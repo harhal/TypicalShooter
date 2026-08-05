@@ -1,0 +1,70 @@
+# ---- Unreal Engine build / cache output ----
+Binaries/
+Intermediate/
+Saved/
+DerivedDataCache/
+Build/*/**
+!Build/*/
+!Build/**/*.ico
+!Build/**/*.png
+
+# Plugin build output
+Plugins/**/Binaries/
+Plugins/**/Intermediate/
+
+# Generated project files (regenerate via "Generate Visual Studio project files")
+*.sln
+*.slnx
+*.suo
+*.opensdf
+*.sdf
+*.VC.db
+*.VC.opendb
+*.xcodeproj
+*.xcworkspace
+Makefile
+CMakeLists.txt
+*.code-workspace
+compile_commands.json
+
+# ---- IDEs / tools ----
+.vs/
+.vscode/
+.idea/
+.junie/
+*.DotSettings.user
+
+# ---- Compiled artefacts ----
+*.pdb
+*.lib
+*.dll
+*.exe
+*.ilk
+*.exp
+*.pch
+*.ipch
+*.gch
+*.modulemap
+*.target
+
+# ---- Packaged builds ----
+*.pak
+*.ucas
+*.utoc
+Windows/
+WindowsNoEditor/
+Packaged/
+
+# ---- Per-user editor content ----
+Content/Developers/
+Content/Collections/
+
+# ---- OS / misc ----
+.DS_Store
+Thumbs.db
+desktop.ini
+*.tmp
+*.log
+
+# ---- Claude Code local settings ----
+.claude/settings.local.json
