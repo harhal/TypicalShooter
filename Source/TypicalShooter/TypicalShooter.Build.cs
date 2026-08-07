@@ -18,7 +18,10 @@ public class TypicalShooter : ModuleRules
 			"StateTreeModule",
 			"GameplayStateTreeModule",
 			"UMG",
-			"Slate"
+			"Slate", 
+			"GameplayAbilities", 
+			"GameplayTags", 
+			"GameplayTasks"
 		});
 
 		PrivateDependencyModuleNames.AddRange(new string[] { });

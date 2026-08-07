@@ -3,6 +3,7 @@
 #pragma once
 
 #include "CoreMinimal.h"
+#include "AbilitySystemInterface.h"
 #include "GameFramework/Character.h"
 #include "Logging/LogMacros.h"
 #include "TypicalShooterCharacter.generated.h"
@@ -19,7 +20,7 @@ DECLARE_LOG_CATEGORY_EXTERN(LogTemplateCharacter, Log, All);
  *  A basic first person character
  */
 UCLASS(abstract)
-class ATypicalShooterCharacter : public ACharacter
+class ATypicalShooterCharacter : public ACharacter, public IAbilitySystemInterface
 {
 	GENERATED_BODY()
 
@@ -43,11 +44,14 @@ protected:
 
 	/** Look Input Action */
 	UPROPERTY(EditAnywhere, Category ="Input")
-	class UInputAction* LookAction;
+	UInputAction* LookAction;
 
 	/** Mouse Look Input Action */
 	UPROPERTY(EditAnywhere, Category ="Input")
-	class UInputAction* MouseLookAction;
+	UInputAction* MouseLookAction;
+
+	UPROPERTY(EditAnywhere, Category ="GAS")
+	UAbilitySystemComponent* Gas;
 	
 public:
 	ATypicalShooterCharacter();
@@ -76,12 +80,6 @@ protected:
 	UFUNCTION(BlueprintCallable, Category="Input")
 	virtual void DoJumpEnd();
 
-protected:
-
-	/** Set up input action bindings */
-	virtual void SetupPlayerInputComponent(UInputComponent* InputComponent) override;
-	
-
 public:
 
 	/** Returns the first person mesh **/
@@ -90,5 +88,9 @@ public:
 	/** Returns first person camera component **/
 	UCameraComponent* GetFirstPersonCameraComponent() const { return FirstPersonCameraComponent; }
 
+	virtual UAbilitySystemComponent* GetAbilitySystemComponent() const override;
+
+	/** Set up input action bindings */
+	virtual void SetupPlayerInputComponent(UInputComponent* InputComponent) override;
 };
 
