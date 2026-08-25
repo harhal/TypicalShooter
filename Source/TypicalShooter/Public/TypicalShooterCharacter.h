@@ -8,6 +8,7 @@
 #include "Logging/LogMacros.h"
 #include "TypicalShooterCharacter.generated.h"
 
+class UInteractionComponent;
 class UInputComponent;
 class USkeletalMeshComponent;
 class UCameraComponent;
@@ -52,6 +53,9 @@ protected:
 
 	UPROPERTY(EditAnywhere, Category ="GAS")
 	UAbilitySystemComponent* Gas;
+
+	UPROPERTY(EditAnywhere, Category ="User Interaction")
+	TObjectPtr<UInteractionComponent> InteractionComponent;
 	
 public:
 	ATypicalShooterCharacter();
@@ -89,6 +93,9 @@ public:
 	UCameraComponent* GetFirstPersonCameraComponent() const { return FirstPersonCameraComponent; }
 
 	virtual UAbilitySystemComponent* GetAbilitySystemComponent() const override;
+
+	UFUNCTION(BlueprintCallable, BlueprintPure)
+	UInteractionComponent* GetInteractionComponent() const { return InteractionComponent; }
 
 	/** Set up input action bindings */
 	virtual void SetupPlayerInputComponent(UInputComponent* InputComponent) override;

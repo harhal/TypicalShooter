@@ -7,6 +7,7 @@
 #include "Components/SkeletalMeshComponent.h"
 #include "EnhancedInputComponent.h"
 #include "InputActionValue.h"
+#include "InteractionComponent.h"
 #include "TS_GAS.h"
 #include "GameFramework/CharacterMovementComponent.h"
 #include "TypicalShooter.h"
@@ -45,6 +46,8 @@ ATypicalShooterCharacter::ATypicalShooterCharacter()
 	GetCharacterMovement()->AirControl = 0.5f;
 	
 	Gas = CreateDefaultSubobject<UTS_GAS>(TEXT("Ability System"));
+	
+	InteractionComponent = CreateDefaultSubobject<UInteractionComponent>(TEXT("Interaction Component"));
 }
 
 void ATypicalShooterCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputComponent)
