@@ -23,10 +23,12 @@ public class TypicalShooter : ModuleRules
 			"GameplayTags", 
 			"GameplayTasks",
 			"NetCore",
+			"SlateCore", 
 			"HarhalHexagonalGrid"
 		});
 
-		PrivateDependencyModuleNames.AddRange(new string[] { });
+		PrivateDependencyModuleNames.AddRange(new string[]
+		{ });
 
 		PublicIncludePaths.AddRange(new string[] {
 			"TypicalShooter",
