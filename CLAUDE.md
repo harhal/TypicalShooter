@@ -85,6 +85,13 @@ included by bare filename.
   tasks, update that feature's doc (status, sections, "Сверено с кодом" date) in the same commit.
   A new feature gets a new doc from the template plus a row in the index.
 
+## Feature workflow
+
+Features are built on a `feature/<name>` branch in small test-first iterations (one focused commit
+each, code split into small files/functions), with requirements and an iteration plan kept in the
+feature's doc and updated as they change; finished features are merged into `main`. The project skill
+`.claude/skills/feature-workflow` (`/feature-workflow start|next|status|finish`) describes the steps.
+
 ## Testing (TDD)
 
 - Work test-first: for any new behaviour or bug fix, write a failing automation test first, run it
