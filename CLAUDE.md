@@ -77,6 +77,20 @@ included by bare filename.
 - Prefer C++ for systems; Blueprints for content/tuning.
 - Keep the hex-grid plugin independent of game code (no dependency on `TypicalShooter`).
 
+## Testing (TDD)
+
+- Work test-first: for any new behaviour or bug fix, write a failing automation test first, run it
+  and see it fail for the expected reason, then implement until it passes.
+- Tests live in `Source/TypicalShooter/Private/Tests/` (plugin: `Plugins/<Plugin>/Source/<Module>/Private/Tests/`),
+  named `TypicalShooter.<Area>.<Case>`, guarded by `WITH_DEV_AUTOMATION_TESTS`.
+- Pure logic (hex math, inventory array, fragments, presenters): fast `IMPLEMENT_SIMPLE_AUTOMATION_TEST`
+  without a world. Gameplay / UI flow: PIE tests like `TypicalShooter.Inventory.UIFlow` (start PIE,
+  feed keys via `UGameViewportClient::InputKey`); keep these for end-to-end scenarios.
+- Run via Unreal MCP `AutomationTestToolset` (`DiscoverTests` → `RunTests` → `GetTestResults`);
+  the whole `TypicalShooter.` suite must pass before a commit.
+- Never weaken or delete a failing test to make it pass; if behaviour intentionally changes, update
+  the test first.
+
 ## Git
 
 - `.uasset` / `.umap` and binary media go through Git LFS (see `.gitattributes`). Not `lockable`:
