@@ -18,6 +18,10 @@ Communicate with the user in Russian; code, identifiers and commit messages in E
   auto-starts an HTTP MCP server at `http://127.0.0.1:8000/mcp` (set in
   `Config/DefaultEditorPerProjectUserSettings.ini`); Claude Code connects via `.mcp.json`
   (server `unreal-mcp`). Tools are only available while the editor is open.
+- Claude Code plugin `unreal-engine-skills-for-claude-code@claude-plugins-official` (Epic, MIT) is
+  enabled in `.claude/settings.json`: provides the `unreal-mcp` skill (how to drive the editor via
+  `list_toolsets` / `describe_toolset` / `call_tool`) and a SessionStart hook that needs bash
+  (Git Bash) on PATH.
 
 Build editor target from the command line (close the editor first or use Live Coding instead):
 
