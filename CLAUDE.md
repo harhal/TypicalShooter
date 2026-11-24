@@ -98,12 +98,18 @@ included by bare filename.
   to its `InventoryComponent`) fills its inventory from `ItemsManifest` on the server, laying items out
   in a hex spiral. Two `BP_ItemsContainer` instances are placed in `Lvl_FirstPerson`.
 - **Interaction**: `UInteractionComponent` on the character does an async sphere overlap on
-  `ECC_GameTraceChannel2` ("PlayerInteraction") every tick. `IA_Interact` (key **E**, in
-  `IMC_Default`) → `ATypicalShooterPlayerController::PrimaryInteract`: picks the nearest
-  `IPlayerInteractive` overlap, calls `Interact`, and for an `AItemsContainer` fires the BP event
-  `OnItemsContainerOpened(Container)`; pressing again or leaving range → `OnItemsContainerClosed`.
-  `BP_FirstPersonPlayerController` implements both: `HUD.SetContainer` + show/hide
-  `HUD.BP_ContainerGrid` (collapsed by default). Opening is client-local UI only.
+  `ECC_GameTraceChannel2` ("PlayerInteraction") every tick.
+- **Inventory screen flow** (all in `ATypicalShooterPlayerController`, client-local UI):
+  - `IA_ToggleInventory` (**Tab**) → `OpenInventory` / `CloseInventory`. Open = game+UI input mode
+    with cursor; closed = game-only input (also applied in `BeginPlay`, which gives the viewport focus).
+  - `IA_Interact` (**E**) → `PrimaryInteract`: nearest `IPlayerInteractive` overlap → `Interact`; for an
+    `AItemsContainer` it opens the inventory *and* the container. E again closes both; leaving
+    interaction range closes only the container; closing the inventory closes the container too.
+  - BP events implemented in `BP_FirstPersonPlayerController`: `OnInventoryOpened/Closed` show/hide
+    `HUD.InventoryScreen` (grid panel with `BP_InventoryGrid`, `BP_ContainerGrid`, `BP_ItemInfo`;
+    collapsed by default); `OnItemsContainerOpened/Closed` → `HUD.SetContainer` + show/hide
+    `HUD.BP_ContainerGrid`. `BP_InventoryGrid`'s Close button calls `CloseInventory`.
+  - Esc can't be used for UI in PIE (it ends the session).
 - **UI (MVP)**: Model interfaces (`IInventoryItem_Model`, `IItemsContainer_Model`, implemented by
   `UInventoryItem` / `UInventoryComponent`) → UObject presenters → view interfaces implemented by
   Slate widgets (`SInventoryGrid` on top of `SHhGridPanel`, `SInventoryGridItem`). UMG entry point:
@@ -126,10 +132,12 @@ own inventory panel (no inventory component on the player yet).
 The two level containers hold test items (`Test Medkit/Ammo/Grenade`, `Test Armor/Scope`) with
 `FInfo_ItemFragment` (placeholder icon `T_UE_Logo_M`).
 
-Container opening on **E** is wired (see Interaction above). Verified via MCP that the container is
-detected in range (HUD interaction hint visible) and everything compiles; the actual key press was
-**not** verified automatically — synthetic keystrokes (SendKeys) don't reach the PIE viewport, so
-test by hand. Log: `LogTypicalShooter: Opened/Closed items container`.
+Inventory screen (Tab) and container opening (E) are wired; initial PIE state verified via MCP
+(screen collapsed, no cursor). Key presses can't be tested automatically: synthetic input
+(SendKeys / keybd_event) never reached the PIE viewport, and stray clicks landed in the editor —
+test input by hand. Logs: `LogTypicalShooter: Opened/Closed inventory|items container`; input setup
+logs at Verbose. Before this, game input was effectively dead in PIE (the always-visible inventory
+panel covered the screen and nothing set an input mode).
 
 Open work:
 - Player inventory: no `UInventoryComponent` on the character; `BP_InventoryGrid` shows only cells.

@@ -19,15 +19,23 @@ void ATypicalShooterPlayerController::BeginPlay()
 {
 	Super::BeginPlay();
 
+	if (IsLocalPlayerController())
+	{
+		// Start in gameplay: focus the game viewport, no cursor.
+		ApplyInputMode(false);
+	}
+
 	UEnhancedInputLocalPlayerSubsystem* Subsystem = ULocalPlayer::GetSubsystem<UEnhancedInputLocalPlayerSubsystem>(GetLocalPlayer());
 	if (!Subsystem)
 	{
+		UE_LOG(LogTypicalShooter, Verbose, TEXT("%s: no Enhanced Input subsystem (not a local player?), mapping contexts not added"), *GetName());
 		return;
 	}
 
 	for (const TObjectPtr<UInputMappingContext>& Imc : DefaultIMCs)
 	{
 		Subsystem->AddMappingContext(Imc, 0);
+		UE_LOG(LogTypicalShooter, Verbose, TEXT("%s: added mapping context %s"), *GetName(), *GetNameSafe(Imc));
 	}
 }
 
@@ -35,13 +43,76 @@ void ATypicalShooterPlayerController::SetupInputComponent()
 {
 	Super::SetupInputComponent();
 
-	if (!IsLocalPlayerController() || !PrimaryInteractAction)
+	if (!IsLocalPlayerController())
 	{
 		return;
 	}
 
 	UEnhancedInputComponent* EnhancedInputComponent = CastChecked<UEnhancedInputComponent>(InputComponent);
-	EnhancedInputComponent->BindAction(PrimaryInteractAction, ETriggerEvent::Started, this, &ATypicalShooterPlayerController::PrimaryInteract);
+	if (PrimaryInteractAction)
+	{
+		EnhancedInputComponent->BindAction(PrimaryInteractAction, ETriggerEvent::Started, this, &ATypicalShooterPlayerController::PrimaryInteract);
+	}
+	if (ToggleInventoryAction)
+	{
+		EnhancedInputComponent->BindAction(ToggleInventoryAction, ETriggerEvent::Started, this, &ATypicalShooterPlayerController::ToggleInventory);
+	}
+}
+
+void ATypicalShooterPlayerController::ApplyInputMode(bool bUIVisible)
+{
+	if (bUIVisible)
+	{
+		FInputModeGameAndUI InputMode;
+		InputMode.SetLockMouseToViewportBehavior(EMouseLockMode::DoNotLock);
+		InputMode.SetHideCursorDuringCapture(false);
+		SetInputMode(InputMode);
+	}
+	else
+	{
+		SetInputMode(FInputModeGameOnly());
+	}
+	SetShowMouseCursor(bUIVisible);
+}
+
+void ATypicalShooterPlayerController::ToggleInventory()
+{
+	if (bInventoryOpened)
+	{
+		CloseInventory();
+	}
+	else
+	{
+		OpenInventory();
+	}
+}
+
+void ATypicalShooterPlayerController::OpenInventory()
+{
+	if (bInventoryOpened)
+	{
+		return;
+	}
+
+	bInventoryOpened = true;
+	ApplyInputMode(true);
+	UE_LOG(LogTypicalShooter, Log, TEXT("Opened inventory"));
+	OnInventoryOpened();
+}
+
+void ATypicalShooterPlayerController::CloseInventory()
+{
+	if (!bInventoryOpened)
+	{
+		return;
+	}
+
+	CloseItemsContainer();
+
+	bInventoryOpened = false;
+	ApplyInputMode(false);
+	UE_LOG(LogTypicalShooter, Log, TEXT("Closed inventory"));
+	OnInventoryClosed();
 }
 
 void ATypicalShooterPlayerController::PlayerTick(float DeltaTime)
@@ -59,7 +130,8 @@ void ATypicalShooterPlayerController::PrimaryInteract_Implementation()
 {
 	if (bContainerOpened)
 	{
-		CloseItemsContainer();
+		// The container was opened together with the inventory screen: close both.
+		CloseInventory();
 		return;
 	}
 
@@ -74,6 +146,7 @@ void ATypicalShooterPlayerController::PrimaryInteract_Implementation()
 
 	if (AItemsContainer* Container = Cast<AItemsContainer>(Target))
 	{
+		OpenInventory();
 		OpenedContainer = Container;
 		bContainerOpened = true;
 		UE_LOG(LogTypicalShooter, Log, TEXT("Opened items container %s"), *Container->GetName());

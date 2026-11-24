@@ -65,6 +65,8 @@ void ATypicalShooterCharacter::SetupPlayerInputComponent(UInputComponent* Player
 		// Looking/Aiming
 		EnhancedInputComponent->BindAction(LookAction, ETriggerEvent::Triggered, this, &ATypicalShooterCharacter::LookInput);
 		EnhancedInputComponent->BindAction(MouseLookAction, ETriggerEvent::Triggered, this, &ATypicalShooterCharacter::LookInput);
+
+		UE_LOG(LogTypicalShooter, Verbose, TEXT("%s: bound %d input actions"), *GetNameSafe(this), EnhancedInputComponent->GetActionEventBindings().Num());
 	}
 	else
 	{
