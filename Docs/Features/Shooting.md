@@ -1,6 +1,6 @@
 # Стрельба: абилки основной и альтернативной атаки
 
-**Статус:** ⚪ Описана, реализация не начата (ветка `feature/shooting-abilities`).
+**Статус:** 🟡 В работе (ветка `feature/shooting-abilities`): есть приём урона простыми получателями; стрельбы ещё нет.
 
 ## Что это
 Шутерная составляющая. Основная и альтернативная атаки — это GAS-абилки, которые запускаются
@@ -88,9 +88,9 @@ R17 подтверждено; дистанции от дула, дуло — `Mu
 **Открытые вопросы:** нет.
 
 ## План итераций
-- [ ] 1. Интерфейс получателя урона + `FShotDamage` (урон по тегам типов) + простой получатель с прочностью —
+- [x] 1. Теги типов урона + интерфейс получателя урона + `FShotDamage` (урон по тегам типов) + простой получатель с прочностью —
   тест: `TypicalShooter.Shooting.Damage.SimpleReceiver`
-- [ ] 2. Атрибут здоровья + теги типов урона + GE урона (SetByCaller) + GAS-получатель —
+- [ ] 2. Атрибут здоровья + GE урона (SetByCaller) + GAS-получатель —
   тест: `TypicalShooter.Shooting.Damage.GasReceiver`
 - [ ] 3. Наборы атрибутов основной/альтернативной атаки + клампы (R1–R3) —
   тест: `TypicalShooter.Shooting.Attributes.*`
@@ -113,13 +113,25 @@ R17 подтверждено; дистанции от дула, дуло — `Mu
 - [ ] 12. Контент: мишень на уровне, меш снаряда, счётчик патронов в HUD, тестовые предметы — ручная проверка
 
 ## Как устроено
-_Заполняется по ходу итераций._
+- Теги типов урона `Damage.Type.{Physical,Acid,Electric,Plasma,Ice,Radiation}` — нативные, в
+  [ShootingTags.h](../../Source/TypicalShooter/Public/Shooting/ShootingTags.h).
+- [`FShotDamage`](../../Source/TypicalShooter/Public/Shooting/ShotDamage.h) — урон одного попадания: `Amounts`
+  (тег типа → величина) + `Instigator`; `GetTotal`, `HasDamage`, `Scale` (для потери урона при пробитии).
+- [`IShotDamageReceiver`](../../Source/TypicalShooter/Public/Shooting/ShotDamageReceiver.h) — C++-интерфейс
+  на **компоненте** актора; `FindOnActor` ищет первый такой компонент. Урон применяется только на сервере.
+- [`USimpleDamageReceiverComponent`](../../Source/TypicalShooter/Public/Shooting/SimpleDamageReceiverComponent.h) —
+  получатель без GAS: прочность `MaxDurability` (выставляется в `InitializeComponent`), все типы урона
+  отнимаются суммой; при нуле один раз `OnDepleted` (BP) / `GetDepletedDelegate` (C++), опционально
+  `bDestroyOwnerOnDepleted`.
 
 ## Настройка контента
-_Заполняется по ходу итераций._
+Простреливаемая стена / ящик: добавить актору компонент `Simple Damage Receiver`, задать `Max Durability`
+и при необходимости `Destroy Owner On Depleted`.
 
 ## Тесты
-_Заполняется по ходу итераций._
+[ShootingDamageTest.cpp](../../Source/TypicalShooter/Private/Tests/ShootingDamageTest.cpp) (игровой мир без PIE,
+фикстура [ShootingTestFixture.h](../../Source/TypicalShooter/Private/Tests/ShootingTestFixture.h)):
+`TypicalShooter.Shooting.Damage.ShotDamageAmounts`, `.SimpleReceiver`, `.SimpleReceiverDestroysOwner`.
 
 ## Ограничения и грабли
 
@@ -130,4 +142,4 @@ _Заполняется по ходу итераций._
 - [ ] Сопротивления типам урона.
 
 ---
-_Сверено с кодом: 2026-11-24_
+_Сверено с кодом: 2026-11-25_
