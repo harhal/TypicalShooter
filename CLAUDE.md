@@ -61,9 +61,9 @@ Regenerate IDE project files (`.sln` / `.slnx` are gitignored):
   - `InteractionComponent`, `TS_GAS`, `TypicalShooterCharacter`.
   - `UI/` — inventory UI in MVP style (`*_Model`, `*_Presenter`, `*_View`), plus Slate widgets
     (`UI/Slate/InventoryGrid*`) wrapped by UMG (`UI/Widget/InventoryGridWidget`).
-- `Plugins/HarhalHexagonalGrid/` — user's own hex-grid library: axial coords (`HhAxialCoord`),
-  grid math (`HhGridFunctions`), Slate panel (`HhGridPanel`) + UMG wrapper (`HhGridPanelWidget`),
-  `HhGridPlane`.
+- `Plugins/HarhalHexagonalGrid/` — **git submodule** (separate repository): user's own hex-grid
+  library: axial coords (`HhAxialCoord`), grid math (`HhGridFunctions`), Slate panel (`HhGridPanel`)
+  + UMG wrapper (`HhGridPanelWidget`), `HhGridPlane`. See "Git" for the submodule workflow.
 - `Content/` — mostly template content (`FirstPerson`, `Variant_*`, `Weapons`, `Characters`,
   `LevelPrototyping`, `Input`); custom content lives in `Content/Inventory`.
   Uses One File Per Actor (`__ExternalActors__`, `__ExternalObjects__`).
@@ -104,6 +104,20 @@ included by bare filename.
   there is no LFS lock server, and lockable files are checked out read-only (the editor can't save).
 - Never commit `Binaries/`, `Intermediate/`, `Saved/`, `DerivedDataCache/`, generated `.sln`,
   IDE folders or `Content/Developers/`.
+
+### HarhalHexagonalGrid submodule
+- `Plugins/HarhalHexagonalGrid` is a submodule with its own history (no Git LFS there; the icon is a
+  plain binary). Clone this project with `git clone --recursive`, or run
+  `git submodule update --init` after cloning.
+- Changing the plugin is two commits: commit (and push) inside `Plugins/HarhalHexagonalGrid` first,
+  then commit the updated submodule pointer in this repository. Never leave the main repo pointing at
+  a plugin commit that only exists locally once a real remote is used.
+- Plugin commit messages describe plugin changes only; game changes go to this repository.
+- Remote: currently a local bare repo `C:\Users\Admin\Documents\GitRemotes\HarhalHexagonalGrid.git`
+  (placeholder until a hosted remote exists). Local file remotes need
+  `git -c protocol.file.allow=always submodule ...` for submodule commands that fetch.
+  To move to a hosted remote: push `main` there, then `git submodule set-url Plugins/HarhalHexagonalGrid <url>`
+  and `git -C Plugins/HarhalHexagonalGrid remote set-url origin <url>`, commit `.gitmodules`.
 
 ## Architecture (custom code)
 
