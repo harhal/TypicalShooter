@@ -44,6 +44,8 @@ enum class EInventoryCellHighlight : uint8
 	Hovered,
 	Selected,
 	DropTarget,
+	/** Gamepad / keyboard cursor. */
+	Cursor,
 };
 
 /**
@@ -61,6 +63,7 @@ public:
 		, _HoveredCellColor(FLinearColor(1.f, 1.f, 1.f, 0.3f))
 		, _SelectedCellColor(FLinearColor(1.f, 0.75f, 0.2f, 0.5f))
 		, _DropTargetCellColor(FLinearColor(0.3f, 1.f, 0.4f, 0.5f))
+		, _CursorCellColor(FLinearColor(0.3f, 0.7f, 1.f, 0.6f))
 	{ }
 		SLATE_ARGUMENT(float, HexSize)
 		/** Radius shown until a presenter sets the model's one. */
@@ -71,6 +74,7 @@ public:
 		SLATE_ARGUMENT(FLinearColor, HoveredCellColor)
 		SLATE_ARGUMENT(FLinearColor, SelectedCellColor)
 		SLATE_ARGUMENT(FLinearColor, DropTargetCellColor)
+		SLATE_ARGUMENT(FLinearColor, CursorCellColor)
 	SLATE_END_ARGS()
 
 	void Construct(const FArguments& InArgs);
@@ -105,6 +109,9 @@ public:
 
 	/** Item view drawn as selected (invalid guid = none). */
 	void SetSelectedSlot(const FGuid& SlotGuid);
+
+	/** Cell drawn as the gamepad / keyboard cursor (unset = no cursor in this grid). */
+	void SetCursorCell(const TOptional<FHhAxialCoord>& Location);
 
 	EInventoryCellHighlight GetCellHighlight(const FHhAxialCoord& Location) const;
 
@@ -144,11 +151,13 @@ private:
 	FLinearColor HoveredCellColor;
 	FLinearColor SelectedCellColor;
 	FLinearColor DropTargetCellColor;
+	FLinearColor CursorCellColor;
 
 	TOptional<FHhAxialCoord> HoveredCell;
 	FGuid HoveredSlot;
 	FGuid SelectedSlot;
 	TOptional<FHhAxialCoord> DropTargetCell;
+	TOptional<FHhAxialCoord> CursorCell;
 	/** Cell the left mouse button went down on (click / drag source). */
 	TOptional<FHhAxialCoord> PressedCell;
 };

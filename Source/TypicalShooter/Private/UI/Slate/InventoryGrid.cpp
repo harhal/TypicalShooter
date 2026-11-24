@@ -53,6 +53,7 @@ void SInventoryGrid::Construct(const FArguments& InArgs)
 	HoveredCellColor = InArgs._HoveredCellColor;
 	SelectedCellColor = InArgs._SelectedCellColor;
 	DropTargetCellColor = InArgs._DropTargetCellColor;
+	CursorCellColor = InArgs._CursorCellColor;
 
 	ChildSlot
 	[
@@ -289,6 +290,11 @@ void SInventoryGrid::SetSelectedSlot(const FGuid& SlotGuid)
 	SelectedSlot = ItemWidgets.Contains(SlotGuid) ? SlotGuid : FGuid();
 }
 
+void SInventoryGrid::SetCursorCell(const TOptional<FHhAxialCoord>& Location)
+{
+	CursorCell = Location.IsSet() && IsInGrid(Location.GetValue()) ? Location : TOptional<FHhAxialCoord>();
+}
+
 EInventoryCellHighlight SInventoryGrid::GetCellHighlight(const FHhAxialCoord& Location) const
 {
 	if (DropTargetCell == TOptional<FHhAxialCoord>(Location))
@@ -298,6 +304,10 @@ EInventoryCellHighlight SInventoryGrid::GetCellHighlight(const FHhAxialCoord& Lo
 	if (SelectedSlot.IsValid() && GetSlotLocation(SelectedSlot) == TOptional<FHhAxialCoord>(Location))
 	{
 		return EInventoryCellHighlight::Selected;
+	}
+	if (CursorCell == TOptional<FHhAxialCoord>(Location))
+	{
+		return EInventoryCellHighlight::Cursor;
 	}
 	if (HoveredCell == TOptional<FHhAxialCoord>(Location))
 	{
@@ -314,6 +324,8 @@ FSlateColor SInventoryGrid::GetHighlightColor(const FHhAxialCoord Location) cons
 		return DropTargetCellColor;
 	case EInventoryCellHighlight::Selected:
 		return SelectedCellColor;
+	case EInventoryCellHighlight::Cursor:
+		return CursorCellColor;
 	case EInventoryCellHighlight::Hovered:
 		return HoveredCellColor;
 	default:

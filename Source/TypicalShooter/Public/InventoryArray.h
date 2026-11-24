@@ -106,6 +106,8 @@ struct TYPICALSHOOTER_API FInventoryArray : public FFastArraySerializer
 	void PreReplicatedRemove(const TArrayView<int32>& RemovedIndices, int32 FinalSize);
 	void PostReplicatedAdd(const TArrayView<int32>& AddedIndices, int32 FinalSize);
 	void PostReplicatedChange(const TArrayView<int32>& ChangedIndices, int32 FinalSize);
+	/** After every replication update (all removes / adds / changes applied): one consistent layout event. */
+	void PostReplicatedReceive(const FFastArraySerializer::FPostReplicatedReceiveParameters& Parameters);
 
 	bool NetDeltaSerialize(FNetDeltaSerializeInfo & DeltaParms)
 	{

@@ -4,10 +4,15 @@
 
 #include "CoreMinimal.h"
 #include "InventoryArray.h"
+#include "InventoryLayout.h"
 #include "Components/ActorComponent.h"
 #include "UI/ItemsContainer/ItemsContainer_Model.h"
 #include "InventoryComponent.generated.h"
 
+class UInventoryComponent;
+
+DECLARE_MULTICAST_DELEGATE_TwoParams(FInventoryLayoutChangedDelegate, UInventoryComponent* /*Inventory*/, const FInventoryLayoutChange& /*Change*/);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FOnInventoryLayoutChanged, UInventoryComponent*, Inventory, const FInventoryLayoutChange&, Change);
 
 UCLASS(ClassGroup=(Custom), meta=(BlueprintSpawnableComponent))
 class TYPICALSHOOTER_API UInventoryComponent : public UActorComponent, public IItemsContainer_Model
@@ -51,6 +56,39 @@ public:
 	/** The inventory behind a container model object: the component itself or the first one on an actor. */
 	static UInventoryComponent* FindInventory(UObject* ModelObject);
 
+	/**
+	 * Groups mutations into one layout event: while any batch of this inventory is alive nothing is reported; the
+	 * outermost batch reports everything that changed when it ends. Every mutation opens its own batch, so a swap or
+	 * a transfer is always one event; open one explicitly for multi-step operations (e.g. Take All).
+	 */
+	struct TYPICALSHOOTER_API FScopedLayoutBatch
+	{
+		explicit FScopedLayoutBatch(UInventoryComponent* InInventory);
+		~FScopedLayoutBatch();
+		UE_NONCOPYABLE(FScopedLayoutBatch);
+	private:
+		TWeakObjectPtr<UInventoryComponent> Inventory;
+	};
+
+	/**
+	 * Fires once per atomic change of the layout (on the server after each mutation / batch, on clients after each
+	 * replication update), when the inventory is consistent again. Carries placement and neighbour changes.
+	 */
+	FInventoryLayoutChangedDelegate& GetLayoutChangedDelegate() { return LayoutChangedDelegate; }
+
+	/** Blueprint twin of GetLayoutChangedDelegate(). */
+	UPROPERTY(BlueprintAssignable, Category = "Inventory")
+	FOnInventoryLayoutChanged OnLayoutChanged;
+
+	/** Items in the (up to six) cells adjacent to Location. */
+	TArray<UInventoryItem*> GetNeighborItems(const FHhAxialCoord& Location) const;
+
+	/** Items adjacent to Item; empty if Item is not placed here. */
+	TArray<UInventoryItem*> GetItemNeighbors(const UInventoryItem* Item) const;
+
+	/** Reports layout changes since the last report, unless a batch is open (also called after replication updates). */
+	void FlushLayoutChange();
+
 	void ProcessItemAdded(const UInventoryItem* Item, const FHhAxialCoord& Location);
 	void ProcessItemRemoved(const UInventoryItem* Item, const FHhAxialCoord& Location);
 	void ProcessItemMoved(const UInventoryItem* Item, const FHhAxialCoord& Location, const FHhAxialCoord& PrevLocation);
@@ -77,4 +115,11 @@ private:
 	FItemAddedDelegate OnItemAddedDelegate;
 	FItemRemovedDelegate OnItemRemovedDelegate;
 	FItemMovedDelegate OnItemMovedDelegate;
+	FInventoryLayoutChangedDelegate LayoutChangedDelegate;
+
+	/** Open FScopedLayoutBatch count. */
+	int32 LayoutBatchDepth = 0;
+
+	/** Layout as last reported to layout listeners. */
+	TMap<TWeakObjectPtr<UInventoryItem>, FHhAxialCoord> ReportedLayout;
 };

@@ -238,6 +238,14 @@ void FInventoryArray::PostReplicatedChange(const TArrayView<int32>& ChangedIndic
 	}
 }
 
+void FInventoryArray::PostReplicatedReceive(const FFastArraySerializer::FPostReplicatedReceiveParameters& Parameters)
+{
+	if (Owner.IsValid())
+	{
+		Owner->FlushLayoutChange();
+	}
+}
+
 bool FInventoryArray::SwapItems(const UInventoryItem* ItemA, const UInventoryItem* ItemB)
 {
 	if (!HasAuthority())
