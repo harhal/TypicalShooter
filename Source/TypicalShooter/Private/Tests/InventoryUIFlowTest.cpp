@@ -1,0 +1,238 @@
+// End-to-end check of the inventory screen / container flow in Play In Editor.
+//
+// Starts PIE on the currently open map (expects Lvl_FirstPerson with at least one AItemsContainer).
+// Keys are fed through UGameViewportClient::InputKey, i.e. the entry point real keyboard input uses
+// after Slate, so the Enhanced Input mappings (IMC_Default: Tab, E, W, SpaceBar) and the
+// controller / BP wiring are exercised for real.
+// Not covered: OS -> Slate focus routing (whether the game viewport actually has keyboard focus).
+
+#include "Misc/AutomationTest.h"
+
+#if WITH_DEV_AUTOMATION_TESTS && WITH_EDITOR
+
+#include "Components/Widget.h"
+#include "Engine/Engine.h"
+#include "Engine/GameViewportClient.h"
+#include "Engine/World.h"
+#include "EngineUtils.h"
+#include "GameFramework/Pawn.h"
+#include "GenericPlatform/GenericPlatformInputDeviceMapper.h"
+#include "InputKeyEventArgs.h"
+#include "InventoryComponent.h"
+#include "ItemsContainer.h"
+#include "Tests/AutomationEditorCommon.h"
+#include "TypicalShooterPlayerController.h"
+#include "UI/Widget/InventoryGridWidget.h"
+
+namespace InventoryUIFlowTest
+{
+	UWorld* FindPIEWorld()
+	{
+		for (const FWorldContext& Context : GEngine->GetWorldContexts())
+		{
+			if (Context.WorldType == EWorldType::PIE && Context.World())
+			{
+				return Context.World();
+			}
+		}
+		return nullptr;
+	}
+
+	/** Reads a UObject property by name (used for Blueprint-defined widget variables). */
+	UObject* GetObjectProperty(const UObject* Object, const FName Name)
+	{
+		if (!Object)
+		{
+			return nullptr;
+		}
+		const FObjectPropertyBase* Property = FindFProperty<FObjectPropertyBase>(Object->GetClass(), Name);
+		return Property ? Property->GetObjectPropertyValue_InContainer(Object) : nullptr;
+	}
+
+	bool IsWidgetShown(const UObject* Owner, const FName WidgetName)
+	{
+		const UWidget* Widget = Cast<UWidget>(GetObjectProperty(Owner, WidgetName));
+		return Widget && Widget->IsVisible();
+	}
+
+	struct FState
+	{
+		bool bReady = false;
+		double WaitStarted = 0.0;
+		TWeakObjectPtr<UWorld> World;
+		TWeakObjectPtr<ATypicalShooterPlayerController> Controller;
+		TWeakObjectPtr<AItemsContainer> Container;
+		FVector SavedLocation = FVector::ZeroVector;
+
+		UObject* GetHUD() const { return GetObjectProperty(Controller.Get(), TEXT("HUD")); }
+
+		/** Tries to resolve PIE objects; true once everything (incl. the BP-created HUD) exists. */
+		bool TryResolve()
+		{
+			World = FindPIEWorld();
+			if (!World.IsValid())
+			{
+				return false;
+			}
+			Controller = Cast<ATypicalShooterPlayerController>(World->GetFirstPlayerController());
+			if (!Controller.IsValid() || !Controller->GetPawn() || !GetHUD())
+			{
+				return false;
+			}
+			for (TActorIterator<AItemsContainer> It(World.Get()); It; ++It)
+			{
+				Container = *It;
+				break;
+			}
+			return Container.IsValid();
+		}
+
+		void SendKey(const FKey& Key, const EInputEvent Event) const
+		{
+			UGameViewportClient* ViewportClient = World.IsValid() ? World->GetGameViewport() : nullptr;
+			if (!ViewportClient)
+			{
+				return;
+			}
+			const FInputDeviceId Device = IPlatformInputDeviceMapper::Get().GetDefaultInputDevice();
+			ViewportClient->InputKey(FInputKeyEventArgs(ViewportClient->Viewport, Device, Key, Event, FPlatformTime::Cycles64()));
+		}
+	};
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FInventoryUIFlowTest, "TypicalShooter.Inventory.UIFlow",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter)
+
+bool FInventoryUIFlowTest::RunTest(const FString& Parameters)
+{
+	using namespace InventoryUIFlowTest;
+
+	const TSharedRef<FState> State = MakeShared<FState>();
+
+	// Runs Fn after Delay seconds, only if the PIE setup succeeded.
+	auto Step = [State](TFunction<void()> Fn, const float Delay = 0.3f)
+	{
+		ADD_LATENT_AUTOMATION_COMMAND(FDelayedFunctionLatentCommand([State, Fn = MoveTemp(Fn)]()
+		{
+			if (State->bReady)
+			{
+				Fn();
+			}
+		}, Delay));
+	};
+	// Taps a key: press now, release shortly after.
+	auto Tap = [&Step, State](const FKey Key)
+	{
+		Step([State, Key]() { State->SendKey(Key, IE_Pressed); }, 0.0f);
+		Step([State, Key]() { State->SendKey(Key, IE_Released); }, 0.1f);
+	};
+
+	// 0. Start PIE and wait (up to 15 s) for the controller, pawn, HUD and a container.
+	ADD_LATENT_AUTOMATION_COMMAND(FStartPIECommand(false));
+	ADD_LATENT_AUTOMATION_COMMAND(FFunctionLatentCommand([this, State]()
+	{
+		if (State->WaitStarted == 0.0)
+		{
+			State->WaitStarted = FPlatformTime::Seconds();
+		}
+		if (State->TryResolve())
+		{
+			State->bReady = true;
+			return true;
+		}
+		if (FPlatformTime::Seconds() - State->WaitStarted > 15.0)
+		{
+			AddError(TEXT("PIE did not provide ATypicalShooterPlayerController + pawn + HUD + AItemsContainer within 15 s."));
+			return true;
+		}
+		return false;
+	}));
+
+	// 1. Initial state.
+	Step([this, State]()
+	{
+		ATypicalShooterPlayerController* PC = State->Controller.Get();
+		TestFalse(TEXT("Inventory is closed at start"), PC->IsInventoryOpened());
+		TestFalse(TEXT("No mouse cursor at start"), PC->bShowMouseCursor);
+		TestFalse(TEXT("InventoryScreen hidden at start"), IsWidgetShown(State->GetHUD(), TEXT("InventoryScreen")));
+	}, 0.5f);
+
+	// 2. Tab opens and closes the inventory.
+	Tap(EKeys::Tab);
+	Step([this, State]()
+	{
+		ATypicalShooterPlayerController* PC = State->Controller.Get();
+		TestTrue(TEXT("Tab opens the inventory"), PC->IsInventoryOpened());
+		TestTrue(TEXT("Mouse cursor shown with inventory"), PC->bShowMouseCursor);
+		TestTrue(TEXT("InventoryScreen shown"), IsWidgetShown(State->GetHUD(), TEXT("InventoryScreen")));
+		TestFalse(TEXT("Container grid hidden without a container"), IsWidgetShown(State->GetHUD(), TEXT("BP_ContainerGrid")));
+	});
+	Tap(EKeys::Tab);
+	Step([this, State]()
+	{
+		ATypicalShooterPlayerController* PC = State->Controller.Get();
+		TestFalse(TEXT("Second Tab closes the inventory"), PC->IsInventoryOpened());
+		TestFalse(TEXT("Mouse cursor hidden again"), PC->bShowMouseCursor);
+		TestFalse(TEXT("InventoryScreen hidden again"), IsWidgetShown(State->GetHUD(), TEXT("InventoryScreen")));
+	});
+
+	// 3. Walk up to a container (teleport), let the async interaction overlap update, press E.
+	Step([State]()
+	{
+		APawn* Pawn = State->Controller->GetPawn();
+		const FVector Target = State->Container->GetActorLocation() + FVector(-60.f, 0.f, 50.f);
+		Pawn->TeleportTo(Target, Pawn->GetActorRotation());
+	}, 0.0f);
+	Step([]() {}, 0.5f);
+	Tap(EKeys::E);
+	Step([this, State]()
+	{
+		ATypicalShooterPlayerController* PC = State->Controller.Get();
+		UObject* HUD = State->GetHUD();
+		TestTrue(TEXT("E at a container opens the inventory"), PC->IsInventoryOpened());
+		TestTrue(TEXT("E at a container opens that container"), PC->GetOpenedItemsContainer() == State->Container.Get());
+		TestTrue(TEXT("InventoryScreen shown"), IsWidgetShown(HUD, TEXT("InventoryScreen")));
+		TestTrue(TEXT("Container grid shown"), IsWidgetShown(HUD, TEXT("BP_ContainerGrid")));
+
+		const UInventoryGridWidget* Grid = Cast<UInventoryGridWidget>(
+			GetObjectProperty(GetObjectProperty(HUD, TEXT("BP_ContainerGrid")), TEXT("InventoryGridWidget_237")));
+		const int32 ExpectedItems = State->Container->InventoryComponent->GetNumItems();
+		TestTrue(TEXT("Container has items"), ExpectedItems > 0);
+		if (TestNotNull(TEXT("Container item grid widget"), Grid))
+		{
+			TestEqual(TEXT("Grid shows every container item"), Grid->GetNumDisplayedItems(), ExpectedItems);
+		}
+	});
+	Tap(EKeys::E);
+	Step([this, State]()
+	{
+		ATypicalShooterPlayerController* PC = State->Controller.Get();
+		TestFalse(TEXT("Second E closes the inventory"), PC->IsInventoryOpened());
+		TestNull(TEXT("Second E closes the container"), PC->GetOpenedItemsContainer());
+		TestFalse(TEXT("Container grid hidden"), IsWidgetShown(State->GetHUD(), TEXT("BP_ContainerGrid")));
+	});
+
+	// 4. Movement and jump work with the inventory closed.
+	Step([State]() { State->SavedLocation = State->Controller->GetPawn()->GetActorLocation(); }, 0.0f);
+	Step([State]() { State->SendKey(EKeys::W, IE_Pressed); }, 0.0f);
+	Step([State]() { State->SendKey(EKeys::W, IE_Released); }, 0.5f);
+	Step([this, State]()
+	{
+		const FVector Now = State->Controller->GetPawn()->GetActorLocation();
+		TestTrue(FString::Printf(TEXT("W moves the character (moved %.1f)"), FVector::Dist2D(Now, State->SavedLocation)),
+			FVector::Dist2D(Now, State->SavedLocation) > 20.f);
+		State->SavedLocation = Now;
+	}, 0.1f);
+	Step([State]() { State->SendKey(EKeys::SpaceBar, IE_Pressed); }, 0.0f);
+	Step([this, State]()
+	{
+		State->SendKey(EKeys::SpaceBar, IE_Released);
+		const float Rise = State->Controller->GetPawn()->GetActorLocation().Z - State->SavedLocation.Z;
+		TestTrue(FString::Printf(TEXT("SpaceBar jumps (rose %.1f)"), Rise), Rise > 5.f);
+	}, 0.2f);
+
+	ADD_LATENT_AUTOMATION_COMMAND(FEndPlayMapCommand());
+	return true;
+}
+
+#endif // WITH_DEV_AUTOMATION_TESTS && WITH_EDITOR

@@ -28,7 +28,14 @@ public class TypicalShooter : ModuleRules
 		});
 
 		PrivateDependencyModuleNames.AddRange(new string[]
-		{ });
+		{
+			"ApplicationCore" // IPlatformInputDeviceMapper (automation tests)
+		});
+
+		if (Target.bBuildEditor)
+		{
+			PrivateDependencyModuleNames.Add("UnrealEd"); // PIE latent commands in automation tests
+		}
 
 		PublicIncludePaths.AddRange(new string[] {
 			"TypicalShooter",

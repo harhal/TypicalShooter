@@ -19,6 +19,11 @@ void UInventoryGridWidget::AssignPresenter(UItemsContainer_Presenter* InPresente
 	}
 }
 
+int32 UInventoryGridWidget::GetNumDisplayedItems() const
+{
+	return SlateGrid.IsValid() ? SlateGrid->GetNumItemViews() : 0;
+}
+
 void UInventoryGridWidget::ReleaseSlateResources(bool bReleaseChildren)
 {
 	Super::ReleaseSlateResources(bReleaseChildren);

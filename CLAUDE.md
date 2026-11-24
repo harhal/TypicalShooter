@@ -132,10 +132,14 @@ own inventory panel (no inventory component on the player yet).
 The two level containers hold test items (`Test Medkit/Ammo/Grenade`, `Test Armor/Scope`) with
 `FInfo_ItemFragment` (placeholder icon `T_UE_Logo_M`).
 
-Inventory screen (Tab) and container opening (E) are wired; initial PIE state verified via MCP
-(screen collapsed, no cursor). Key presses can't be tested automatically: synthetic input
-(SendKeys / keybd_event) never reached the PIE viewport, and stray clicks landed in the editor —
-test input by hand. Logs: `LogTypicalShooter: Opened/Closed inventory|items container`; input setup
+Inventory screen (Tab) and container opening (E) are wired and covered by the automation test
+`TypicalShooter.Inventory.UIFlow` (`Source/TypicalShooter/Private/Tests/InventoryUIFlowTest.cpp`): it
+starts PIE itself, feeds keys through `UGameViewportClient::InputKey` (Enhanced Input mappings are
+exercised; OS → Slate focus is not) and checks Tab open/close, E at a container (grid shows every
+item), W movement and jump. Run via MCP: `AutomationTestToolset.DiscoverTests` →
+`RunTests ["TypicalShooter.Inventory.UIFlow"]` → `GetTestResults` (the automation worker ends any
+running PIE first). OS-level synthetic input (SendKeys / keybd_event) does not reach the editor's
+game viewport — don't use it for testing. Logs: `LogTypicalShooter: Opened/Closed inventory|items container`; input setup
 logs at Verbose. Before this, game input was effectively dead in PIE (the always-visible inventory
 panel covered the screen and nothing set an input mode).
 

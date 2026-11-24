@@ -31,6 +31,8 @@ public:
 	virtual void RemoveInventoryItem(const FGuid& SlotGuid) override;
 	virtual void ClearInventoryItems() override;
 
+	int32 GetNumItemViews() const { return ItemWidgets.Num(); }
+
 private:
 	TSharedPtr<SHhGridPanel> GridPanel;
 

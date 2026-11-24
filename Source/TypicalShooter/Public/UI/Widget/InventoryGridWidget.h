@@ -27,6 +27,10 @@ public:
 	UFUNCTION(BlueprintCallable, Category="InventoryGrid")
 	void AssignPresenter(UItemsContainer_Presenter* InPresenter);
 
+	/** Number of item views currently shown in the grid (0 if the Slate widget isn't built). */
+	UFUNCTION(BlueprintPure, Category="InventoryGrid")
+	int32 GetNumDisplayedItems() const;
+
 	virtual void ReleaseSlateResources(bool bReleaseChildren) override;
 
 protected:
