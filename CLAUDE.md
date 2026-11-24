@@ -23,6 +23,20 @@ Communicate with the user in Russian; code, identifiers and commit messages in E
   `list_toolsets` / `describe_toolset` / `call_tool`) and a SessionStart hook that needs bash
   (Git Bash) on PATH.
 
+### Editing assets through Unreal MCP (learned in practice)
+- Widget trees: `UMGToolSet` (`GetWidgets`, `AddWidget`, `WrapWidgets`, `ToggleWidgetAsVariable`,
+  `CompileWidgetBlueprint`); widget/slot properties via `ObjectTools.get/set_properties`.
+- Graphs: `BlueprintTools.read_graph_dsl` to read; edit with `find_nodes` / `get_node_infos` /
+  `delete_node` / `create_node` / `connect_pins`. Nodes with stale pins can't be refreshed — delete,
+  compile (so new variables enter the class), then recreate. A new widget variable's getter may be
+  missing from `find_node_types`, but `create_node "Variables|<BP>|Get<Name>"` still works.
+- `FInstancedStruct` JSON: `{"_structType": "/Script/Module.Struct", "field": ...}` (camelCase).
+  Arrays are applied as diffs: `reset_properties` first, then set the full array.
+- Saving: `AssetTools.save_assets` with package paths. Level-placed actors (One File Per Actor) only
+  save via `save_assets` with an empty list (= all dirty packages) — check `git status` afterwards.
+- Runtime check: `EditorAppToolset.StartPIE/StopPIE` + `LogsToolset.GetLogEntries`;
+  C++ changes while the editor is open: `LiveCodingToolset.CompileLiveCoding`.
+
 Build editor target from the command line (close the editor first or use Live Coding instead):
 
 ```powershell
@@ -65,8 +79,8 @@ included by bare filename.
 
 ## Git
 
-- `.uasset` / `.umap` and binary media go through Git LFS (see `.gitattributes`); assets are
-  `lockable`.
+- `.uasset` / `.umap` and binary media go through Git LFS (see `.gitattributes`). Not `lockable`:
+  there is no LFS lock server, and lockable files are checked out read-only (the editor can't save).
 - Never commit `Binaries/`, `Intermediate/`, `Saved/`, `DerivedDataCache/`, generated `.sln`,
   IDE folders or `Content/Developers/`.
 
@@ -94,14 +108,23 @@ included by bare filename.
 
 ## Current state (as of 2026-11-24)
 
-C++ builds. Inventory core, replication and presenter/Slate wiring were fixed on 2026-11-24 but
-**not yet verified in PIE**.
+C++ and all project blueprints compile. In PIE (standalone, server) both level containers fill
+their inventories (`LogTypicalShooter: ... placed N of N manifest items`). The UI path has not been
+seen on screen yet, and multiplayer replication is untested.
+
+UI widgets: `BP_HUD` → `SetContainer(Container)` → `BP_ContainerGrid.SetContainer` →
+`CreatePresenter` + `InventoryGridWidget_237.AssignPresenter`. `BP_ContainerGrid` / `BP_InventoryGrid`
+draw empty background cells (`BP_Slot_InventoryGrid`) in an `HhGridPanelWidget` named `GridPanel`;
+in `BP_ContainerGrid` it sits under the item grid in an Overlay. `BP_InventoryGrid` is the player's
+own inventory panel (no inventory component on the player yet).
+
+The two level containers hold test items (`Test Medkit/Ammo/Grenade`, `Test Armor/Scope`) with
+`FInfo_ItemFragment` (placeholder icon `T_UE_Logo_M`).
 
 Open work:
-- `BP_ContainerGrid` and `BP_InventoryGrid` still use the old BP-driven grid (deleted `GridPanel`
-  `UHhGridPanelWidget` variable + `AddChildToGrid` nodes) and fail to compile. Needs editor work:
-  replace with `UInventoryGridWidget` + `AssignPresenter(CreatePresenter(...))`.
-- No item in the level has an `FInfo_ItemFragment` yet, so items show their object name only.
+- **Nothing calls `BP_HUD.SetContainer`**: `PrimaryInteract` (C++ `BlueprintNativeEvent` on the
+  controller) has no implementation, so a container never opens in game.
+- Player inventory: no `UInventoryComponent` on the character; `BP_InventoryGrid` shows only cells.
 - Drag & drop between cells/containers: `SInventoryGridItem` has stub handlers; no server RPC for moves.
 
 Verify blueprints headlessly with:

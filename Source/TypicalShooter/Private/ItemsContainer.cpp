@@ -7,6 +7,7 @@
 #include "Components/SphereComponent.h"
 #include "InventoryComponent.h"
 #include "Net/UnrealNetwork.h"
+#include "TypicalShooter.h"
 
 
 AItemsContainer::AItemsContainer(const FObjectInitializer& ObjectInitializer) : 
@@ -47,6 +48,9 @@ void AItemsContainer::BeginPlay()
 			ItemIdx++;
 		}
 	}
+
+	UE_LOG(LogTypicalShooter, Log, TEXT("%s: placed %d of %d manifest items"),
+		*GetName(), InventoryComponent->GetNumItems(), ItemsManifest.Num());
 }
 
 void AItemsContainer::GetLifetimeReplicatedProps(TArray<class FLifetimeProperty>& OutLifetimeProps) const
