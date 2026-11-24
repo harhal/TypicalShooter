@@ -29,9 +29,36 @@ void SHhGridPanel::RemoveSlot(const FHhAxialCoord& Coord)
     }
 }
 
+bool SHhGridPanel::RemoveSlot(const TSharedRef<SWidget>& SlotWidget)
+{
+    for (int32 i = Children.Num() - 1; i >= 0; --i)
+    {
+        if (Children[i].GetWidget() == SlotWidget)
+        {
+            Children.RemoveAt(i);
+            Invalidate(EInvalidateWidgetReason::Layout);
+            return true;
+        }
+    }
+    return false;
+}
+
+SHhGridPanel::FSlot* SHhGridPanel::FindSlot(const TSharedRef<SWidget>& SlotWidget)
+{
+    for (int32 i = 0; i < Children.Num(); ++i)
+    {
+        if (Children[i].GetWidget() == SlotWidget)
+        {
+            return &Children[i];
+        }
+    }
+    return nullptr;
+}
+
 void SHhGridPanel::ClearChildren()
 {
     Children.Empty();
+    Invalidate(EInvalidateWidgetReason::Layout);
 }
  
 void SHhGridPanel::SetHexSize(float NewSize)

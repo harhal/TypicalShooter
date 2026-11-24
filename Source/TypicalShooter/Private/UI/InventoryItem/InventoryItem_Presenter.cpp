@@ -2,13 +2,13 @@
 
 #include "UI/InventoryItem/InventoryItem_View.h"
 
-void UInventoryItem_Presenter::SetModel(TScriptInterface<IInventoryItem_Model> InModel)
+void UInventoryItem_Presenter::SetModel(const TScriptInterface<IInventoryItem_Model>& InModel)
 {
 	Model = InModel;
 	UpdateView();
 }
 
-void UInventoryItem_Presenter::SetView(TSharedPtr<IInventoryItem_View> InView)
+void UInventoryItem_Presenter::SetView(const TSharedPtr<IInventoryItem_View>& InView)
 {
 	View = InView;
 	UpdateView();
@@ -16,26 +16,27 @@ void UInventoryItem_Presenter::SetView(TSharedPtr<IInventoryItem_View> InView)
 
 void UInventoryItem_Presenter::UpdateView() const
 {
-	if (!View.Get())
+	const TSharedPtr<IInventoryItem_View> PinnedView = View.Pin();
+	if (!PinnedView.IsValid())
 	{
 		return;
 	}
-	
-	FSlateBrush Icon = FSlateBrush();
-	FString Name = FString();
-	FString Description = FString();
+
+	FSlateBrush Icon;
+	FText Name;
+	FText Description;
 	int32 Count = 0;
-	
+
 	if (IsValid(Model.GetObject()))
 	{
-		Icon = Model->GetIcon();
-		Name = Model->GetName();
-		Description = Model->GetDescription();
-		Count = Model->GetCount();
+		Icon = Model->GetItemIcon();
+		Name = Model->GetItemName();
+		Description = Model->GetItemDescription();
+		Count = Model->GetItemCount();
 	}
-	
-	View->SetIcon(Icon);
-	View->SetName(Name);
-	View->SetDescription(Description);
-	View->SetCount(Count);
+
+	PinnedView->SetIcon(Icon);
+	PinnedView->SetName(Name);
+	PinnedView->SetDescription(Description);
+	PinnedView->SetCount(Count);
 }

@@ -1,12 +1,22 @@
 // Fill out your copyright notice in the Description page of Project Settings.
 
 #include "UI/Widget/InventoryGridWidget.h"
+
 #include "UI/ItemsContainer/ItemsContainer_Presenter.h"
+#include "UI/Slate/InventoryGrid.h"
 
 void UInventoryGridWidget::AssignPresenter(UItemsContainer_Presenter* InPresenter)
 {
-	Presenter = TStrongObjectPtr(InPresenter);
-	Presenter->SetView(SlateGrid);
+	if (Presenter && Presenter != InPresenter)
+	{
+		Presenter->SetView(nullptr);
+	}
+
+	Presenter = InPresenter;
+	if (Presenter && SlateGrid.IsValid())
+	{
+		Presenter->SetView(SlateGrid);
+	}
 }
 
 void UInventoryGridWidget::ReleaseSlateResources(bool bReleaseChildren)
@@ -18,10 +28,9 @@ void UInventoryGridWidget::ReleaseSlateResources(bool bReleaseChildren)
 TSharedRef<SWidget> UInventoryGridWidget::RebuildWidget()
 {
 	SlateGrid = SNew(SInventoryGrid).HexSize(HexSize).GridSize(PreviewGridSize);
-	if (Presenter.IsValid())
+	if (Presenter)
 	{
 		Presenter->SetView(SlateGrid);
 	}
 	return SlateGrid.ToSharedRef();
 }
-

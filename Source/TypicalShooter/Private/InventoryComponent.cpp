@@ -10,14 +10,30 @@ UInventoryComponent::UInventoryComponent()
 	bReplicateUsingRegisteredSubObjectList = true;
 }
 
-void UInventoryComponent::AddItem(const struct FInventoryItemManifest& ItemManifest, const FHhAxialCoord& Location)
+void UInventoryComponent::PostInitProperties()
 {
-	InventoryArray.AddItem(ItemManifest, Location);
+	Super::PostInitProperties();
+
+	// After property initialization so the owner is never left pointing at an archetype.
+	InventoryArray.SetOwner(this);
 }
 
-void UInventoryComponent::AddItem(UInventoryItem* Item, const FHhAxialCoord& Location)
+void UInventoryComponent::ReadyForReplication()
 {
-	InventoryArray.AddItem(Item, Location);
+	Super::ReadyForReplication();
+
+	// Items added before the component was ready were not registered yet.
+	InventoryArray.RegisterReplicatedSubObjects();
+}
+
+UInventoryItem* UInventoryComponent::AddItem(const FInventoryItemManifest& ItemManifest, const FHhAxialCoord& Location)
+{
+	return InventoryArray.AddItem(ItemManifest, Location);
+}
+
+bool UInventoryComponent::AddItem(UInventoryItem* Item, const FHhAxialCoord& Location)
+{
+	return InventoryArray.AddItem(Item, Location);
 }
 
 void UInventoryComponent::RemoveItem(const UInventoryItem* Item)
@@ -30,22 +46,22 @@ void UInventoryComponent::RemoveItem(const FHhAxialCoord& Location)
 	InventoryArray.RemoveItem(Location);
 }
 
-void UInventoryComponent::MoveItem(const UInventoryItem* Item, const FHhAxialCoord& Location)
+bool UInventoryComponent::MoveItem(const UInventoryItem* Item, const FHhAxialCoord& Location)
 {
-	InventoryArray.MoveItem(Item, Location);
+	return InventoryArray.MoveItem(Item, Location);
 }
 
-void UInventoryComponent::ProcessItemAdded(const UInventoryItem* Item, const FHhAxialCoord& Location) const
+void UInventoryComponent::ProcessItemAdded(const UInventoryItem* Item, const FHhAxialCoord& Location)
 {
 	OnItemAddedDelegate.Broadcast(Item, Location);
 }
 
-void UInventoryComponent::ProcessItemRemoved(const UInventoryItem* Item, const FHhAxialCoord& Location) const
+void UInventoryComponent::ProcessItemRemoved(const UInventoryItem* Item, const FHhAxialCoord& Location)
 {
 	OnItemRemovedDelegate.Broadcast(Item);
 }
 
-void UInventoryComponent::ProcessItemMoved(const UInventoryItem* Item, const FHhAxialCoord& Location, const FHhAxialCoord& PrevLocation) const
+void UInventoryComponent::ProcessItemMoved(const UInventoryItem* Item, const FHhAxialCoord& Location, const FHhAxialCoord& PrevLocation)
 {
 	OnItemMovedDelegate.Broadcast(Item, Location, PrevLocation);
 }
@@ -53,26 +69,11 @@ void UInventoryComponent::ProcessItemMoved(const UInventoryItem* Item, const FHh
 void UInventoryComponent::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
 {
 	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
-	
+
 	DOREPLIFETIME(ThisClass, InventoryArray);
 }
 
 TArray<TPair<UInventoryItem*, FHhAxialCoord>> UInventoryComponent::GetPlacedItems() const
 {
 	return InventoryArray.GetPlacedItems();
-}
-
-FItemAddedDelegate UInventoryComponent::GetItemAddedDelegate() const
-{
-	return OnItemAddedDelegate;
-}
-
-FItemRemovedDelegate UInventoryComponent::GetItemRemovedDelegate() const
-{
-	return OnItemRemovedDelegate;
-}
-
-FItemMovedDelegate UInventoryComponent::GetItemMovedDelegate() const
-{
-	return OnItemMovedDelegate;
 }

@@ -10,10 +10,10 @@
 class UInventoryItem;
 
 DECLARE_MULTICAST_DELEGATE_TwoParams(FItemAddedDelegate, const UInventoryItem*, const FHhAxialCoord&);
-DECLARE_MULTICAST_DELEGATE_ThreeParams(FItemMovedDelegate, const UInventoryItem*, const FHhAxialCoord&, const FHhAxialCoord&);
+DECLARE_MULTICAST_DELEGATE_ThreeParams(FItemMovedDelegate, const UInventoryItem*, const FHhAxialCoord& /*Location*/, const FHhAxialCoord& /*PrevLocation*/);
 DECLARE_MULTICAST_DELEGATE_OneParam(FItemRemovedDelegate, const UInventoryItem*);
 
-UINTERFACE(MinimalAPI)
+UINTERFACE(MinimalAPI, meta = (CannotImplementInterfaceInBlueprint))
 class UItemsContainer_Model : public UInterface
 {
 	GENERATED_BODY()
@@ -23,8 +23,10 @@ class IItemsContainer_Model
 {
 	GENERATED_BODY()
 public:
-	virtual TArray<TPair<UInventoryItem*, FHhAxialCoord>> GetPlacedItems() const { return TArray<TPair<UInventoryItem*, FHhAxialCoord>>();}
-	virtual FItemAddedDelegate GetItemAddedDelegate() const { return FItemAddedDelegate();}
-	virtual FItemRemovedDelegate GetItemRemovedDelegate() const { return FItemRemovedDelegate(); }
-	virtual FItemMovedDelegate GetItemMovedDelegate() const { return FItemMovedDelegate(); }
+	virtual TArray<TPair<UInventoryItem*, FHhAxialCoord>> GetPlacedItems() const = 0;
+
+	/** Delegates are returned by reference so listeners bind to the model's own instances. */
+	virtual FItemAddedDelegate& GetItemAddedDelegate() = 0;
+	virtual FItemRemovedDelegate& GetItemRemovedDelegate() = 0;
+	virtual FItemMovedDelegate& GetItemMovedDelegate() = 0;
 };

@@ -3,15 +3,15 @@
 #pragma once
 
 #include "CoreMinimal.h"
-#include "UObject/Object.h"
+#include "Styling/SlateBrush.h"
 
 class TYPICALSHOOTER_API IInventoryItem_View
 {
 public:
-    virtual ~IInventoryItem_View() = default;	
-		
-	virtual void SetIcon(FSlateBrush IconBrush) = 0;
-	virtual void SetName(FString Name) = 0;
-	virtual void SetDescription(FString Description) = 0;
+	virtual ~IInventoryItem_View() = default;
+
+	virtual void SetIcon(const FSlateBrush& IconBrush) = 0;
+	virtual void SetName(const FText& Name) = 0;
+	virtual void SetDescription(const FText& Description) = 0;
 	virtual void SetCount(int32 Count) = 0;
 };

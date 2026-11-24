@@ -2,12 +2,13 @@
 
 
 #include "InventoryItem.h"
+#include "Engine/Texture2D.h"
 #include "Net/UnrealNetwork.h"
 
 void UInventoryItem::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
 {
 	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
-	
+
 	DOREPLIFETIME(ThisClass, ItemManifest);
 }
 
@@ -16,22 +17,37 @@ void UInventoryItem::SetItemManifest(const FInventoryItemManifest& NewItemManife
 	ItemManifest = FInstancedStruct::Make(NewItemManifest);
 }
 
-FSlateBrush UInventoryItem::GetIcon()
+const FInfo_ItemFragment* UInventoryItem::GetInfoFragment() const
 {
-	return IInventoryItem_Model::GetIcon();
+	const FInventoryItemManifest* Manifest = GetItemManifest();
+	return Manifest ? Manifest->GetFragmentOfType<FInfo_ItemFragment>() : nullptr;
 }
 
-FString UInventoryItem::GetName()
+FSlateBrush UInventoryItem::GetItemIcon() const
 {
-	return IInventoryItem_Model::GetName();
+	FSlateBrush Brush;
+	if (const FInfo_ItemFragment* Info = GetInfoFragment(); Info && Info->Icon)
+	{
+		Brush.SetResourceObject(Info->Icon);
+		Brush.ImageSize = FVector2D(Info->Icon->GetSizeX(), Info->Icon->GetSizeY());
+	}
+	return Brush;
 }
 
-FString UInventoryItem::GetDescription()
+FText UInventoryItem::GetItemName() const
 {
-	return IInventoryItem_Model::GetDescription();
+	const FInfo_ItemFragment* Info = GetInfoFragment();
+	return Info ? Info->DisplayName : FText::FromString(GetName());
 }
 
-int32 UInventoryItem::GetCount()
+FText UInventoryItem::GetItemDescription() const
 {
-	return IInventoryItem_Model::GetCount();
+	const FInfo_ItemFragment* Info = GetInfoFragment();
+	return Info ? Info->Description : FText::GetEmpty();
+}
+
+int32 UInventoryItem::GetItemCount() const
+{
+	// Stacking is not implemented yet: every item is a single unit.
+	return 1;
 }

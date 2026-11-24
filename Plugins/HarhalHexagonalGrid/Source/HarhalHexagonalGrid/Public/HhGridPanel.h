@@ -64,7 +64,13 @@ public:
 	TPanelChildren<FSlot>::FScopedWidgetSlotArguments AddSlot(const FHhAxialCoord& Coord);
  
 	void RemoveSlot(const FHhAxialCoord& Coord);
- 
+
+	/** Removes the slot holding the given widget. Returns true if a slot was removed. */
+	bool RemoveSlot(const TSharedRef<SWidget>& SlotWidget);
+
+	/** Finds the slot holding the given widget, nullptr if none. */
+	FSlot* FindSlot(const TSharedRef<SWidget>& SlotWidget);
+
     void ClearChildren();
  
 	void SetHexSize(float NewSize);

@@ -4,6 +4,9 @@
 #include "UI/Slate/InventoryGridItem.h"
 
 #include "SlateOptMacros.h"
+#include "Widgets/Images/SImage.h"
+#include "Widgets/Input/SButton.h"
+#include "Widgets/Text/STextBlock.h"
 
 BEGIN_SLATE_FUNCTION_BUILD_OPTIMIZATION
 
@@ -21,14 +24,15 @@ void SInventoryGridItem::Construct(const FArguments& InArgs)
 		.ButtonStyle(FCoreStyle::Get(), "NoBorder")
 		[
 			SNew(SVerticalBox)
- 
+
 			+ SVerticalBox::Slot()
 			.AutoHeight()
 			.HAlign(HAlign_Center)
 			[
 				SAssignNew(IconBrushWidget, SImage)
+				.Image(&IconBrush)
 			]
- 
+
 			+ SVerticalBox::Slot()
 			.AutoHeight()
 			.HAlign(HAlign_Center)
@@ -40,6 +44,8 @@ void SInventoryGridItem::Construct(const FArguments& InArgs)
 		]
 	];
 }
+
+END_SLATE_FUNCTION_BUILD_OPTIMIZATION
 
 void SInventoryGridItem::HandleHovered(bool bHovered)
 {
@@ -54,22 +60,24 @@ FReply SInventoryGridItem::HandleDrag(const FGeometry& Geometry, const FPointerE
 	return FReply::Handled();
 }
 
-void SInventoryGridItem::SetIcon(FSlateBrush IconBrush)
+void SInventoryGridItem::SetIcon(const FSlateBrush& InIconBrush)
 {
+	IconBrush = InIconBrush;
 	IconBrushWidget->SetImage(&IconBrush);
 }
 
-void SInventoryGridItem::SetName(FString Name)
+void SInventoryGridItem::SetName(const FText& InName)
 {
-	NameTextBlock->SetText(*Name);
+	NameTextBlock->SetText(InName);
 }
 
-void SInventoryGridItem::SetDescription(FString Description)
+void SInventoryGridItem::SetDescription(const FText& InDescription)
 {
+	Description = InDescription;
+	SetToolTipText(Description);
 }
 
-void SInventoryGridItem::SetCount(int32 Count)
+void SInventoryGridItem::SetCount(int32 InCount)
 {
+	Count = InCount;
 }
-
-END_SLATE_FUNCTION_BUILD_OPTIMIZATION

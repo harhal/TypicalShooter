@@ -34,9 +34,18 @@ void AItemsContainer::BeginPlay()
 	int32 ItemIdx = 0;
 	for (const FInstancedStruct& ItemManifest : ItemsManifest)
 	{
-		FHhAxialCoord ItemCoords = UHhGridFunctions::MakeHexAxialCoordFromSpiral(ItemIdx);
-		InventoryComponent->AddItem(ItemManifest.Get<FInventoryItemManifest>(), ItemCoords);
-		ItemIdx++;		
+		// Entries left empty in the editor have no struct set.
+		const FInventoryItemManifest* Manifest = ItemManifest.GetPtr<FInventoryItemManifest>();
+		if (!Manifest)
+		{
+			continue;
+		}
+
+		const FHhAxialCoord ItemCoords = UHhGridFunctions::MakeHexAxialCoordFromSpiral(ItemIdx);
+		if (InventoryComponent->AddItem(*Manifest, ItemCoords))
+		{
+			ItemIdx++;
+		}
 	}
 }
 
@@ -45,6 +54,26 @@ void AItemsContainer::GetLifetimeReplicatedProps(TArray<class FLifetimeProperty>
 	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
 	
 	DOREPLIFETIME(ThisClass, ItemsManifest);
+}
+
+TArray<TPair<UInventoryItem*, FHhAxialCoord>> AItemsContainer::GetPlacedItems() const
+{
+	return InventoryComponent->GetPlacedItems();
+}
+
+FItemAddedDelegate& AItemsContainer::GetItemAddedDelegate()
+{
+	return InventoryComponent->GetItemAddedDelegate();
+}
+
+FItemRemovedDelegate& AItemsContainer::GetItemRemovedDelegate()
+{
+	return InventoryComponent->GetItemRemovedDelegate();
+}
+
+FItemMovedDelegate& AItemsContainer::GetItemMovedDelegate()
+{
+	return InventoryComponent->GetItemMovedDelegate();
 }
 
 void AItemsContainer::Tick(float DeltaTime)

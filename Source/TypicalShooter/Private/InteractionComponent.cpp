@@ -38,7 +38,7 @@ void UInteractionComponent::GetOverlapActors(TArray<AActor*>& OutOverlapActors)
 
 TScriptInterface<IPlayerInteractive> UInteractionComponent::GetInteractionAPI(AActor* Actor)
 {	
-	if (Actor->Implements<UPlayerInteractive>())
+	if (IsValid(Actor) && Actor->Implements<UPlayerInteractive>())
 	{
 		return TScriptInterface<IPlayerInteractive>(Actor);
 	}
@@ -51,14 +51,15 @@ void UInteractionComponent::UpdateOverlapList(const FTraceHandle& CompleteTraceH
 {
 	TraceHandle = FTraceHandle();
 	
-	OverlapActors.Empty();
-	OverlapActors.Reserve(OverlapDatum.OutOverlaps.Num());
-	
-	Algo::Transform(OverlapDatum.OutOverlaps, OverlapActors, [](const FOverlapResult& Overlap)
+	OverlapActors.Reset(OverlapDatum.OutOverlaps.Num());
+
+	for (const FOverlapResult& Overlap : OverlapDatum.OutOverlaps)
 	{
-	
-	UE_LOG(LogActor, Log, TEXT("Overlap actor %s"), *Overlap.GetActor()->GetName());
-		return Overlap.GetActor();
-	});
+		AActor* Actor = Overlap.GetActor();
+		if (IsValid(Actor) && Actor != GetOwner())
+		{
+			OverlapActors.AddUnique(Actor);
+		}
+	}
 }
 

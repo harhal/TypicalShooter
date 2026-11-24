@@ -9,23 +9,22 @@
 
 class IInventoryItem_View;
 /**
- * 
+ * Pushes item model data into an item view.
  */
 UCLASS(BlueprintType)
 class TYPICALSHOOTER_API UInventoryItem_Presenter : public UObject
 {
 	GENERATED_BODY()
-	
+
 	UPROPERTY()
 	TScriptInterface<IInventoryItem_Model> Model;
-	
-	TSharedPtr<IInventoryItem_View> View;
 
-public:	
-	UFUNCTION(BlueprintCallable)
-	void SetModel(TScriptInterface<IInventoryItem_Model> InModel);	
-	void SetView(TSharedPtr<IInventoryItem_View> InView);
-	
-private:
+	TWeakPtr<IInventoryItem_View> View;
+
+public:
+	UFUNCTION(BlueprintCallable, Category = "Inventory")
+	void SetModel(const TScriptInterface<IInventoryItem_Model>& InModel);
+	void SetView(const TSharedPtr<IInventoryItem_View>& InView);
+
 	void UpdateView() const;
 };

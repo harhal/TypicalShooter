@@ -12,60 +12,67 @@ BEGIN_SLATE_FUNCTION_BUILD_OPTIMIZATION
 
 void SInventoryGrid::Construct(const FArguments& InArgs)
 {
-	GridPanel = SNew(SHhGridPanel)
-		.HexSize(InArgs._HexSize)
-		.HorizontalSize(InArgs._GridSize)
-		.VerticalSize(InArgs._GridSize);
-	
 	ChildSlot
 	[
-		GridPanel
+		SAssignNew(GridPanel, SHhGridPanel)
+		.HexSize(InArgs._HexSize)
+		.HorizontalSize(InArgs._GridSize)
+		.VerticalSize(InArgs._GridSize)
 	];
 }
 
+END_SLATE_FUNCTION_BUILD_OPTIMIZATION
+
 FGuid SInventoryGrid::AddInventoryItem(UInventoryItem_Presenter* Item, const FHhAxialCoord& Location)
 {
-	const TSharedRef<SInventoryGridItem> InventoryGridItem = SNew(SInventoryGridItem);
-	SHhGridPanel::FSlot* Slot;
+	const TSharedRef<SInventoryGridItem> ItemWidget = SNew(SInventoryGridItem);
 	GridPanel->AddSlot(Location)
-	.Expose(Slot)
 	[
-		InventoryGridItem
+		ItemWidget
 	];
-	const FGuid& SlotGuid = FGuid::NewGuid();
-	ChildSlots.Add(SlotGuid, MakeShareable(Slot));
-	
-	Item->SetView(InventoryGridItem);
-	
+
+	const FGuid SlotGuid = FGuid::NewGuid();
+	ItemWidgets.Add(SlotGuid, ItemWidget);
+
+	if (Item)
+	{
+		Item->SetView(ItemWidget);
+	}
+
 	return SlotGuid;
 }
 
 void SInventoryGrid::MoveInventoryItem(const FGuid& SlotGuid, const FHhAxialCoord& Location)
 {
-	if (ChildSlots.Contains(SlotGuid))
+	const TSharedRef<SInventoryGridItem>* ItemWidget = ItemWidgets.Find(SlotGuid);
+	if (!ItemWidget)
 	{
-		ChildSlots[SlotGuid]->SetCoord(Location);
+		return;
+	}
+
+	if (SHhGridPanel::FSlot* Slot = GridPanel->FindSlot(*ItemWidget))
+	{
+		Slot->SetCoord(Location);
 	}
 }
 
 void SInventoryGrid::RemoveInventoryItem(const FGuid& SlotGuid)
 {
-	if (ChildSlots.Contains(SlotGuid))
+	TSharedPtr<SInventoryGridItem> ItemWidget;
+	if (TSharedRef<SInventoryGridItem>* Found = ItemWidgets.Find(SlotGuid))
 	{
-		ChildSlots.Remove(SlotGuid);
+		ItemWidget = *Found;
+		ItemWidgets.Remove(SlotGuid);
+	}
+
+	if (ItemWidget.IsValid())
+	{
+		GridPanel->RemoveSlot(ItemWidget.ToSharedRef());
 	}
 }
 
-void SInventoryGrid::GetAddItemDelegate()
+void SInventoryGrid::ClearInventoryItems()
 {
+	ItemWidgets.Reset();
+	GridPanel->ClearChildren();
 }
-
-void SInventoryGrid::GetRemoveItemDelegate()
-{
-}
-
-void SInventoryGrid::GetMoveItemDelegate()
-{
-}
-
-END_SLATE_FUNCTION_BUILD_OPTIMIZATION

@@ -63,45 +63,40 @@ included by bare filename.
 
 ## Architecture (custom code)
 
-- **Items**: `FInventoryItemManifest` = array of `TInstancedStruct<FItemFragment>` (fragments are
-  identified by `FGameplayTag`; `FGrid_ItemFragment` has `Size`). `ManifestItem()` creates a
-  `UInventoryItem` (UObject, replicated as a subobject).
+- **Items**: `FInventoryItemManifest` = array of `TInstancedStruct<FItemFragment>`; look fragments up
+  with `GetFragmentOfType<T>()` or by tag with `GetFragment<T>(Tag)`. Fragments: `FGrid_ItemFragment`
+  (`Size`), `FInfo_ItemFragment` (`DisplayName`, `Description`, `Icon` — feeds the UI).
+  `ManifestItem()` creates a `UInventoryItem` (UObject, replicated as a subobject).
 - **Inventory**: `UInventoryComponent` owns `FInventoryArray` (FastArraySerializer of
-  `{Item, FHhAxialCoord Location}` + `CoordsMap` lookup) and broadcasts added/removed/moved delegates.
-- **World**: `AItemsContainer` (implements `IPlayerInteractive`) fills its inventory from
-  `ItemsManifest` on the server, laying items out in a hex spiral. Two `BP_ItemsContainer` instances
-  are placed in `Lvl_FirstPerson`.
+  `{Item, FHhAxialCoord Location}`, linear lookups, one item per cell) and broadcasts
+  added/removed/moved delegates on server and clients. Mutations (`AddItem/RemoveItem/MoveItem`) are
+  **server-only**; there are no RPCs yet for client-initiated moves.
+- **World**: `AItemsContainer` (implements `IPlayerInteractive` and `IItemsContainer_Model`, forwarding
+  to its `InventoryComponent`) fills its inventory from `ItemsManifest` on the server, laying items out
+  in a hex spiral. Two `BP_ItemsContainer` instances are placed in `Lvl_FirstPerson`.
 - **Interaction**: `UInteractionComponent` on the character does an async sphere overlap on
   `ECC_GameTraceChannel2` ("PlayerInteraction") every tick; `PrimaryInteract` input on the controller.
 - **UI (MVP)**: Model interfaces (`IInventoryItem_Model`, `IItemsContainer_Model`, implemented by
   `UInventoryItem` / `UInventoryComponent`) → UObject presenters → view interfaces implemented by
-  Slate widgets (`SInventoryGrid` on top of `SHhGridPanel`, `SInventoryGridItem`). UMG entry point is
-  `UInventoryGridWidget::AssignPresenter`. HUD (`BP_HUD`) is spawned by `BP_FirstPersonPlayerController`.
+  Slate widgets (`SInventoryGrid` on top of `SHhGridPanel`, `SInventoryGridItem`). UMG entry point:
+  `UItemsContainer_Presenter::CreatePresenter(Model)` → `UInventoryGridWidget::AssignPresenter`.
+  HUD (`BP_HUD`) is spawned by `BP_FirstPersonPlayerController`.
 - Custom content lives in `Content/Inventory` (note the folder typo `Bllueprints`).
 
 ## Current state (as of 2026-11-24)
 
-Work stopped (2026-09-30) in the middle of wiring the inventory UI. Last successful build was
-2026-09-11; the current tree **does not compile**.
+C++ builds. Inventory core, replication and presenter/Slate wiring were fixed on 2026-11-24 but
+**not yet verified in PIE**.
 
-Known problems, roughly in fixing order:
-1. Build error: `SInventoryGridItem::SetName` passes `*Name` to `STextBlock::SetText` (needs `FText`).
-   `SetIcon` stores a pointer to a by-value local brush (dangling).
-2. `FInventoryArray::Owner` is never assigned → `AddItem` returns early; containers stay empty.
-3. `FInventoryArray_Entry::Item` / `Location` are not `UPROPERTY` → nothing replicates.
-   (`TStrongObjectPtr` should be a `UPROPERTY() TObjectPtr`.)
-4. `FInventoryArray::RemoveItem(idx)` indexes `Entries[Idx]` after `RemoveAtSwap` (breaks when removing
-   the last element); `MoveItem` uses `CoordsMap[Location]` on a missing key (assert).
-5. `UInventoryComponent::Get*Delegate()` and `IItemsContainer_Model` return delegates **by value** →
-   presenter subscriptions bind to copies and never fire. Presenter `OnItemAdded/Removed/Moved` are stubs.
-6. `SInventoryGrid::AddInventoryItem` wraps a panel-owned `FSlot*` in `MakeShareable` (double free);
-   `RemoveInventoryItem` doesn't remove the slot from the panel.
-7. `UInventoryItem` model getters return interface defaults (no data from fragments yet).
-   `FInventoryItemManifest::GetFragment` iterates by value and returns a pointer into a copy.
-8. `BP_ContainerGrid` references a removed `CreatePresenter` function and a deleted `GridPanel`
-   variable (editor warnings on load).
-9. Plugin: `UHhGridPanelWidget::ReleaseSlateResources` dereferences `SlateGridPanel` without a check;
-   UMG classes lack the `HARHALHEXAGONALGRID_API` export.
+Open work:
+- `BP_ContainerGrid` and `BP_InventoryGrid` still use the old BP-driven grid (deleted `GridPanel`
+  `UHhGridPanelWidget` variable + `AddChildToGrid` nodes) and fail to compile. Needs editor work:
+  replace with `UInventoryGridWidget` + `AssignPresenter(CreatePresenter(...))`.
+- No item in the level has an `FInfo_ItemFragment` yet, so items show their object name only.
+- Drag & drop between cells/containers: `SInventoryGridItem` has stub handlers; no server RPC for moves.
+
+Verify blueprints headlessly with:
+`UnrealEditor-Cmd.exe <uproject> -run=CompileAllBlueprints -unattended -nopause -NullRHI -stdout`
 
 Game design (roguelike arena loop, weapons, enemies) has not been started; `Variant_Shooter` template
 code is the current basis for combat/AI.

@@ -13,14 +13,20 @@ class UInventoryComponent;
 class USphereComponent;
 
 UCLASS()
-class TYPICALSHOOTER_API AItemsContainer : public AActor, public IPlayerInteractive
+class TYPICALSHOOTER_API AItemsContainer : public AActor, public IPlayerInteractive, public IItemsContainer_Model
 {
 	GENERATED_BODY()
 
 public:
 	AItemsContainer(const FObjectInitializer& ObjectInitializer);
-	
+
 	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
+
+	// IItemsContainer_Model, forwarded to InventoryComponent
+	virtual TArray<TPair<UInventoryItem*, FHhAxialCoord>> GetPlacedItems() const override;
+	virtual FItemAddedDelegate& GetItemAddedDelegate() override;
+	virtual FItemRemovedDelegate& GetItemRemovedDelegate() override;
+	virtual FItemMovedDelegate& GetItemMovedDelegate() override;
 
 protected:
 	virtual void BeginPlay() override;

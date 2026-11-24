@@ -13,16 +13,16 @@
 class SHhGridPanel;
 
 UCLASS()
-class UHhGridPanelSlotWidget : public UPanelSlot
+class HARHALHEXAGONALGRID_API UHhGridPanelSlotWidget : public UPanelSlot
 {
 	GENERATED_BODY()
- 
+
 public:
 	UPROPERTY(EditAnywhere, Category = "HHex")
 	FHhAxialCoord Coord;
- 
-private:	
-	SHhGridPanel::FSlot* Slot;
+
+private:
+	SHhGridPanel::FSlot* Slot = nullptr;
 	
 public:
 	
@@ -43,7 +43,7 @@ public:
 };
  
 UCLASS()
-class UHhGridPanelWidget : public UPanelWidget
+class HARHALHEXAGONALGRID_API UHhGridPanelWidget : public UPanelWidget
 {
 	GENERATED_BODY()
  

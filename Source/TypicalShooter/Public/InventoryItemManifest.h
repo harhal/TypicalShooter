@@ -10,43 +10,57 @@
 
 class UInventoryItem;
 /**
- * 
+ *
  */
 USTRUCT(BlueprintType)
 struct TYPICALSHOOTER_API FInventoryItemManifest
 {
 	GENERATED_BODY()
-	
+
 public:
 	UInventoryItem* ManifestItem(UObject* Outer) const;
-	
+
+	/** First fragment of type T whose tag matches exactly. */
 	template<typename T>
 	requires std::derived_from<T, FItemFragment>
-	T* GetFragment(const FGameplayTag& FragmentTag) const;
-	
+	const T* GetFragment(const FGameplayTag& FragmentTag) const;
+
+	/** First fragment of type T (or derived from it), regardless of tag. */
+	template<typename T>
+	requires std::derived_from<T, FItemFragment>
+	const T* GetFragmentOfType() const;
+
 	UPROPERTY(EditAnywhere, Category = Inventory, meta = (ExcludeBaseStruct))
 	TArray<TInstancedStruct<FItemFragment>> Fragments;
 };
 
-template <typename T> 
+template <typename T>
 requires std::derived_from<T, FItemFragment>
-T* FInventoryItemManifest::GetFragment(const FGameplayTag& FragmentTag) const
+const T* FInventoryItemManifest::GetFragment(const FGameplayTag& FragmentTag) const
 {
-	for (TInstancedStruct<FItemFragment> Fragment : Fragments)
+	for (const TInstancedStruct<FItemFragment>& Fragment : Fragments)
 	{
-		T* TFragment = Fragment.GetPtr<T>();
-		if (!TFragment)
+		const T* TFragment = Fragment.GetPtr<T>();
+		if (TFragment && TFragment->GetFragmentTag().MatchesTagExact(FragmentTag))
 		{
-			continue;
+			return TFragment;
 		}
-		
-		if (!TFragment->GetFragmentTag().MatchesTagExact(FragmentTag))
-		{
-			continue;
-		}
-		
-		return &Fragment.Get();
 	}
-	
+
+	return nullptr;
+}
+
+template <typename T>
+requires std::derived_from<T, FItemFragment>
+const T* FInventoryItemManifest::GetFragmentOfType() const
+{
+	for (const TInstancedStruct<FItemFragment>& Fragment : Fragments)
+	{
+		if (const T* TFragment = Fragment.GetPtr<T>())
+		{
+			return TFragment;
+		}
+	}
+
 	return nullptr;
 }

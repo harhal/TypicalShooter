@@ -106,9 +106,9 @@ TSharedRef<SWidget> UHhGridPanelWidget::RebuildWidget()
 void UHhGridPanelWidget::ReleaseSlateResources(bool bReleaseChildren)
 {
     Super::ReleaseSlateResources(bReleaseChildren);
-    if (bReleaseChildren)
+    if (bReleaseChildren && SlateGridPanel.IsValid())
     {
         SlateGridPanel->ClearChildren();
-        SlateGridPanel.Reset();
     }
+    SlateGridPanel.Reset();
 }

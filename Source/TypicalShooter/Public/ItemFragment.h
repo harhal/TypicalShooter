@@ -7,6 +7,8 @@
 #include "UObject/Object.h"
 #include "ItemFragment.generated.h"
 
+class UTexture2D;
+
 /**
  * 
  */
@@ -35,7 +37,23 @@ USTRUCT(BlueprintType)
 struct TYPICALSHOOTER_API FGrid_ItemFragment : public FItemFragment
 {
 	GENERATED_BODY()
-	
+
 	UPROPERTY(EditAnywhere, Category = "Item Fragment")
 	int32 Size = 1;
+};
+
+/** Display data shown by inventory UI. */
+USTRUCT(BlueprintType)
+struct TYPICALSHOOTER_API FInfo_ItemFragment : public FItemFragment
+{
+	GENERATED_BODY()
+
+	UPROPERTY(EditAnywhere, Category = "Item Fragment")
+	FText DisplayName;
+
+	UPROPERTY(EditAnywhere, Category = "Item Fragment", meta = (MultiLine = true))
+	FText Description;
+
+	UPROPERTY(EditAnywhere, Category = "Item Fragment")
+	TObjectPtr<UTexture2D> Icon = nullptr;
 };

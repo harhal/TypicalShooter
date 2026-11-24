@@ -16,28 +16,34 @@ class TYPICALSHOOTER_API UInventoryComponent : public UActorComponent, public II
 
 public:
 	UInventoryComponent();
-	
-	void AddItem(const FInventoryItemManifest& ItemManifest, const FHhAxialCoord& Location);	
-	void AddItem(UInventoryItem* Item, const FHhAxialCoord& Location);	
-	void RemoveItem(const UInventoryItem* Item);	
-	void RemoveItem(const FHhAxialCoord& Location);	
-	void MoveItem(const UInventoryItem* Item, const FHhAxialCoord& Location);	
+
+	virtual void PostInitProperties() override;
+	virtual void ReadyForReplication() override;
+
+	/** Server only. Returns the created item or nullptr if the location is occupied. */
+	UInventoryItem* AddItem(const FInventoryItemManifest& ItemManifest, const FHhAxialCoord& Location);
+	bool AddItem(UInventoryItem* Item, const FHhAxialCoord& Location);
+	void RemoveItem(const UInventoryItem* Item);
+	void RemoveItem(const FHhAxialCoord& Location);
+	bool MoveItem(const UInventoryItem* Item, const FHhAxialCoord& Location);
 	FORCEINLINE int32 GetNumItems() const { return InventoryArray.GetNumItems(); }
 
-	void ProcessItemAdded(const UInventoryItem* Item, const FHhAxialCoord& Location) const;
-	void ProcessItemRemoved(const UInventoryItem* Item, const FHhAxialCoord& Location) const;
-	void ProcessItemMoved(const UInventoryItem* Item, const FHhAxialCoord& Location, const FHhAxialCoord& PrevLocation) const;
-	
-	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
-	
-	virtual TArray<TPair<UInventoryItem*, FHhAxialCoord>> GetPlacedItems() const override;
-	virtual FItemAddedDelegate GetItemAddedDelegate() const override;
-	virtual FItemRemovedDelegate GetItemRemovedDelegate() const override;
-	virtual FItemMovedDelegate GetItemMovedDelegate() const override;
+	void ProcessItemAdded(const UInventoryItem* Item, const FHhAxialCoord& Location);
+	void ProcessItemRemoved(const UInventoryItem* Item, const FHhAxialCoord& Location);
+	void ProcessItemMoved(const UInventoryItem* Item, const FHhAxialCoord& Location, const FHhAxialCoord& PrevLocation);
 
+	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
+
+	// IItemsContainer_Model
+	virtual TArray<TPair<UInventoryItem*, FHhAxialCoord>> GetPlacedItems() const override;
+	virtual FItemAddedDelegate& GetItemAddedDelegate() override { return OnItemAddedDelegate; }
+	virtual FItemRemovedDelegate& GetItemRemovedDelegate() override { return OnItemRemovedDelegate; }
+	virtual FItemMovedDelegate& GetItemMovedDelegate() override { return OnItemMovedDelegate; }
+
+private:
 	UPROPERTY(Replicated)
 	FInventoryArray InventoryArray;
-	
+
 	FItemAddedDelegate OnItemAddedDelegate;
 	FItemRemovedDelegate OnItemRemovedDelegate;
 	FItemMovedDelegate OnItemMovedDelegate;
