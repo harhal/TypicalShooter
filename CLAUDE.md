@@ -87,7 +87,14 @@ included by bare filename.
   without a world. Gameplay / UI flow: PIE tests like `TypicalShooter.Inventory.UIFlow` (start PIE,
   feed keys via `UGameViewportClient::InputKey`); keep these for end-to-end scenarios.
 - Run via Unreal MCP `AutomationTestToolset` (`DiscoverTests` → `RunTests` → `GetTestResults`);
-  the whole `TypicalShooter.` suite must pass before a commit.
+  the whole `TypicalShooter.` + `HarhalHexagonalGrid.` suites must pass before a commit.
+  Existing suites: `TypicalShooter.Inventory.Core.*` (bare game world, no PIE),
+  `TypicalShooter.Inventory.UIFlow` (PIE), `HarhalHexagonalGrid.*` (pure math).
+- New test files / UFUNCTIONs need a full build with the editor closed; edits to existing test
+  bodies can go through `LiveCodingToolset.CompileLiveCoding`.
+- Unity builds merge .cpp files: no file-scope `using namespace` or short global names in tests.
+- Gotcha: `TInstancedStruct<FItemFragment>::Make(DerivedLvalue)` picks the variadic overload and
+  slices to the base type — always write `Make<FDerived>(Value)`.
 - Never weaken or delete a failing test to make it pass; if behaviour intentionally changes, update
   the test first.
 
