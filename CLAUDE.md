@@ -98,7 +98,12 @@ included by bare filename.
   to its `InventoryComponent`) fills its inventory from `ItemsManifest` on the server, laying items out
   in a hex spiral. Two `BP_ItemsContainer` instances are placed in `Lvl_FirstPerson`.
 - **Interaction**: `UInteractionComponent` on the character does an async sphere overlap on
-  `ECC_GameTraceChannel2` ("PlayerInteraction") every tick; `PrimaryInteract` input on the controller.
+  `ECC_GameTraceChannel2` ("PlayerInteraction") every tick. `IA_Interact` (key **E**, in
+  `IMC_Default`) → `ATypicalShooterPlayerController::PrimaryInteract`: picks the nearest
+  `IPlayerInteractive` overlap, calls `Interact`, and for an `AItemsContainer` fires the BP event
+  `OnItemsContainerOpened(Container)`; pressing again or leaving range → `OnItemsContainerClosed`.
+  `BP_FirstPersonPlayerController` implements both: `HUD.SetContainer` + show/hide
+  `HUD.BP_ContainerGrid` (collapsed by default). Opening is client-local UI only.
 - **UI (MVP)**: Model interfaces (`IInventoryItem_Model`, `IItemsContainer_Model`, implemented by
   `UInventoryItem` / `UInventoryComponent`) → UObject presenters → view interfaces implemented by
   Slate widgets (`SInventoryGrid` on top of `SHhGridPanel`, `SInventoryGridItem`). UMG entry point:
@@ -121,9 +126,12 @@ own inventory panel (no inventory component on the player yet).
 The two level containers hold test items (`Test Medkit/Ammo/Grenade`, `Test Armor/Scope`) with
 `FInfo_ItemFragment` (placeholder icon `T_UE_Logo_M`).
 
+Container opening on **E** is wired (see Interaction above). Verified via MCP that the container is
+detected in range (HUD interaction hint visible) and everything compiles; the actual key press was
+**not** verified automatically — synthetic keystrokes (SendKeys) don't reach the PIE viewport, so
+test by hand. Log: `LogTypicalShooter: Opened/Closed items container`.
+
 Open work:
-- **Nothing calls `BP_HUD.SetContainer`**: `PrimaryInteract` (C++ `BlueprintNativeEvent` on the
-  controller) has no implementation, so a container never opens in game.
 - Player inventory: no `UInventoryComponent` on the character; `BP_InventoryGrid` shows only cells.
 - Drag & drop between cells/containers: `SInventoryGridItem` has stub handlers; no server RPC for moves.
 
