@@ -21,8 +21,12 @@
 #include "InventoryComponent.h"
 #include "ItemsContainer.h"
 #include "Tests/AutomationEditorCommon.h"
+#include "Engine/LocalPlayer.h"
+#include "InventoryItem.h"
 #include "TypicalShooterPlayerController.h"
+#include "UI/InventoryUISubsystem.h"
 #include "UI/Widget/InventoryGridWidget.h"
+#include "UObject/UObjectIterator.h"
 
 namespace InventoryUIFlowTest
 {
@@ -55,6 +59,19 @@ namespace InventoryUIFlowTest
 		return Widget && Widget->IsVisible();
 	}
 
+	/** The HUD grid bound to the pawn's own inventory (lives inside BP_InventoryGrid). */
+	const UInventoryGridWidget* FindPawnInventoryGrid(const UWorld* World)
+	{
+		for (TObjectIterator<UInventoryGridWidget> It; It; ++It)
+		{
+			if (It->bShowOwningPawnInventory && It->GetWorld() == World && It->GetSlateGrid().IsValid())
+			{
+				return *It;
+			}
+		}
+		return nullptr;
+	}
+
 	struct FState
 	{
 		bool bReady = false;
@@ -63,6 +80,7 @@ namespace InventoryUIFlowTest
 		TWeakObjectPtr<ATypicalShooterPlayerController> Controller;
 		TWeakObjectPtr<AItemsContainer> Container;
 		FVector SavedLocation = FVector::ZeroVector;
+		int32 NumContainerItems = 0;
 
 		UObject* GetHUD() const { return GetObjectProperty(Controller.Get(), TEXT("HUD")); }
 
@@ -203,6 +221,51 @@ bool FInventoryUIFlowTest::RunTest(const FString& Parameters)
 			TestEqual(TEXT("Grid shows every container item"), Grid->GetNumDisplayedItems(), ExpectedItems);
 		}
 	});
+
+	// 3a. Moving items between the container and the player inventory (server RPC path, standalone PIE).
+	Step([this, State]()
+	{
+		ATypicalShooterPlayerController* PC = State->Controller.Get();
+		UInventoryComponent* ContainerInventory = State->Container->InventoryComponent;
+		UInventoryComponent* PlayerInventory = PC->GetPawn()->FindComponentByClass<UInventoryComponent>();
+		const UInventoryGridWidget* PlayerGrid = FindPawnInventoryGrid(State->World.Get());
+		if (!TestNotNull(TEXT("Player has an inventory"), PlayerInventory) || !TestNotNull(TEXT("HUD has a player inventory grid"), PlayerGrid))
+		{
+			return;
+		}
+		State->NumContainerItems = ContainerInventory->GetNumItems();
+		TestEqual(TEXT("Player inventory starts empty"), PlayerInventory->GetNumItems(), 0);
+		TestEqual(TEXT("Player grid starts empty"), PlayerGrid->GetNumDisplayedItems(), 0);
+
+		UInventoryItem* First = ContainerInventory->GetPlacedItems()[0].Key;
+		PC->RequestTransferItem(ContainerInventory, First, PlayerInventory, FHhAxialCoord(0, 0));
+		TestEqual(TEXT("Transfer: item left the container"), ContainerInventory->GetNumItems(), State->NumContainerItems - 1);
+		TestNotNull(TEXT("Transfer: item is in the player's centre cell"), PlayerInventory->GetItemAt(FHhAxialCoord(0, 0)));
+		TestEqual(TEXT("Player grid shows the item"), PlayerGrid->GetNumDisplayedItems(), 1);
+	});
+	Step([this, State]()
+	{
+		ATypicalShooterPlayerController* PC = State->Controller.Get();
+		UInventoryComponent* ContainerInventory = State->Container->InventoryComponent;
+		UInventoryComponent* PlayerInventory = PC->GetPawn()->FindComponentByClass<UInventoryComponent>();
+		UInventoryUISubsystem* UISubsystem = PC->GetLocalPlayer()->GetSubsystem<UInventoryUISubsystem>();
+		if (ContainerInventory->GetNumItems() == 0 || !TestNotNull(TEXT("UI subsystem"), UISubsystem))
+		{
+			return;
+		}
+
+		UInventoryItem* Selected = ContainerInventory->GetPlacedItems()[0].Key;
+		UISubsystem->SelectItem(Selected);
+		TestTrue(TEXT("Selected item is displayed by the info panel"), UISubsystem->GetDisplayedItem() == Selected);
+		PC->TakeSelectedItem();
+		TestEqual(TEXT("Take: player got the selected item"), PlayerInventory->GetNumItems(), 2);
+		TestNull(TEXT("Take: the taken item is no longer selected"), UISubsystem->GetSelectedItem());
+
+		PC->TakeAllFromOpenedContainer();
+		TestEqual(TEXT("Take All: container is empty"), ContainerInventory->GetNumItems(), 0);
+		TestEqual(TEXT("Take All: player has every item"), PlayerInventory->GetNumItems(), State->NumContainerItems);
+	});
+
 	Tap(EKeys::E);
 	Step([this, State]()
 	{
@@ -210,6 +273,29 @@ bool FInventoryUIFlowTest::RunTest(const FString& Parameters)
 		TestFalse(TEXT("Second E closes the inventory"), PC->IsInventoryOpened());
 		TestNull(TEXT("Second E closes the container"), PC->GetOpenedItemsContainer());
 		TestFalse(TEXT("Container grid hidden"), IsWidgetShown(State->GetHUD(), TEXT("BP_ContainerGrid")));
+	});
+
+	// 3b. The server refuses transfers into a container the pawn is not next to.
+	Step([this, State]()
+	{
+		ATypicalShooterPlayerController* PC = State->Controller.Get();
+		AItemsContainer* Container = State->Container.Get();
+		UInventoryComponent* PlayerInventory = PC->GetPawn()->FindComponentByClass<UInventoryComponent>();
+		if (PlayerInventory->GetNumItems() == 0)
+		{
+			return;
+		}
+
+		const FVector ContainerLocation = Container->GetActorLocation();
+		Container->SetActorLocation(ContainerLocation + FVector(20000.f, 0.f, 0.f));
+		TestFalse(TEXT("Far container is not accessible"), PC->CanAccessInventory(Container->InventoryComponent));
+		TestTrue(TEXT("Own inventory is accessible"), PC->CanAccessInventory(PlayerInventory));
+
+		const int32 Before = PlayerInventory->GetNumItems();
+		PC->RequestTransferItem(PlayerInventory, PlayerInventory->GetPlacedItems()[0].Key, Container->InventoryComponent, FHhAxialCoord(0, 0));
+		TestEqual(TEXT("Transfer into a far container is rejected"), PlayerInventory->GetNumItems(), Before);
+		TestEqual(TEXT("Far container stays empty"), Container->InventoryComponent->GetNumItems(), 0);
+		Container->SetActorLocation(ContainerLocation);
 	});
 
 	// 4. Movement and jump work with the inventory closed.

@@ -56,6 +56,28 @@ struct TYPICALSHOOTER_API FInventoryArray : public FFastArraySerializer
 {
 	GENERATED_BODY()
 
+	FInventoryArray() = default;
+
+	/**
+	 * Copies never take the owner: components of Blueprint actors get their properties copied from the class
+	 * default object's component after PostInitProperties, which used to point the instance at the CDO's component.
+	 */
+	FInventoryArray(const FInventoryArray& Other)
+		: FFastArraySerializer(Other)
+		, Entries(Other.Entries)
+	{
+	}
+
+	FInventoryArray& operator=(const FInventoryArray& Other)
+	{
+		if (this != &Other)
+		{
+			FFastArraySerializer::operator=(Other);
+			Entries = Other.Entries;
+		}
+		return *this;
+	}
+
 	void SetOwner(UInventoryComponent* InOwner) { Owner = InOwner; }
 
 	UInventoryItem* AddItem(const struct FInventoryItemManifest& ItemManifest, const FHhAxialCoord& Location);
@@ -65,6 +87,12 @@ struct TYPICALSHOOTER_API FInventoryArray : public FFastArraySerializer
 	void RemoveItem(const FHhAxialCoord& Location);
 
 	bool MoveItem(const UInventoryItem* Item, const FHhAxialCoord& Location);
+
+	/** Exchanges the cells of two placed items. */
+	bool SwapItems(const UInventoryItem* ItemA, const UInventoryItem* ItemB);
+
+	UInventoryItem* GetItemAt(const FHhAxialCoord& Location) const;
+	TOptional<FHhAxialCoord> GetItemLocation(const UInventoryItem* Item) const;
 
 	FORCEINLINE int32 GetNumItems() const { return Entries.Num(); }
 
@@ -93,7 +121,7 @@ private:
 	UPROPERTY()
 	TArray<FInventoryArray_Entry> Entries;
 
-	/** Set by the owning component in PostInitProperties; intentionally not a UPROPERTY so it is never copied from archetypes. */
+	/** Set by the owning component (PostInitProperties, OnRegister); not a UPROPERTY and skipped by the copy operations. */
 	TWeakObjectPtr<UInventoryComponent>	Owner;
 };
 

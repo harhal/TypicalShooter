@@ -88,8 +88,15 @@ included by bare filename.
   feed keys via `UGameViewportClient::InputKey`); keep these for end-to-end scenarios.
 - Run via Unreal MCP `AutomationTestToolset` (`DiscoverTests` → `RunTests` → `GetTestResults`);
   the whole `TypicalShooter.` + `HarhalHexagonalGrid.` suites must pass before a commit.
-  Existing suites: `TypicalShooter.Inventory.Core.*` (bare game world, no PIE),
-  `TypicalShooter.Inventory.UIFlow` (PIE), `HarhalHexagonalGrid.*` (pure math).
+  Existing suites: `TypicalShooter.Inventory.Core.*` (bare game world, no PIE; shared fixture in
+  `Private/Tests/InventoryTestFixture.h`), `TypicalShooter.Inventory.UI.*` (presenter + Slate grid /
+  info view without a window), `TypicalShooter.Inventory.UIFlow` (PIE), `HarhalHexagonalGrid.*` (pure math).
+- Headless alternative (editor closed, also runs the PIE test):
+  `UnrealEditor-Cmd.exe <uproject> "-ExecCmds=Automation RunTests TypicalShooter.+HarhalHexagonalGrid.;Quit" -unattended -nopause -NullRHI -abslog=<file>`
+  and grep the log for `Test Completed. Result=`.
+- Building while *any* editor with Live Coding runs fails ("Unable to build while Live Coding is
+  active"), even for another checkout/worktree. Copying a file back with `Copy-Item` keeps its old
+  timestamp, so UBT may skip it — touch it first.
 - New test files / UFUNCTIONs need a full build with the editor closed; edits to existing test
   bodies can go through `LiveCodingToolset.CompileLiveCoding`.
 - Unity builds merge .cpp files: no file-scope `using namespace` or short global names in tests.
@@ -125,8 +132,19 @@ included by bare filename.
   `ManifestItem()` creates a `UInventoryItem` (UObject, replicated as a subobject).
 - **Inventory**: `UInventoryComponent` owns `FInventoryArray` (FastArraySerializer of
   `{Item, FHhAxialCoord Location}`, linear lookups, one item per cell) and broadcasts
-  added/removed/moved delegates on server and clients. Mutations (`AddItem/RemoveItem/MoveItem`) are
-  **server-only**; there are no RPCs yet for client-initiated moves.
+  added/removed/moved delegates on server and clients. The grid is a hex of `GridRadius` (default 2 =
+  19 cells; `IsLocationInBounds`, `FindFreeLocation` in spiral order). Mutations
+  (`AddItem/RemoveItem/MoveItem/TransferItem/TransferItemToFreeLocation`) are **server-only**.
+  `TransferItem` moves within or between inventories; an occupied target cell swaps the two items;
+  between inventories the item is re-created from its manifest (items have no other state yet).
+  `FInventoryArray`'s copy operations deliberately skip its `Owner` (BP actors copy component
+  properties from the CDO; regression test `Core.OwnerSurvivesArchetypeCopy`).
+- **Client requests**: UI calls `IItemsContainer_Model::RequestTransferItem` → `UInventoryComponent`
+  routes it to the first local `ATypicalShooterPlayerController::RequestTransferItem` →
+  `ServerTransferItem` RPC (validates `CanAccessInventory`: own pawn's inventory, or an
+  `AItemsContainer` within `SphereCollision` radius + `AccessRangeTolerance`). `TakeSelectedItem` /
+  `TakeAllFromOpenedContainer` → `ServerTakeItems` (to the pawn's first free cells).
+  `ATypicalShooterCharacter` has its own `InventoryComponent`.
 - **World**: `AItemsContainer` (implements `IPlayerInteractive` and `IItemsContainer_Model`, forwarding
   to its `InventoryComponent`) fills its inventory from `ItemsManifest` on the server, laying items out
   in a hex spiral. Two `BP_ItemsContainer` instances are placed in `Lvl_FirstPerson`.
@@ -146,21 +164,35 @@ included by bare filename.
 - **UI (MVP)**: Model interfaces (`IInventoryItem_Model`, `IItemsContainer_Model`, implemented by
   `UInventoryItem` / `UInventoryComponent`) → UObject presenters → view interfaces implemented by
   Slate widgets (`SInventoryGrid` on top of `SHhGridPanel`, `SInventoryGridItem`). UMG entry point:
-  `UItemsContainer_Presenter::CreatePresenter(Model)` → `UInventoryGridWidget::AssignPresenter`.
+  `UItemsContainer_Presenter::CreatePresenter(Model)` → `UInventoryGridWidget::AssignPresenter`, or
+  `UInventoryGridWidget::bShowOwningPawnInventory` (follows the owning player's pawn).
   HUD (`BP_HUD`) is spawned by `BP_FirstPersonPlayerController`.
+  - `SInventoryGrid` draws a background cell per grid cell (`CellBrush`, hex outline texture
+    `M_UI_InventoryCell`) plus a round highlight fill (hover / selected / drop target), and handles all
+    input itself: hover, click, drag & drop (`FInventoryItemDragDropOp`, payload = source presenter +
+    slot). Cell under the cursor: `UHhGridFunctions::PointToHexAxialCoord`. Drops call
+    `UItemsContainer_Presenter::HandleItemDropped` → source model `RequestTransferItem`.
+  - Hover / selection are shared by all grids via `UInventoryUISubsystem` (local player subsystem):
+    displayed item = hovered, else selected; items leaving a grid are forgotten. Clicking the selected
+    item or an empty cell deselects.
+  - `UInventoryItemInfoWidget` (UMG wrapper of `SInventoryItemInfo`, an `IInventoryItem_View`) shows
+    the displayed item's icon / name / description; it lives in `BP_ItemInfo`.
 - Custom content lives in `Content/Inventory` (note the folder typo `Bllueprints`).
 
 ## Current state (as of 2026-11-24)
 
 C++ and all project blueprints compile. In PIE (standalone, server) both level containers fill
-their inventories (`LogTypicalShooter: ... placed N of N manifest items`). The UI path has not been
-seen on screen yet, and multiplayer replication is untested.
+their inventories (`LogTypicalShooter: ... placed N of N manifest items`). The inventory screen has
+been seen on screen (player grid, container grid, info panel, selection highlight). Multiplayer
+replication (client → server RPCs over a real connection) is untested.
 
 UI widgets: `BP_HUD` → `SetContainer(Container)` → `BP_ContainerGrid.SetContainer` →
-`CreatePresenter` + `InventoryGridWidget_237.AssignPresenter`. `BP_ContainerGrid` / `BP_InventoryGrid`
-draw empty background cells (`BP_Slot_InventoryGrid`) in an `HhGridPanelWidget` named `GridPanel`;
-in `BP_ContainerGrid` it sits under the item grid in an Overlay. `BP_InventoryGrid` is the player's
-own inventory panel (no inventory component on the player yet).
+`CreatePresenter` + `InventoryGridWidget_237.AssignPresenter`. `BP_InventoryGrid` holds `PlayerGrid`
+(`UInventoryGridWidget`, `bShowOwningPawnInventory`). Both grids draw their own cells (the old
+`BP_Slot_InventoryGrid` / `HhGridPanelWidget` background is gone; `BP_Slot_InventoryGrid` is unused).
+`BP_ContainerGrid` buttons **Take** / **Take All** call `TakeSelectedItem` /
+`TakeAllFromOpenedContainer` (no key bindings). `BP_ItemInfo` holds `ItemInfo`
+(`UInventoryItemInfoWidget`).
 
 The two level containers hold test items (`Test Medkit/Ammo/Grenade`, `Test Armor/Scope`) with
 `FInfo_ItemFragment` (placeholder icon `T_UE_Logo_M`).
@@ -169,7 +201,9 @@ Inventory screen (Tab) and container opening (E) are wired and covered by the au
 `TypicalShooter.Inventory.UIFlow` (`Source/TypicalShooter/Private/Tests/InventoryUIFlowTest.cpp`): it
 starts PIE itself, feeds keys through `UGameViewportClient::InputKey` (Enhanced Input mappings are
 exercised; OS → Slate focus is not) and checks Tab open/close, E at a container (grid shows every
-item), W movement and jump. Run via MCP: `AutomationTestToolset.DiscoverTests` →
+item), transfer container → player (player grid updates), Take / Take All, server rejection for a far
+container, W movement and jump. Real mouse drag & drop is covered only below the Slate event layer
+(`UI.DragDrop*` call `MakeDragPayload` / `DropPayload` directly). Run via MCP: `AutomationTestToolset.DiscoverTests` →
 `RunTests ["TypicalShooter.Inventory.UIFlow"]` → `GetTestResults` (the automation worker ends any
 running PIE first). OS-level synthetic input (SendKeys / keybd_event) does not reach the editor's
 game viewport — don't use it for testing. Logs: `LogTypicalShooter: Opened/Closed inventory|items container`; input setup
@@ -177,8 +211,10 @@ logs at Verbose. Before this, game input was effectively dead in PIE (the always
 panel covered the screen and nothing set an input mode).
 
 Open work:
-- Player inventory: no `UInventoryComponent` on the character; `BP_InventoryGrid` shows only cells.
-- Drag & drop between cells/containers: `SInventoryGridItem` has stub handlers; no server RPC for moves.
+- Multi-cell items (`FGrid_ItemFragment::Size` is ignored: one item per cell), stacking (`GetItemCount` is 1).
+- Dropping items into the world; key bindings for Take (R) / Take All.
+- Multiplayer check of transfers (dedicated server / client PIE).
+- Leftover debug output outside the inventory: `BP_ItemsContainer` prints "Open / That's All" on interact.
 
 Verify blueprints headlessly with:
 `UnrealEditor-Cmd.exe <uproject> -run=CompileAllBlueprints -unattended -nopause -NullRHI -stdout`

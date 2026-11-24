@@ -29,4 +29,13 @@ public:
 	virtual FItemAddedDelegate& GetItemAddedDelegate() = 0;
 	virtual FItemRemovedDelegate& GetItemRemovedDelegate() = 0;
 	virtual FItemMovedDelegate& GetItemMovedDelegate() = 0;
+
+	/** Cells within this hex distance of (0,0) belong to the grid. */
+	virtual int32 GetGridRadius() const = 0;
+
+	/**
+	 * Asks to put Item (placed in this container) at Location of Target (may be this container). An occupied target
+	 * cell swaps the two items. Applied by the server; the result arrives through the delegates above.
+	 */
+	virtual void RequestTransferItem(UInventoryItem* Item, const TScriptInterface<IItemsContainer_Model>& Target, const FHhAxialCoord& Location) = 0;
 };

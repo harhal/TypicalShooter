@@ -37,7 +37,51 @@ void UItemsContainer_Presenter::SetModel(const TScriptInterface<IItemsContainer_
 void UItemsContainer_Presenter::SetView(const TSharedPtr<IItemsContainer_View>& InView)
 {
 	View = InView;
+	if (InView.IsValid())
+	{
+		InView->SetPresenter(this);
+	}
 	RebuildView();
+}
+
+UInventoryItem* UItemsContainer_Presenter::GetItemInSlot(const FGuid& SlotGuid) const
+{
+	const TWeakObjectPtr<UInventoryItem>* Item = ItemsBySlot.Find(SlotGuid);
+	return Item ? Item->Get() : nullptr;
+}
+
+FGuid UItemsContainer_Presenter::GetSlotOfItem(const UInventoryItem* Item) const
+{
+	const FGuid* SlotGuid = Item ? SlotsByItem.Find(Item) : nullptr;
+	return SlotGuid ? *SlotGuid : FGuid();
+}
+
+bool UItemsContainer_Presenter::HandleItemDropped(UItemsContainer_Presenter* SourcePresenter, const FGuid& SourceSlot, const FHhAxialCoord& Location)
+{
+	if (!SourcePresenter || !IsValid(Model.GetObject()))
+	{
+		return false;
+	}
+
+	UInventoryItem* Item = SourcePresenter->GetItemInSlot(SourceSlot);
+	const TScriptInterface<IItemsContainer_Model>& SourceModel = SourcePresenter->GetModel();
+	if (!Item || !IsValid(SourceModel.GetObject()))
+	{
+		return false;
+	}
+
+	SourceModel->RequestTransferItem(Item, Model, Location);
+	return true;
+}
+
+void UItemsContainer_Presenter::HandleItemHovered(const FGuid& SlotGuid)
+{
+	OnItemHovered.Broadcast(GetItemInSlot(SlotGuid));
+}
+
+void UItemsContainer_Presenter::HandleItemClicked(const FGuid& SlotGuid)
+{
+	OnItemClicked.Broadcast(GetItemInSlot(SlotGuid));
 }
 
 void UItemsContainer_Presenter::UnbindModel()
@@ -55,6 +99,7 @@ void UItemsContainer_Presenter::RebuildView()
 {
 	PresentersBySlot.Reset();
 	SlotsByItem.Reset();
+	ItemsBySlot.Reset();
 
 	const TSharedPtr<IItemsContainer_View> PinnedView = View.Pin();
 	if (!PinnedView.IsValid())
@@ -68,6 +113,8 @@ void UItemsContainer_Presenter::RebuildView()
 	{
 		return;
 	}
+
+	PinnedView->SetGridRadius(Model->GetGridRadius());
 
 	for (const TPair<UInventoryItem*, FHhAxialCoord>& PlacedItem : Model->GetPlacedItems())
 	{
@@ -83,13 +130,16 @@ void UItemsContainer_Presenter::AddItemToView(const UInventoryItem* Item, const 
 		return;
 	}
 
+	// Model delegates hand out const items; the presenter only reads from them and passes them back to the model.
+	UInventoryItem* MutableItem = const_cast<UInventoryItem*>(Item);
+
 	UInventoryItem_Presenter* ItemPresenter = NewObject<UInventoryItem_Presenter>(this);
-	// TScriptInterface needs a mutable object; the item presenter only reads from it.
-	ItemPresenter->SetModel(const_cast<UInventoryItem*>(Item));
+	ItemPresenter->SetModel(MutableItem);
 
 	const FGuid SlotGuid = PinnedView->AddInventoryItem(ItemPresenter, Location);
 	PresentersBySlot.Add(SlotGuid, ItemPresenter);
 	SlotsByItem.Add(Item, SlotGuid);
+	ItemsBySlot.Add(SlotGuid, MutableItem);
 }
 
 void UItemsContainer_Presenter::OnItemAdded(const UInventoryItem* Item, const FHhAxialCoord& Location)
@@ -106,11 +156,14 @@ void UItemsContainer_Presenter::OnItemRemoved(const UInventoryItem* Item)
 	}
 
 	PresentersBySlot.Remove(SlotGuid);
+	ItemsBySlot.Remove(SlotGuid);
 
 	if (const TSharedPtr<IItemsContainer_View> PinnedView = View.Pin())
 	{
 		PinnedView->RemoveInventoryItem(SlotGuid);
 	}
+
+	OnItemViewRemoved.Broadcast(const_cast<UInventoryItem*>(Item));
 }
 
 void UItemsContainer_Presenter::OnItemMoved(const UInventoryItem* Item, const FHhAxialCoord& Location, const FHhAxialCoord& PrevLocation)

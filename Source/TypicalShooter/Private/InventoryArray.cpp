@@ -35,7 +35,7 @@ int32 FInventoryArray::FindIndexByLocation(const FHhAxialCoord& Location) const
 
 UInventoryItem* FInventoryArray::AddItem(const FInventoryItemManifest& ItemManifest, const FHhAxialCoord& Location)
 {
-	if (!HasAuthority() || IsLocationOccupied(Location))
+	if (!HasAuthority() || IsLocationOccupied(Location) || !Owner->IsLocationInBounds(Location))
 	{
 		return nullptr;
 	}
@@ -56,7 +56,7 @@ bool FInventoryArray::AddItem(UInventoryItem* Item, const FHhAxialCoord& Locatio
 		return false;
 	}
 
-	if (IsLocationOccupied(Location) || FindIndexByItem(Item) != INDEX_NONE)
+	if (IsLocationOccupied(Location) || !Owner->IsLocationInBounds(Location) || FindIndexByItem(Item) != INDEX_NONE)
 	{
 		return false;
 	}
@@ -127,7 +127,7 @@ bool FInventoryArray::MoveItem(const UInventoryItem* Item, const FHhAxialCoord& 
 		return true;
 	}
 
-	if (IsLocationOccupied(Location))
+	if (IsLocationOccupied(Location) || !Owner->IsLocationInBounds(Location))
 	{
 		return false;
 	}
@@ -236,4 +236,45 @@ void FInventoryArray::PostReplicatedChange(const TArrayView<int32>& ChangedIndic
 			Owner->ProcessItemMoved(Entry.Item, Entry.Location, PrevLocation);
 		}
 	}
+}
+
+bool FInventoryArray::SwapItems(const UInventoryItem* ItemA, const UInventoryItem* ItemB)
+{
+	if (!HasAuthority())
+	{
+		return false;
+	}
+
+	const int32 IndexA = FindIndexByItem(ItemA);
+	const int32 IndexB = FindIndexByItem(ItemB);
+	if (IndexA == INDEX_NONE || IndexB == INDEX_NONE || IndexA == IndexB)
+	{
+		return false;
+	}
+
+	FInventoryArray_Entry& EntryA = Entries[IndexA];
+	FInventoryArray_Entry& EntryB = Entries[IndexB];
+	const FHhAxialCoord LocationA = EntryA.Location;
+	const FHhAxialCoord LocationB = EntryB.Location;
+
+	EntryA.Location = EntryA.LastKnownLocation = LocationB;
+	EntryB.Location = EntryB.LastKnownLocation = LocationA;
+	MarkItemDirty(EntryA);
+	MarkItemDirty(EntryB);
+
+	Owner->ProcessItemMoved(EntryA.Item, LocationB, LocationA);
+	Owner->ProcessItemMoved(EntryB.Item, LocationA, LocationB);
+	return true;
+}
+
+UInventoryItem* FInventoryArray::GetItemAt(const FHhAxialCoord& Location) const
+{
+	const int32 Idx = FindIndexByLocation(Location);
+	return Entries.IsValidIndex(Idx) ? Entries[Idx].Item.Get() : nullptr;
+}
+
+TOptional<FHhAxialCoord> FInventoryArray::GetItemLocation(const UInventoryItem* Item) const
+{
+	const int32 Idx = FindIndexByItem(Item);
+	return Entries.IsValidIndex(Idx) ? TOptional<FHhAxialCoord>(Entries[Idx].Location) : TOptional<FHhAxialCoord>();
 }

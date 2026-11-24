@@ -4,6 +4,9 @@
 #include "EnhancedInputSubsystems.h"
 #include "Engine/LocalPlayer.h"
 #include "InputMappingContext.h"
+#include "InventoryComponent.h"
+#include "InventoryItem.h"
+#include "UI/InventoryUISubsystem.h"
 #include "InteractionComponent.h"
 #include "ItemsContainer.h"
 #include "TypicalShooter.h"
@@ -216,4 +219,98 @@ bool ATypicalShooterPlayerController::IsInInteractionRange(const AActor* Actor) 
 	TArray<AActor*> Overlaps;
 	Interaction->GetOverlapActors(Overlaps);
 	return Overlaps.Contains(Actor);
+}
+
+void ATypicalShooterPlayerController::RequestTransferItem(UInventoryComponent* Source, UInventoryItem* Item, UInventoryComponent* Target, const FHhAxialCoord& Location)
+{
+	// On the server (standalone / listen host) this runs immediately.
+	ServerTransferItem(Source, Item, Target, Location);
+}
+
+void ATypicalShooterPlayerController::ServerTransferItem_Implementation(UInventoryComponent* Source, UInventoryItem* Item, UInventoryComponent* Target, FHhAxialCoord Location)
+{
+	if (!CanAccessInventory(Source) || !CanAccessInventory(Target))
+	{
+		UE_LOG(LogTypicalShooter, Warning, TEXT("%s: rejected item transfer %s -> %s (inventory not accessible)"),
+			*GetName(), *GetNameSafe(Source ? Source->GetOwner() : nullptr), *GetNameSafe(Target ? Target->GetOwner() : nullptr));
+		return;
+	}
+
+	if (!Source->TransferItem(Item, Target, Location))
+	{
+		UE_LOG(LogTypicalShooter, Verbose, TEXT("%s: item transfer %s -> %s refused by the inventory"),
+			*GetName(), *GetNameSafe(Source->GetOwner()), *GetNameSafe(Target->GetOwner()));
+	}
+}
+
+UInventoryComponent* ATypicalShooterPlayerController::GetPawnInventory() const
+{
+	const APawn* ControlledPawn = GetPawn();
+	return ControlledPawn ? ControlledPawn->FindComponentByClass<UInventoryComponent>() : nullptr;
+}
+
+void ATypicalShooterPlayerController::TakeSelectedItem()
+{
+	const AItemsContainer* Container = GetOpenedItemsContainer();
+	const ULocalPlayer* LocalPlayer = GetLocalPlayer();
+	const UInventoryUISubsystem* UISubsystem = LocalPlayer ? LocalPlayer->GetSubsystem<UInventoryUISubsystem>() : nullptr;
+	UInventoryItem* Selected = UISubsystem ? UISubsystem->GetSelectedItem() : nullptr;
+	if (!Container || !Selected || Selected->GetOuter() != Container->InventoryComponent)
+	{
+		return;
+	}
+	ServerTakeItems(Container->InventoryComponent, { Selected });
+}
+
+void ATypicalShooterPlayerController::TakeAllFromOpenedContainer()
+{
+	if (const AItemsContainer* Container = GetOpenedItemsContainer())
+	{
+		ServerTakeItems(Container->InventoryComponent, {});
+	}
+}
+
+void ATypicalShooterPlayerController::ServerTakeItems_Implementation(UInventoryComponent* Source, const TArray<UInventoryItem*>& Items)
+{
+	UInventoryComponent* Target = GetPawnInventory();
+	if (!Target || !CanAccessInventory(Source))
+	{
+		UE_LOG(LogTypicalShooter, Warning, TEXT("%s: rejected taking items from %s"), *GetName(), *GetNameSafe(Source ? Source->GetOwner() : nullptr));
+		return;
+	}
+
+	TArray<UInventoryItem*> ToTake = Items;
+	if (ToTake.IsEmpty())
+	{
+		for (const TPair<UInventoryItem*, FHhAxialCoord>& Placed : Source->GetPlacedItems())
+		{
+			ToTake.Add(Placed.Key);
+		}
+	}
+
+	for (UInventoryItem* Item : ToTake)
+	{
+		if (!Source->TransferItemToFreeLocation(Item, Target))
+		{
+			break; // the pawn's inventory is full (or the item is gone)
+		}
+	}
+}
+
+bool ATypicalShooterPlayerController::CanAccessInventory(const UInventoryComponent* Inventory) const
+{
+	const APawn* ControlledPawn = GetPawn();
+	if (!Inventory || !ControlledPawn)
+	{
+		return false;
+	}
+
+	const AActor* InventoryOwner = Inventory->GetOwner();
+	if (InventoryOwner == ControlledPawn)
+	{
+		return true;
+	}
+
+	const AItemsContainer* Container = Cast<AItemsContainer>(InventoryOwner);
+	return Container && Container->CanBeAccessedBy(ControlledPawn);
 }
