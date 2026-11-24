@@ -77,6 +77,14 @@ included by bare filename.
 - Prefer C++ for systems; Blueprints for content/tuning.
 - Keep the hex-grid plugin independent of game code (no dependency on `TypicalShooter`).
 
+## Feature documentation
+
+- `Docs/Features/` holds living per-feature docs (in Russian): `README.md` is the index with a status
+  table, `_Template.md` the template for new features.
+- Keep them in sync: when a change alters a feature's behaviour, controls, content setup, tests or open
+  tasks, update that feature's doc (status, sections, "Сверено с кодом" date) in the same commit.
+  A new feature gets a new doc from the template plus a row in the index.
+
 ## Testing (TDD)
 
 - Work test-first: for any new behaviour or bug fix, write a failing automation test first, run it
