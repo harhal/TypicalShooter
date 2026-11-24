@@ -13,6 +13,11 @@ Communicate with the user in Russian; code, identifiers and commit messages in E
 - Primary module: `TypicalShooter` (Runtime). Project plugin: `HarhalHexagonalGrid` (Runtime).
 - Engine plugins in use: GameplayAbilities (GAS), GASToolsets, StateTree, GameplayStateTree,
   TargetingSystem, AbilitySystemGameFeatureActions, ModelingToolsEditorMode.
+- Unreal MCP (Epic's experimental `ModelContextProtocol` plugin, editor-only) + toolsets
+  (Editor, UMG, GameplayTags, StateTree, AutomationTest, LiveCoding, ConfigSettings). The editor
+  auto-starts an HTTP MCP server at `http://127.0.0.1:8000/mcp` (set in
+  `Config/DefaultEditorPerProjectUserSettings.ini`); Claude Code connects via `.mcp.json`
+  (server `unreal-mcp`). Tools are only available while the editor is open.
 
 Build editor target from the command line (close the editor first or use Live Coding instead):
 
