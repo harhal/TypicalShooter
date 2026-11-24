@@ -8,6 +8,7 @@
 #include "EnhancedInputComponent.h"
 #include "InputActionValue.h"
 #include "InteractionComponent.h"
+#include "InventoryComponent.h"
 #include "TS_GAS.h"
 #include "GameFramework/CharacterMovementComponent.h"
 #include "TypicalShooter.h"
@@ -48,6 +49,8 @@ ATypicalShooterCharacter::ATypicalShooterCharacter()
 	Gas = CreateDefaultSubobject<UTS_GAS>(TEXT("Ability System"));
 	
 	InteractionComponent = CreateDefaultSubobject<UInteractionComponent>(TEXT("Interaction Component"));
+
+	InventoryComponent = CreateDefaultSubobject<UInventoryComponent>(TEXT("Inventory Component"));
 }
 
 void ATypicalShooterCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputComponent)

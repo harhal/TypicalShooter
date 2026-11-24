@@ -85,3 +85,23 @@ void AItemsContainer::Tick(float DeltaTime)
 	Super::Tick(DeltaTime);
 }
 
+
+int32 AItemsContainer::GetGridRadius() const
+{
+	return InventoryComponent->GetGridRadius();
+}
+
+void AItemsContainer::RequestTransferItem(UInventoryItem* Item, const TScriptInterface<IItemsContainer_Model>& Target, const FHhAxialCoord& Location)
+{
+	InventoryComponent->RequestTransferItem(Item, Target, Location);
+}
+
+bool AItemsContainer::CanBeAccessedBy(const AActor* Accessor) const
+{
+	if (!Accessor)
+	{
+		return false;
+	}
+	const float Reach = SphereCollision->GetScaledSphereRadius() + AccessRangeTolerance;
+	return FVector::DistSquared(Accessor->GetActorLocation(), GetActorLocation()) <= FMath::Square(Reach);
+}

@@ -10,7 +10,7 @@ class SImage;
 class STextBlock;
 
 /**
- * Single item cell of SInventoryGrid.
+ * Visual of one item in SInventoryGrid: icon with a short name. Input is handled by the grid.
  */
 class TYPICALSHOOTER_API SInventoryGridItem : public SCompoundWidget, public IInventoryItem_View
 {
@@ -24,19 +24,16 @@ public:
 	/** Constructs this widget with InArgs */
 	void Construct(const FArguments& InArgs);
 
-	void HandleHovered(bool bHovered);
-	void HandleFocus(bool bFocus);
-	FReply HandleDrag(const FGeometry& Geometry, const FPointerEvent& PointerEvent, bool bDrag);
-
 	virtual void SetIcon(const FSlateBrush& InIconBrush) override;
 	virtual void SetName(const FText& InName) override;
 	virtual void SetDescription(const FText& InDescription) override;
 	virtual void SetCount(int32 InCount) override;
 
+	const FSlateBrush& GetIconBrush() const { return IconBrush; }
+
 private:
 	/** SImage keeps a pointer to the brush, so the brush must live as long as the widget. */
 	FSlateBrush IconBrush;
-	FText Description;
 	int32 Count = 0;
 
 	TSharedPtr<SImage> IconBrushWidget;

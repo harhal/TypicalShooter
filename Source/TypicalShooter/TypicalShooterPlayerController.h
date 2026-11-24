@@ -4,9 +4,13 @@
 
 #include "CoreMinimal.h"
 #include "GameFramework/PlayerController.h"
+#include "HhAxialCoord.h"
 #include "TypicalShooterPlayerController.generated.h"
 
 class AItemsContainer;
+class UInventoryComponent;
+class UInventoryItem;
+
 class UInputAction;
 class UInputMappingContext;
 
@@ -81,7 +85,34 @@ public:
 	UFUNCTION(BlueprintPure, Category="Inventory")
 	AItemsContainer* GetOpenedItemsContainer() const { return OpenedContainer.Get(); }
 
+	/**
+	 * Asks the server to put Item (placed in Source) at Location of Target (may equal Source; an occupied cell swaps).
+	 * Both inventories must be accessible to this player (see CanAccessInventory).
+	 */
+	void RequestTransferItem(UInventoryComponent* Source, UInventoryItem* Item, UInventoryComponent* Target, const FHhAxialCoord& Location);
+
+	/** The controlled pawn's own inventory, or a container the pawn stands next to. */
+	bool CanAccessInventory(const UInventoryComponent* Inventory) const;
+
+	/** Moves the item selected in the inventory UI from the opened container to the first free cell of the pawn's inventory. */
+	UFUNCTION(BlueprintCallable, Category="Inventory")
+	void TakeSelectedItem();
+
+	/** Moves every item of the opened container into the pawn's inventory (as many as fit). */
+	UFUNCTION(BlueprintCallable, Category="Inventory")
+	void TakeAllFromOpenedContainer();
+
+protected:
+	UFUNCTION(Server, Reliable)
+	void ServerTransferItem(UInventoryComponent* Source, UInventoryItem* Item, UInventoryComponent* Target, FHhAxialCoord Location);
+
+	/** Items == empty takes everything Source holds. */
+	UFUNCTION(Server, Reliable)
+	void ServerTakeItems(UInventoryComponent* Source, const TArray<UInventoryItem*>& Items);
+
 private:
+	UInventoryComponent* GetPawnInventory() const;
+
 	/** Nearest actor implementing IPlayerInteractive among the pawn's interaction overlaps. */
 	AActor* FindInteractionTarget() const;
 	bool IsInInteractionRange(const AActor* Actor) const;

@@ -9,6 +9,7 @@
 #include "TypicalShooterCharacter.generated.h"
 
 class UInteractionComponent;
+class UInventoryComponent;
 class UInputComponent;
 class USkeletalMeshComponent;
 class UCameraComponent;
@@ -56,6 +57,10 @@ protected:
 
 	UPROPERTY(EditAnywhere, Category ="User Interaction")
 	TObjectPtr<UInteractionComponent> InteractionComponent;
+
+	/** The player's own items. */
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category ="Inventory", meta = (AllowPrivateAccess = "true"))
+	TObjectPtr<UInventoryComponent> InventoryComponent;
 	
 public:
 	ATypicalShooterCharacter();
@@ -96,6 +101,9 @@ public:
 
 	UFUNCTION(BlueprintCallable, BlueprintPure)
 	UInteractionComponent* GetInteractionComponent() const { return InteractionComponent; }
+
+	UFUNCTION(BlueprintCallable, BlueprintPure)
+	UInventoryComponent* GetInventoryComponent() const { return InventoryComponent; }
 
 	/** Set up input action bindings */
 	virtual void SetupPlayerInputComponent(UInputComponent* InputComponent) override;
