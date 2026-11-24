@@ -70,7 +70,8 @@ TSharedRef<SWidget> UInventoryGridWidget::RebuildWidget()
 		.CellColor(CellColor)
 		.HoveredCellColor(HoveredCellColor)
 		.SelectedCellColor(SelectedCellColor)
-		.DropTargetCellColor(DropTargetCellColor);
+		.DropTargetCellColor(DropTargetCellColor)
+		.CursorCellColor(CursorCellColor);
 
 	if (UInventoryUISubsystem* UISubsystem = GetUISubsystem(); UISubsystem && !SelectionChangedHandle.IsValid())
 	{
@@ -161,12 +162,21 @@ void UInventoryGridWidget::SyncSelection()
 	const UInventoryUISubsystem* UISubsystem = GetUISubsystem();
 	const UInventoryItem* Selected = UISubsystem ? UISubsystem->GetSelectedItem() : nullptr;
 	SlateGrid->SetSelectedSlot(Presenter && Selected ? Presenter->GetSlotOfItem(Selected) : FGuid());
+
+	// The cursor container may be given as the component or its actor (same for the presenter's model).
+	const UInventoryComponent* GridInventory = Presenter ? UInventoryComponent::FindInventory(Presenter->GetModel().GetObject()) : nullptr;
+	const bool bCursorHere = UISubsystem && UISubsystem->IsCursorActive() && GridInventory
+		&& UInventoryComponent::FindInventory(UISubsystem->GetCursorContainer()) == GridInventory;
+	SlateGrid->SetCursorCell(bCursorHere ? TOptional<FHhAxialCoord>(UISubsystem->GetCursorLocation()) : TOptional<FHhAxialCoord>());
 }
 
 void UInventoryGridWidget::HandleItemHovered(UInventoryItem* Item)
 {
 	if (UInventoryUISubsystem* UISubsystem = GetUISubsystem())
 	{
+		// Hover changes only come from the mouse moving: it takes over from the gamepad / keyboard cursor.
+		UISubsystem->SetCursorActive(false);
+
 		// Leaving an item only clears the hover this grid set; another grid may already hover a new one.
 		if (Item || (Presenter && Presenter->GetSlotOfItem(UISubsystem->GetHoveredItem()).IsValid()))
 		{

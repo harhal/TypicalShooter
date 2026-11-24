@@ -147,6 +147,14 @@ included by bare filename.
   between inventories the item is re-created from its manifest (items have no other state yet).
   `FInventoryArray`'s copy operations deliberately skip its `Owner` (BP actors copy component
   properties from the CDO; regression test `Core.OwnerSurvivesArchetypeCopy`).
+- **Layout events** (`InventoryLayout.h`): besides the per-item delegates (used by the UI presenter, may see
+  intermediate states), `UInventoryComponent::GetLayoutChangedDelegate()` / BP `OnLayoutChanged` fire **once
+  per atomic operation**, when the inventory is consistent, with an `FInventoryLayoutChange` = placement
+  changes + per-item neighbour changes (hex distance 1, `GainedNeighbors` / `LostNeighbors`, reported from both
+  sides). Computed by diffing against the last reported layout (`InventoryLayout::Diff`). Server: every
+  mutation opens a `FScopedLayoutBatch` (transfer/swap = one event per inventory); wrap multi-step operations
+  explicitly (`ServerTakeItems` does). Clients: flushed in `FInventoryArray::PostReplicatedReceive`.
+  Queries: `GetNeighborItems(Location)`, `GetItemNeighbors(Item)`. Item adjacency will drive gameplay later.
 - **Client requests**: UI calls `IItemsContainer_Model::RequestTransferItem` → `UInventoryComponent`
   routes it to the first local `ATypicalShooterPlayerController::RequestTransferItem` →
   `ServerTransferItem` RPC (validates `CanAccessInventory`: own pawn's inventory, or an
@@ -169,6 +177,16 @@ included by bare filename.
     collapsed by default); `OnItemsContainerOpened/Closed` → `HUD.SetContainer` + show/hide
     `HUD.BP_ContainerGrid`. `BP_InventoryGrid`'s Close button calls `CloseInventory`.
   - Esc can't be used for UI in PIE (it ends the session).
+  - Gamepad / keyboard: Enhanced Input actions + contexts are **built in C++** (`CreateInventoryInput`, no
+    assets): `GamepadIMC` (always, prio 0: View = toggle inventory, X = interact) and `InventoryIMC` (added
+    while the inventory is open, `InventoryIMCPriority` = 1, consumes keys): D-pad / left stick / arrows =
+    cursor, A / Enter = confirm, B = deselect or close, LB/RB = switch grid, X / R = take focused item,
+    Y / F = take all. Keyboard Tab / E stay in the `IMC_Default` asset.
+  - The cursor lives in `UInventoryUISubsystem` (`SetNavigableContainers` — the controller passes pawn
+    inventory, then opened container; `MoveCursor` picks the hex neighbour best matching the direction and
+    zig-zags vertically keeping a column; `SwitchCursorContainer`; `ConfirmAtCursor` selects / moves the
+    selected item via `RequestTransferItem`). Mouse hover deactivates it; while active the info panel shows
+    the item under it. Grids draw it via `UInventoryGridWidget::SyncSelection` → `SInventoryGrid::SetCursorCell`.
 - **UI (MVP)**: Model interfaces (`IInventoryItem_Model`, `IItemsContainer_Model`, implemented by
   `UInventoryItem` / `UInventoryComponent`) → UObject presenters → view interfaces implemented by
   Slate widgets (`SInventoryGrid` on top of `SHhGridPanel`, `SInventoryGridItem`). UMG entry point:
@@ -176,7 +194,7 @@ included by bare filename.
   `UInventoryGridWidget::bShowOwningPawnInventory` (follows the owning player's pawn).
   HUD (`BP_HUD`) is spawned by `BP_FirstPersonPlayerController`.
   - `SInventoryGrid` draws a background cell per grid cell (`CellBrush`, hex outline texture
-    `M_UI_InventoryCell`) plus a round highlight fill (hover / selected / drop target), and handles all
+    `M_UI_InventoryCell`) plus a round highlight fill (drop target > selected > cursor > hover), and handles all
     input itself: hover, click, drag & drop (`FInventoryItemDragDropOp`, payload = source presenter +
     slot). Cell under the cursor: `UHhGridFunctions::PointToHexAxialCoord`. Drops call
     `UItemsContainer_Presenter::HandleItemDropped` → source model `RequestTransferItem`.
@@ -199,7 +217,7 @@ UI widgets: `BP_HUD` → `SetContainer(Container)` → `BP_ContainerGrid.SetCont
 (`UInventoryGridWidget`, `bShowOwningPawnInventory`). Both grids draw their own cells (the old
 `BP_Slot_InventoryGrid` / `HhGridPanelWidget` background is gone; `BP_Slot_InventoryGrid` is unused).
 `BP_ContainerGrid` buttons **Take** / **Take All** call `TakeSelectedItem` /
-`TakeAllFromOpenedContainer` (no key bindings). `BP_ItemInfo` holds `ItemInfo`
+`TakeAllFromOpenedContainer` (keys: R / F, gamepad X / Y). `BP_ItemInfo` holds `ItemInfo`
 (`UInventoryItemInfoWidget`).
 
 The two level containers hold test items (`Test Medkit/Ammo/Grenade`, `Test Armor/Scope`) with
@@ -210,7 +228,9 @@ Inventory screen (Tab) and container opening (E) are wired and covered by the au
 starts PIE itself, feeds keys through `UGameViewportClient::InputKey` (Enhanced Input mappings are
 exercised; OS → Slate focus is not) and checks Tab open/close, E at a container (grid shows every
 item), transfer container → player (player grid updates), Take / Take All, server rejection for a far
-container, W movement and jump. Real mouse drag & drop is covered only below the Slate event layer
+container, the gamepad flow (X opens the container, D-pad cursor drawn in the grid, A select + move into the
+container without jumping, RB, Y take all, B close, View toggle), W movement and jump. Gamepad keys go
+through the same `InputKey` path. Real mouse drag & drop is covered only below the Slate event layer
 (`UI.DragDrop*` call `MakeDragPayload` / `DropPayload` directly). Run via MCP: `AutomationTestToolset.DiscoverTests` →
 `RunTests ["TypicalShooter.Inventory.UIFlow"]` → `GetTestResults` (the automation worker ends any
 running PIE first). OS-level synthetic input (SendKeys / keybd_event) does not reach the editor's
@@ -220,8 +240,10 @@ panel covered the screen and nothing set an input mode).
 
 Open work:
 - Multi-cell items (`FGrid_ItemFragment::Size` is ignored: one item per cell), stacking (`GetItemCount` is 1).
-- Dropping items into the world; key bindings for Take (R) / Take All.
-- Multiplayer check of transfers (dedicated server / client PIE).
+- Dropping items into the world.
+- Gameplay effects of item adjacency on top of the layout event (design not started).
+- Move the generated inventory input into IMC/IA assets (rebinding, on-screen button prompts).
+- Multiplayer check of transfers and of the client-side layout event (dedicated server / client PIE).
 - Leftover debug output outside the inventory: `BP_ItemsContainer` prints "Open / That's All" on interact.
 
 Verify blueprints headlessly with:

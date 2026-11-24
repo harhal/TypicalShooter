@@ -51,6 +51,10 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="InventoryGrid|Style")
 	FLinearColor DropTargetCellColor = FLinearColor(0.3f, 1.f, 0.4f, 0.5f);
 
+	/** Gamepad / keyboard cursor cell (UInventoryUISubsystem cursor in this grid's container). */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="InventoryGrid|Style")
+	FLinearColor CursorCellColor = FLinearColor(0.3f, 0.7f, 1.f, 0.6f);
+
 	UFUNCTION(BlueprintCallable, Category="InventoryGrid")
 	void AssignPresenter(UItemsContainer_Presenter* InPresenter);
 

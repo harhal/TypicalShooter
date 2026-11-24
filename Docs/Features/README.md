@@ -6,10 +6,10 @@
 | Фича | Статус | Документ |
 |------|--------|----------|
 | Предметы и фрагменты | ✅ работает | [Items.md](Items.md) |
-| Инвентарь на гекс-сетке | 🟡 частично (только сервер, без игрока) | [Inventory.md](Inventory.md) |
+| Инвентарь на гекс-сетке | 🟡 работает на сервере (мультиплеер не проверен) | [Inventory.md](Inventory.md) |
 | Контейнеры предметов в мире | ✅ работает | [ItemsContainer.md](ItemsContainer.md) |
-| Взаимодействие (E) | ✅ работает | [Interaction.md](Interaction.md) |
-| Экран инвентаря (Tab) и UI сетки | 🟡 частично (без drag & drop) | [InventoryUI.md](InventoryUI.md) |
+| Взаимодействие (E / X) | ✅ работает | [Interaction.md](Interaction.md) |
+| Экран инвентаря и UI сетки (мышь + геймпад) | ✅ работает | [InventoryUI.md](InventoryUI.md) |
 | Гекс-сетка (плагин) | ✅ работает | [HexGrid.md](HexGrid.md) |
 | Бой, оружие, ИИ | ⚪ шаблон UE (`Variant_Shooter`), геймдизайн не начат | — |
 | Мультиплеер | ⚪ репликация написана, не проверялась | см. [Inventory.md](Inventory.md#репликация) |

@@ -13,6 +13,8 @@ class UInventoryItem;
 
 class UInputAction;
 class UInputMappingContext;
+class UInventoryUISubsystem;
+struct FInputActionValue;
 
 UCLASS(abstract, config="Game")
 class TYPICALSHOOTER_API ATypicalShooterPlayerController : public APlayerController
@@ -98,6 +100,10 @@ public:
 	UFUNCTION(BlueprintCallable, Category="Inventory")
 	void TakeSelectedItem();
 
+	/** Like TakeSelectedItem, but for the item under the active gamepad / keyboard cursor if there is one. */
+	UFUNCTION(BlueprintCallable, Category="Inventory")
+	void TakeFocusedItem();
+
 	/** Moves every item of the opened container into the pawn's inventory (as many as fit). */
 	UFUNCTION(BlueprintCallable, Category="Inventory")
 	void TakeAllFromOpenedContainer();
@@ -110,8 +116,58 @@ protected:
 	UFUNCTION(Server, Reliable)
 	void ServerTakeItems(UInventoryComponent* Source, const TArray<UInventoryItem*>& Items);
 
+	/** Priority of InventoryIMC over the gameplay contexts (its actions consume their keys: A does not jump, the stick does not walk). */
+	UPROPERTY(EditDefaultsOnly, Category="Input")
+	int32 InventoryIMCPriority = 1;
+
 private:
 	UInventoryComponent* GetPawnInventory() const;
+	UInventoryUISubsystem* GetInventoryUI() const;
+
+	/** Asks the server to move Item from the opened container to the pawn's inventory. */
+	void TakeItem(UInventoryItem* Item);
+
+	/** Tells the UI cursor which grids are on screen: the pawn's inventory, then the opened container. */
+	void UpdateNavigableContainers();
+
+	// Gamepad / keyboard inventory controls. Built in code (no assets yet): see CreateInventoryInput for the keys.
+	void CreateInventoryInput();
+	void HandleInventoryNavigate(const FInputActionValue& Value);
+	void HandleInventoryNavigateReleased();
+	void HandleInventoryConfirm();
+	void HandleInventoryCancel();
+	void HandleInventorySwitchGrid(const FInputActionValue& Value);
+
+	/** Always active: gamepad bindings for opening the inventory / interacting (IMC_Default has keyboard ones). */
+	UPROPERTY(Transient)
+	TObjectPtr<UInputMappingContext> GamepadIMC;
+
+	/** Active while the inventory is open: cursor navigation, confirm / cancel, grid switching, take / take all. */
+	UPROPERTY(Transient)
+	TObjectPtr<UInputMappingContext> InventoryIMC;
+
+	UPROPERTY(Transient)
+	TObjectPtr<UInputAction> InventoryNavigateAction;
+
+	UPROPERTY(Transient)
+	TObjectPtr<UInputAction> InventoryConfirmAction;
+
+	UPROPERTY(Transient)
+	TObjectPtr<UInputAction> InventoryCancelAction;
+
+	UPROPERTY(Transient)
+	TObjectPtr<UInputAction> InventorySwitchGridAction;
+
+	UPROPERTY(Transient)
+	TObjectPtr<UInputAction> InventoryTakeAction;
+
+	UPROPERTY(Transient)
+	TObjectPtr<UInputAction> InventoryTakeAllAction;
+
+	/** Held stick / D-pad direction: one step on press, then auto-repeat. */
+	bool bNavigationHeld = false;
+	int32 NavigationSector = 0;
+	double NextNavigationRepeatTime = 0.0;
 
 	/** Nearest actor implementing IPlayerInteractive among the pawn's interaction overlaps. */
 	AActor* FindInteractionTarget() const;

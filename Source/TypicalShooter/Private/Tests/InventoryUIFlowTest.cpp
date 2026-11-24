@@ -25,7 +25,9 @@
 #include "InventoryItem.h"
 #include "TypicalShooterPlayerController.h"
 #include "UI/InventoryUISubsystem.h"
+#include "UI/Slate/InventoryGrid.h"
 #include "UI/Widget/InventoryGridWidget.h"
+#include "GameFramework/PawnMovementComponent.h"
 #include "UObject/UObjectIterator.h"
 
 namespace InventoryUIFlowTest
@@ -297,6 +299,76 @@ bool FInventoryUIFlowTest::RunTest(const FString& Parameters)
 		TestEqual(TEXT("Far container stays empty"), Container->InventoryComponent->GetNumItems(), 0);
 		Container->SetActorLocation(ContainerLocation);
 	});
+
+	// 3c. Gamepad: X interacts, the D-pad moves the cursor, A picks up / puts down, RB switches grids, Y takes all,
+	//     B closes; View toggles the inventory. The player now holds every item, the container is empty.
+	Step([]() {}, 0.5f); // let the interaction overlap see the container again
+	Tap(EKeys::Gamepad_FaceButton_Left);
+	Step([this, State]()
+	{
+		ATypicalShooterPlayerController* PC = State->Controller.Get();
+		UInventoryUISubsystem* UI = PC->GetLocalPlayer()->GetSubsystem<UInventoryUISubsystem>();
+		TestTrue(TEXT("Gamepad X at a container opens the inventory"), PC->IsInventoryOpened());
+		TestTrue(TEXT("Gamepad X at a container opens that container"), PC->GetOpenedItemsContainer() == State->Container.Get());
+		TestTrue(TEXT("Cursor starts in the player's inventory"),
+			UInventoryComponent::FindInventory(UI->GetCursorContainer()) == PC->GetPawn()->FindComponentByClass<UInventoryComponent>());
+		TestTrue(TEXT("Cursor starts in the centre"), UI->GetCursorLocation() == FHhAxialCoord(0, 0));
+	});
+	Tap(EKeys::Gamepad_DPad_Right);
+	Step([this, State]()
+	{
+		UInventoryUISubsystem* UI = State->Controller->GetLocalPlayer()->GetSubsystem<UInventoryUISubsystem>();
+		TestTrue(TEXT("D-pad right moves the cursor to (1,0)"), UI->GetCursorLocation() == FHhAxialCoord(1, 0));
+		TestTrue(TEXT("D-pad activates the cursor"), UI->IsCursorActive());
+		const UInventoryGridWidget* PlayerGrid = FindPawnInventoryGrid(State->World.Get());
+		if (TestNotNull(TEXT("Player grid"), PlayerGrid))
+		{
+			TestEqual(TEXT("Player grid draws the cursor"), PlayerGrid->GetSlateGrid()->GetCellHighlight(FHhAxialCoord(1, 0)), EInventoryCellHighlight::Cursor);
+		}
+	});
+	Tap(EKeys::Gamepad_DPad_Left);
+	Tap(EKeys::Gamepad_FaceButton_Bottom);
+	Step([this, State]()
+	{
+		ATypicalShooterPlayerController* PC = State->Controller.Get();
+		UInventoryUISubsystem* UI = PC->GetLocalPlayer()->GetSubsystem<UInventoryUISubsystem>();
+		UInventoryComponent* PlayerInventory = PC->GetPawn()->FindComponentByClass<UInventoryComponent>();
+		TestTrue(TEXT("Gamepad A selects the item under the cursor"),
+			UI->GetSelectedItem() && UI->GetSelectedItem() == PlayerInventory->GetItemAt(FHhAxialCoord(0, 0)));
+	});
+	Tap(EKeys::Gamepad_RightShoulder);
+	Tap(EKeys::Gamepad_FaceButton_Bottom);
+	Step([this, State]()
+	{
+		ATypicalShooterPlayerController* PC = State->Controller.Get();
+		UInventoryUISubsystem* UI = PC->GetLocalPlayer()->GetSubsystem<UInventoryUISubsystem>();
+		UInventoryComponent* PlayerInventory = PC->GetPawn()->FindComponentByClass<UInventoryComponent>();
+		TestTrue(TEXT("RB moves the cursor to the container"), UInventoryComponent::FindInventory(UI->GetCursorContainer()) == State->Container->InventoryComponent);
+		TestEqual(TEXT("Gamepad A puts the selected item into the container"), State->Container->InventoryComponent->GetNumItems(), 1);
+		TestNotNull(TEXT("...at the cursor cell"), State->Container->InventoryComponent->GetItemAt(FHhAxialCoord(0, 0)));
+		TestEqual(TEXT("Player gave one item away"), PlayerInventory->GetNumItems(), State->NumContainerItems - 1);
+		TestNull(TEXT("Nothing selected after the move"), UI->GetSelectedItem());
+		TestFalse(TEXT("Gamepad A did not jump (inventory input has priority)"), PC->GetPawn()->GetMovementComponent()->IsFalling());
+	});
+	Tap(EKeys::Gamepad_FaceButton_Top);
+	Step([this, State]()
+	{
+		ATypicalShooterPlayerController* PC = State->Controller.Get();
+		TestEqual(TEXT("Gamepad Y takes all"), State->Container->InventoryComponent->GetNumItems(), 0);
+		TestEqual(TEXT("Player has every item again"), PC->GetPawn()->FindComponentByClass<UInventoryComponent>()->GetNumItems(), State->NumContainerItems);
+	});
+	Tap(EKeys::Gamepad_FaceButton_Right);
+	Step([this, State]()
+	{
+		ATypicalShooterPlayerController* PC = State->Controller.Get();
+		TestFalse(TEXT("Gamepad B with nothing selected closes the inventory"), PC->IsInventoryOpened());
+		TestNull(TEXT("...and the container"), PC->GetOpenedItemsContainer());
+		TestNull(TEXT("Closed inventory: no cursor"), PC->GetLocalPlayer()->GetSubsystem<UInventoryUISubsystem>()->GetCursorContainer());
+	});
+	Tap(EKeys::Gamepad_Special_Left);
+	Step([this, State]() { TestTrue(TEXT("Gamepad View opens the inventory"), State->Controller->IsInventoryOpened()); });
+	Tap(EKeys::Gamepad_Special_Left);
+	Step([this, State]() { TestFalse(TEXT("Gamepad View closes the inventory"), State->Controller->IsInventoryOpened()); });
 
 	// 4. Movement and jump work with the inventory closed.
 	Step([State]() { State->SavedLocation = State->Controller->GetPawn()->GetActorLocation(); }, 0.0f);

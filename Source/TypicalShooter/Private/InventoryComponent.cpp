@@ -39,26 +39,31 @@ void UInventoryComponent::ReadyForReplication()
 
 UInventoryItem* UInventoryComponent::AddItem(const FInventoryItemManifest& ItemManifest, const FHhAxialCoord& Location)
 {
+	FScopedLayoutBatch Batch(this);
 	return InventoryArray.AddItem(ItemManifest, Location);
 }
 
 bool UInventoryComponent::AddItem(UInventoryItem* Item, const FHhAxialCoord& Location)
 {
+	FScopedLayoutBatch Batch(this);
 	return InventoryArray.AddItem(Item, Location);
 }
 
 void UInventoryComponent::RemoveItem(const UInventoryItem* Item)
 {
+	FScopedLayoutBatch Batch(this);
 	InventoryArray.RemoveItem(Item);
 }
 
 void UInventoryComponent::RemoveItem(const FHhAxialCoord& Location)
 {
+	FScopedLayoutBatch Batch(this);
 	InventoryArray.RemoveItem(Location);
 }
 
 bool UInventoryComponent::MoveItem(const UInventoryItem* Item, const FHhAxialCoord& Location)
 {
+	FScopedLayoutBatch Batch(this);
 	return InventoryArray.MoveItem(Item, Location);
 }
 
@@ -105,6 +110,10 @@ bool UInventoryComponent::TransferItem(UInventoryItem* Item, UInventoryComponent
 	}
 
 	UInventoryItem* Occupant = Target->GetItemAt(Location);
+
+	// Listeners of both inventories see the whole transfer / swap as one change.
+	FScopedLayoutBatch SourceBatch(this);
+	FScopedLayoutBatch TargetBatch(Target);
 
 	if (Target == this)
 	{
@@ -198,4 +207,82 @@ void UInventoryComponent::RequestTransferItem(UInventoryItem* Item, const TScrip
 
 	// No controller (tools, tests): only possible with authority.
 	TransferItem(Item, TargetInventory, Location);
+}
+
+UInventoryComponent::FScopedLayoutBatch::FScopedLayoutBatch(UInventoryComponent* InInventory)
+	: Inventory(InInventory)
+{
+	if (InInventory)
+	{
+		++InInventory->LayoutBatchDepth;
+	}
+}
+
+UInventoryComponent::FScopedLayoutBatch::~FScopedLayoutBatch()
+{
+	if (UInventoryComponent* PinnedInventory = Inventory.Get())
+	{
+		if (ensure(PinnedInventory->LayoutBatchDepth > 0) && --PinnedInventory->LayoutBatchDepth == 0)
+		{
+			PinnedInventory->FlushLayoutChange();
+		}
+	}
+}
+
+TArray<UInventoryItem*> UInventoryComponent::GetNeighborItems(const FHhAxialCoord& Location) const
+{
+	TArray<UInventoryItem*> Result;
+	for (const FHhAxialCoord& NeighborLocation : InventoryLayout::GetNeighborLocations(Location))
+	{
+		if (UInventoryItem* Neighbor = GetItemAt(NeighborLocation))
+		{
+			Result.Add(Neighbor);
+		}
+	}
+	return Result;
+}
+
+TArray<UInventoryItem*> UInventoryComponent::GetItemNeighbors(const UInventoryItem* Item) const
+{
+	const TOptional<FHhAxialCoord> Location = Item ? GetItemLocation(Item) : TOptional<FHhAxialCoord>();
+	return Location.IsSet() ? GetNeighborItems(Location.GetValue()) : TArray<UInventoryItem*>();
+}
+
+void UInventoryComponent::FlushLayoutChange()
+{
+	if (LayoutBatchDepth > 0)
+	{
+		return;
+	}
+
+	InventoryLayout::FLayout Before;
+	Before.Reserve(ReportedLayout.Num());
+	for (const TPair<TWeakObjectPtr<UInventoryItem>, FHhAxialCoord>& Reported : ReportedLayout)
+	{
+		if (UInventoryItem* Item = Reported.Key.Get())
+		{
+			Before.Add(Item, Reported.Value);
+		}
+	}
+
+	InventoryLayout::FLayout After;
+	for (const TPair<UInventoryItem*, FHhAxialCoord>& Placed : GetPlacedItems())
+	{
+		After.Add(Placed.Key, Placed.Value);
+	}
+
+	FInventoryLayoutChange Change = InventoryLayout::Diff(Before, After);
+	if (Change.IsEmpty())
+	{
+		return;
+	}
+
+	ReportedLayout.Reset();
+	for (const TPair<UInventoryItem*, FHhAxialCoord>& Placed : After)
+	{
+		ReportedLayout.Add(Placed.Key, Placed.Value);
+	}
+
+	LayoutChangedDelegate.Broadcast(this, Change);
+	OnLayoutChanged.Broadcast(this, Change);
 }
