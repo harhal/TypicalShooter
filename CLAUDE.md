@@ -113,11 +113,9 @@ included by bare filename.
   then commit the updated submodule pointer in this repository. Never leave the main repo pointing at
   a plugin commit that only exists locally once a real remote is used.
 - Plugin commit messages describe plugin changes only; game changes go to this repository.
-- Remote: currently a local bare repo `C:\Users\Admin\Documents\GitRemotes\HarhalHexagonalGrid.git`
-  (placeholder until a hosted remote exists). Local file remotes need
-  `git -c protocol.file.allow=always submodule ...` for submodule commands that fetch.
-  To move to a hosted remote: push `main` there, then `git submodule set-url Plugins/HarhalHexagonalGrid <url>`
-  and `git -C Plugins/HarhalHexagonalGrid remote set-url origin <url>`, commit `.gitmodules`.
+- Remotes (public, GitHub account `harhal`; `gh` CLI at `C:\Program Files\GitHub CLI\gh.exe`):
+  project https://github.com/harhal/TypicalShooter, plugin https://github.com/harhal/HarhalHexagonalGrid.
+  Push the plugin before pushing a main-repo commit that points at a new plugin commit.
 
 ## Architecture (custom code)
 
