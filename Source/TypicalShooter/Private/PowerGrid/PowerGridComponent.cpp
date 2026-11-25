@@ -59,7 +59,7 @@ void UPowerGridComponent::Recalculate()
 {
 	using namespace PowerGridComponentPrivate;
 	NodeItems.Reset();
-	TArray<FPowerGridNode> Nodes;
+	Nodes.Reset();
 	if (const UInventoryComponent* InventoryPtr = Inventory.Get())
 	{
 		for (const TPair<UInventoryItem*, FHhAxialCoord>& Placed : InventoryPtr->GetPlacedItems())
@@ -112,6 +112,30 @@ TArray<UInventoryItem*> UPowerGridComponent::GetConnectedItems(const UInventoryI
 		}
 	}
 	return Items;
+}
+
+UInventoryItem* UPowerGridComponent::GetSlotReceiver(const EReceiverSlot Slot) const
+{
+	const FHhAxialCoord Cell = ReceiverSlots::GetLocation(Slot);
+	const int32 Node = Nodes.IndexOfByPredicate([&Cell](const FPowerGridNode& Candidate)
+	{
+		return Candidate.Type == EPowerItemType::Receiver && Candidate.Location == Cell;
+	});
+	return Node != INDEX_NONE ? NodeItems[Node].Get() : nullptr;
+}
+
+UInventoryItem* UPowerGridComponent::GetActiveReceiver(const EReceiverSlot Slot) const
+{
+	UInventoryItem* Receiver = GetSlotReceiver(Slot);
+	const FPowerGrid_ItemFragment* Fragment = PowerGridComponentPrivate::GetPowerFragment(Receiver);
+	return Fragment && GetItemPower(Receiver) >= Fragment->Receiver.RequiredPower ? Receiver : nullptr;
+}
+
+TOptional<EReceiverSlot> UPowerGridComponent::GetItemSlot(const UInventoryItem* Item) const
+{
+	const int32 Node = FindNode(Item);
+	return Node != INDEX_NONE && Nodes[Node].Type == EPowerItemType::Receiver
+		? ReceiverSlots::GetSlotAt(Nodes[Node].Location) : TOptional<EReceiverSlot>();
 }
 
 TArray<UInventoryItem*> UPowerGridComponent::GetNodeItems() const

@@ -1,6 +1,6 @@
 # Энергосеть предметов: источники, приёмники, коннекторы
 
-**Статус:** 🟡 В работе: готовы итерации 1–8 из 16 (ядро сети, компонент, стрельба без обоймы, слот Air, прыжок-абилка).
+**Статус:** 🟡 В работе: готовы итерации 1–9a из 19 (ядро сети, компонент, стрельба без обоймы, слот Air, прыжок-абилка).
 
 ## Что это
 Предметы в инвентаре персонажа образуют энергосеть на гекс-сетке. **Источники** выдают мощность через
@@ -142,8 +142,13 @@
 - [x] 7a. Атрибуты атаки: третий набор `Air_*`, атрибут отдачи (R5b, R5c) — тест: `TypicalShooter.Shooting.Attributes.*`
 - [x] 8. Абилка прыжка с земли + атрибуты силы прыжка и управления в воздухе (R6c) —
   тест: `TypicalShooter.Movement.*`, `TypicalShooter.Inventory.UIFlow` (пробел прыгает)
-- [ ] 9. Приёмник в слоте выдаёт абилку слота с его базовыми параметрами; без питания / вне слота — нет;
-  воздушная атака вниз только в воздухе; отдача (R5, R5a, R6, R6a) — тест: `TypicalShooter.PowerGrid.Receivers.*`
+- [x] 9a. Активный приёмник слота: приёмник в клетке слота с мощностью ≥ требуемой (R4a, R6, R6a) —
+  тест: `TypicalShooter.PowerGrid.Receivers.ActiveInSlot`
+- [ ] 9b. Компонент выдаёт / забирает абилку активного приёмника по событию сети, ввод по слоту; воздушная атака
+  только в воздухе (кнопка прыжка) и вниз (R5, R5b) — тест: `TypicalShooter.PowerGrid.Receivers.*`
+- [ ] 9c. Базовые параметры приёмника → атрибуты слота, нейтральный стартовый GE, стартовые предметы персонажа,
+  чтобы стрельба в PIE работала (R5a) — тест: `TypicalShooter.PowerGrid.Receivers.*`, `TypicalShooter.Shooting.Flow`
+- [ ] 9d. Отдача: выстрел толкает стрелка против направления выстрела (R5c) — тест: `TypicalShooter.Shooting.Ability.Recoil`
 - [ ] 10. Эффекты по порогам мощности: глобальные и на абилки подключённых приёмников по слоту (R13, R14, R14a) —
   тест: `TypicalShooter.PowerGrid.Effects.*`
 - [ ] 11. Обойма источника (состояние экземпляра, копируется в `CloneFor`): резерв при входе / возврат при выходе, расход за выстрел всеми источниками,
@@ -198,7 +203,9 @@
   `GetPowerGridChangedDelegate()`. В сеть попадают только предметы с `FPowerGrid_ItemFragment`; узел строится с
   гранями по `UInventoryItem::GetRotation()`. Не реплицируется: сервер и клиенты считают сами из
   реплицированной раскладки (событие раскладки есть на обеих сторонах). Запросы: `IsInGrid`, `GetItemPower`,
-  `IsItemPowered`, `GetConnectedItems(Receiver)`, `GetNodeItems` / `GetSolution`.
+  `IsItemPowered`, `GetConnectedItems(Receiver)`, `GetNodeItems` / `GetSolution`. Слоты: `GetSlotReceiver(Slot)` —
+  приёмник в клетке слота (запитан или нет), `GetActiveReceiver(Slot)` — он же, если мощность ≥ его
+  `RequiredPower` (иначе / пусто / не приёмник — `nullptr`), `GetItemSlot(Item)` — слот приёмника.
   - Пока обоймы нет (итерация 11), источник с `AmmoType` считается с пустой обоймой и не работает (R9d).
 - **Стрельба без обоймы** (R9a): из `EAttackAttribute` / `UAttackAttributeSet` убраны `Ammo`, `ClipSize`,
   `ReloadTime`; удалены `UReloadGameplayAbility` и её подклассы, `EAttackInputID::Reload`, кнопка R / B, теги
@@ -246,6 +253,8 @@
   `FindsInventoryAndSolves` (предметы до регистрации, предметы без фрагмента), `RecalculatesOnLayoutChange`
   (добавление, поворот закрывает / открывает соединение, удаление источника, рассылка изменений),
   `AmmoSourceWithoutClip`, `OnCharacterAndContainer`.
+- `TypicalShooter.PowerGrid.Receivers.ActiveInSlot` (`Private/Tests/PowerGridReceiversTest.cpp`): запитанный приёмник в
+  слоте, недопитанный, коннектор в слоте, приёмник вне слотов, перенос из слота.
 - `TypicalShooter.Movement.*` (`Private/Tests/MovementJumpTest.cpp`, тикающий мир с полом-коробкой, `ACharacter` с
   AI-контроллером): `AttributesDriveMovement` (старт из движения, атрибуты → `JumpZVelocity` / `AirControl`, кламп),
   `JumpAbility` (прыжок с земли с силой атрибута, отпускание завершает, в воздухе не активируется, после

@@ -6,6 +6,7 @@
 #include "CoreMinimal.h"
 #include "Components/ActorComponent.h"
 #include "PowerGrid/PowerGridSolver.h"
+#include "PowerGrid/ReceiverSlots.h"
 #include "PowerGridComponent.generated.h"
 
 class UInventoryComponent;
@@ -35,6 +36,13 @@ public:
 	/** Receiver + items on powered paths to it (R14); empty for non-receivers. */
 	TArray<UInventoryItem*> GetConnectedItems(const UInventoryItem* Receiver) const;
 
+	/** Receiver lying in Slot's cell, powered or not; nullptr if the cell is empty or holds another item (R4a). */
+	UInventoryItem* GetSlotReceiver(EReceiverSlot Slot) const;
+	/** GetSlotReceiver if fed with at least its required power: the receiver whose ability Slot grants (R5, R6). */
+	UInventoryItem* GetActiveReceiver(EReceiverSlot Slot) const;
+	/** Slot of a receiver lying in a slot cell; unset for other items and cells. */
+	TOptional<EReceiverSlot> GetItemSlot(const UInventoryItem* Item) const;
+
 	/** Items of the grid nodes, parallel to GetSolution().Nodes. */
 	TArray<UInventoryItem*> GetNodeItems() const;
 	const FPowerGridSolution& GetSolution() const { return Solution; }
@@ -54,6 +62,8 @@ private:
 	FDelegateHandle LayoutChangedHandle;
 
 	TArray<TWeakObjectPtr<UInventoryItem>> NodeItems;
+	/** Solver input, parallel to NodeItems. */
+	TArray<FPowerGridNode> Nodes;
 	FPowerGridSolution Solution;
 	FPowerGridChangedDelegate PowerGridChangedDelegate;
 };
