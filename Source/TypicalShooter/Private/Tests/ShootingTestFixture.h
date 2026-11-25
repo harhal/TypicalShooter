@@ -17,12 +17,26 @@ namespace ShootingTest
 	{
 		UWorld* World = nullptr;
 
-		FWorldFixture()
+		/** bBeginPlay: mark the world as playing, so spawned actors get BeginPlay and tick (no game mode). */
+		explicit FWorldFixture(const bool bBeginPlay = false)
 		{
 			World = UWorld::CreateWorld(EWorldType::Game, false);
 			FWorldContext& Context = GEngine->CreateNewWorldContext(EWorldType::Game);
 			Context.SetCurrentWorld(World);
 			World->InitializeActorsForPlay(FURL());
+			if (bBeginPlay)
+			{
+				World->SetBegunPlay(true);
+			}
+		}
+
+		/** Advances the world by Seconds in fixed steps. */
+		void Tick(const float Seconds, const float Step = 1.f / 60.f) const
+		{
+			for (float Elapsed = 0.f; Elapsed < Seconds; Elapsed += Step)
+			{
+				World->Tick(LEVELTICK_All, Step);
+			}
 		}
 
 		~FWorldFixture()

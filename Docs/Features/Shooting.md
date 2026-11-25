@@ -95,7 +95,7 @@ R17 подтверждено; дистанции от дула, дуло — `Mu
   тест: `TypicalShooter.Shooting.Damage.SimpleReceiver`
 - [x] 2. Атрибут здоровья + GE урона (SetByCaller) + GAS-получатель —
   тест: `TypicalShooter.Shooting.Damage.GasReceiver`, `.HealthClamp`
-- [ ] 3. Мишень-манекен: GAS-здоровье, надпись со здоровьем, восстановление при нуле (R13a) —
+- [x] 3. Мишень-манекен: GAS-здоровье, надпись со здоровьем, восстановление при нуле (R13a) —
   тест: `TypicalShooter.Shooting.TargetDummy.*`
 - [ ] 4. Актор снаряда: гравитация, предел дистанции, урон, потеря урона и пробитие (R7–R9) —
   тест: `TypicalShooter.Shooting.Projectile.*` (игровой мир без PIE, снаряды по манекенам)
@@ -136,16 +136,27 @@ R17 подтверждено; дистанции от дула, дуло — `Mu
   сопротивления). [`UGasDamageReceiverComponent`](../../Source/TypicalShooter/Public/Shooting/GasDamageReceiverComponent.h)
   находит ASC владельца, проставляет все типы (отсутствующие = 0) и применяет `DamageEffect` к нему; в контекст
   эффекта кладутся инстигатор и хит.
+- [`ATargetDummy`](../../Source/TypicalShooter/Public/Shooting/TargetDummy.h) — манекен: капсула коллизии
+  (`BlockAllDynamic`, блокирует и снаряды, и трассы прицела), цилиндр-меш без коллизии, `UTS_GAS` +
+  `UHealthAttributeSet` + `UGasDamageReceiverComponent`, надпись `UTextRenderComponent` «здоровье / максимум»
+  (обновляется по изменению атрибута, в т.ч. на клиентах). Сервер: считает `TotalDamageTaken`, пишет каждое
+  попадание в `LogTypicalShooter`, при нуле `++Defeats` и на следующем тике восстанавливает здоровье
+  (не внутри исполнения эффекта).
 
 ## Настройка контента
 Простреливаемая стена / ящик: добавить актору компонент `Simple Damage Receiver`, задать `Max Durability`
 и при необходимости `Destroy Owner On Depleted`.
+
+Мишень: перетащить `Target Dummy` (C++-класс) на уровень, при желании поменять `Max Health`.
 
 ## Тесты
 [ShootingDamageTest.cpp](../../Source/TypicalShooter/Private/Tests/ShootingDamageTest.cpp) (игровой мир без PIE,
 фикстура [ShootingTestFixture.h](../../Source/TypicalShooter/Private/Tests/ShootingTestFixture.h)):
 `TypicalShooter.Shooting.Damage.ShotDamageAmounts`, `.SimpleReceiver`, `.SimpleReceiverDestroysOwner`.
 [ShootingGasDamageTest.cpp](../../Source/TypicalShooter/Private/Tests/ShootingGasDamageTest.cpp): `TypicalShooter.Shooting.Damage.HealthClamp`, `.GasReceiver`.
+[ShootingTargetDummyTest.cpp](../../Source/TypicalShooter/Private/Tests/ShootingTargetDummyTest.cpp) (мир с
+`SetBegunPlay(true)` и ручным тиком — `FWorldFixture(true)` / `Tick`): `TypicalShooter.Shooting.TargetDummy.TakesDamage`,
+`.RefillsWhenDepleted`.
 
 ## Ограничения и грабли
 
