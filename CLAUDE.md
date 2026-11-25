@@ -105,7 +105,10 @@ feature's doc and updated as they change; finished features are merged into `mai
   the whole `TypicalShooter.` + `HarhalHexagonalGrid.` suites must pass before a commit.
   Existing suites: `TypicalShooter.Inventory.Core.*` (bare game world, no PIE; shared fixture in
   `Private/Tests/InventoryTestFixture.h`), `TypicalShooter.Inventory.UI.*` (presenter + Slate grid /
-  info view without a window), `TypicalShooter.Inventory.UIFlow` (PIE), `HarhalHexagonalGrid.*` (pure math).
+  info view without a window), `TypicalShooter.Inventory.UIFlow` (PIE), `HarhalHexagonalGrid.*` (pure math),
+  `TypicalShooter.Shooting.*` (bare world, `Private/Tests/ShootingTestFixture.h`; `FWorldFixture(true)` marks
+  the world as playing and `Tick` steps it — bumps `GFrameCounter`, since tick functions run once per engine
+  frame; attack/reload tests share `ShootingAbilityFixture.h`), `TypicalShooter.Shooting.Flow` (PIE).
 - Headless alternative (editor closed, also runs the PIE test):
   `UnrealEditor-Cmd.exe <uproject> "-ExecCmds=Automation RunTests TypicalShooter.+HarhalHexagonalGrid.;Quit" -unattended -nopause -NullRHI -abslog=<file>`
   and grep the log for `Test Completed. Result=`.
@@ -211,8 +214,21 @@ feature's doc and updated as they change; finished features are merged into `mai
   - `UInventoryItemInfoWidget` (UMG wrapper of `SInventoryItemInfo`, an `IInventoryItem_View`) shows
     the displayed item's icon / name / description; it lives in `BP_ItemInfo`.
 - Custom content lives in `Content/Inventory` (note the folder typo `Bllueprints`).
+- **Shooting** (`Public|Private/Shooting/`, doc `Docs/Features/Shooting.md`): primary / alternate attacks are
+  server-only GAS abilities (`UAttackGameplayAbility`, `UReloadGameplayAbility`, slot = `EAttackSlot`) driven by
+  attributes: `UAttackAttributeSet` (`Primary_*` / `Alternate_*`, read via `GetAttribute(Slot, EAttackAttribute)` /
+  `ReadStats`) and `UAmmoAttributeSet` (reserve per `Ammo.*` kind). A shot spends one clip round and spawns one
+  `AShotProjectile` per `FShotPattern` point from the `Muzzle`-tagged component towards the camera aim point;
+  projectiles pierce (`UShotProjectileMovementComponent::HandleBlockingHit`) losing damage per hit. Damage goes
+  through `IShotDamageReceiver` components (`UGasDamageReceiverComponent` → `UShotDamageEffect` SetByCaller per
+  `Damage.Type.*` → `UHealthAttributeSet`; `USimpleDamageReceiverComponent` for plain durability). The character
+  grants `AttackAbilities` + `UDefaultAttackStatsEffect` at BeginPlay; input is generated in
+  `UAttackInputComponent` (LMB / RT, RMB / LT, R / B → ability InputIDs, ignored while the inventory is open).
+  Items change attacks via `FAttackModifier_ItemFragment` (GE while held, pattern replacement, ammo-gated
+  per-shot bonuses), applied by `UAttackModifiersComponent`. `ATargetDummy` is a refilling GAS target;
+  `UAmmoCounterWidget` (in `BP_HUD`) shows clip / reserve.
 
-## Current state (as of 2026-11-24)
+## Current state (as of 2026-11-25)
 
 C++ and all project blueprints compile. In PIE (standalone, server) both level containers fill
 their inventories (`LogTypicalShooter: ... placed N of N manifest items`). The inventory screen has
@@ -252,9 +268,15 @@ Open work:
 - Move the generated inventory input into IMC/IA assets (rebinding, on-screen button prompts).
 - Multiplayer check of transfers and of the client-side layout event (dedicated server / client PIE).
 - Leftover debug output outside the inventory: `BP_ItemsContainer` prints "Open / That's All" on interact.
+- Shooting: hitscan / collider attacks, on-hit effects, resistances, items with attack modifiers in the level,
+  projectile visuals, multiplayer check (see `Docs/Features/Shooting.md`).
+
+Shooting works in PIE: the player fires at three `ATargetDummy` on `Lvl_FirstPerson` (LMB rifle-like, RMB
+7-pellet spread, R reload from reserve), `BP_HUD.AmmoCounter` shows clip / reserve; covered by
+`TypicalShooter.Shooting.Flow`.
 
 Verify blueprints headlessly with:
 `UnrealEditor-Cmd.exe <uproject> -run=CompileAllBlueprints -unattended -nopause -NullRHI -stdout`
 
-Game design (roguelike arena loop, weapons, enemies) has not been started; `Variant_Shooter` template
-code is the current basis for combat/AI.
+Game design (roguelike arena loop, enemies) has not been started; enemies / AI still come from the
+`Variant_Shooter` template (not hooked to the new damage receivers).
