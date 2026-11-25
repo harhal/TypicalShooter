@@ -15,16 +15,27 @@ UReloadGameplayAbility::UReloadGameplayAbility()
 
 bool UReloadGameplayAbility::TryReload(UAbilitySystemComponent& Asc, const EAttackSlot Slot)
 {
+	FGameplayAbilitySpecHandle Handle;
+	return FindForSlot(Asc, Slot, &Handle) && Asc.TryActivateAbility(Handle);
+}
+
+const UReloadGameplayAbility* UReloadGameplayAbility::FindForSlot(const UAbilitySystemComponent& Asc, const EAttackSlot Slot,
+	FGameplayAbilitySpecHandle* OutHandle)
+{
 	for (const FGameplayAbilitySpec& Spec : Asc.GetActivatableAbilities())
 	{
 		const UReloadGameplayAbility* Reload = Cast<UReloadGameplayAbility>(Spec.GetPrimaryInstance());
 		Reload = Reload ? Reload : Cast<UReloadGameplayAbility>(Spec.Ability);
 		if (Reload && Reload->Slot == Slot)
 		{
-			return Asc.TryActivateAbility(Spec.Handle);
+			if (OutHandle)
+			{
+				*OutHandle = Spec.Handle;
+			}
+			return Reload;
 		}
 	}
-	return false;
+	return nullptr;
 }
 
 void UReloadGameplayAbility::ActivateAbility(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo,
@@ -45,7 +56,7 @@ void UReloadGameplayAbility::ActivateAbility(const FGameplayAbilitySpecHandle Ha
 		return;
 	}
 
-	Asc->AddLooseGameplayTag(ShootingTags::GetReloadingTag(static_cast<uint8>(Slot)));
+	Asc->AddLooseGameplayTag(ShootingTags::GetReloadingTag(static_cast<uint8>(Slot)), 1, EGameplayTagReplicationState::TagOnly);
 	bReloadingTagAdded = true;
 	if (Stats.ReloadTime <= 0.f)
 	{
@@ -66,7 +77,7 @@ void UReloadGameplayAbility::EndAbility(const FGameplayAbilitySpecHandle Handle,
 	UAbilitySystemComponent* Asc = GetAbilitySystemComponentFromActorInfo();
 	if (bReloadingTagAdded && Asc)
 	{
-		Asc->RemoveLooseGameplayTag(ShootingTags::GetReloadingTag(static_cast<uint8>(Slot)));
+		Asc->RemoveLooseGameplayTag(ShootingTags::GetReloadingTag(static_cast<uint8>(Slot)), 1, EGameplayTagReplicationState::TagOnly);
 	}
 	bReloadingTagAdded = false;
 	Super::EndAbility(Handle, ActorInfo, ActivationInfo, bReplicateEndAbility, bWasCancelled);

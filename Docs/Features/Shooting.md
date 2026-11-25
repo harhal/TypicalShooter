@@ -177,7 +177,7 @@ R17 подтверждено; дистанции от дула, дуло — `Mu
   Таймеры — `FTimerManager` мира, сбрасываются в `EndAbility`.
 - Перезарядка — [`UReloadGameplayAbility`](../../Source/TypicalShooter/Public/Shooting/ReloadGameplayAbility.h) (`Slot`,
   `ServerOnly`): полная обойма — сразу завершается; иначе вешает loose-тег `State.Reloading.<Слот>` (блокирует атаку
-  слота в её `CanActivateAbility`), ждёт время перезарядки и переносит в обойму `min(не хватает, запас)` патронов
+  слота в её `CanActivateAbility`; реплицируется для HUD), ждёт время перезарядки и переносит в обойму `min(не хватает, запас)` патронов
   вида `AmmoType` (пустой тег — бесконечный запас). Нет запаса — перезарядка не начинается.
 - Запас — [`UAmmoAttributeSet`](../../Source/TypicalShooter/Public/Shooting/AmmoAttributeSet.h): `Reserve_Bullet / Battery /
   Grenade / Radiator / Particle` (целые, ≥ 0, реплицируются с уведомлением для HUD); `GetReserveAttribute(Ammo.*)`.
@@ -196,6 +196,11 @@ R17 подтверждено; дистанции от дула, дуло — `Mu
   модификаторам слота в порядке прихода предметов: хватает запаса — списывает расход и прибавляет бонусы к копии
   `FAttackStats` этого выстрела (`UAttackAttributeSet::AddToStats`, с клампами; обойма, очередь и патроны не
   меняются), не хватает — модификатор пропускается, выстрел происходит как обычно.
+- HUD — [`UAmmoCounterWidget`](../../Source/TypicalShooter/Public/UI/Widget/AmmoCounterWidget.h) (UMG-обёртка над
+  двумя `STextBlock`): строки «Primary: обойма / запас» и «Alternate: …», текст из
+  [`AmmoDisplay::GetSlotText`](../../Source/TypicalShooter/Public/Shooting/AmmoDisplay.h) каждый кадр по ASC пешки владельца
+  (запас — по `AmmoType` перезарядки слота, `∞` если не ограничен; во время перезарядки «Reloading...»). Тег
+  `State.Reloading.*` теперь реплицируется (`EGameplayTagReplicationState::TagOnly`), чтобы клиент видел перезарядку.
 - Персонаж — [`ATypicalShooterCharacter`](../../Source/TypicalShooter/Public/TypicalShooterCharacter.h): `UTS_GAS`
   (реплицируется, Mixed) + `UAttackAttributeSet`, компонент `Muzzle` (тег `Muzzle`, у камеры: 40 вперёд, 15 вправо,
   12 вниз). На сервере в `BeginPlay` выдаёт `AttackAbilities` (класс + `EAttackInputID` как InputID спека) и
@@ -253,6 +258,7 @@ R17 подтверждено; дистанции от дула, дуло — `Mu
 [ShootingTestEffects.h](../../Source/TypicalShooter/Private/Tests/ShootingTestEffects.h)):
 `TypicalShooter.Shooting.ItemModifiers.EffectWhileHeld`, `.PatternReplacement`, `.AttackUsesModifiers`.
 `TypicalShooter.Shooting.Ability.AmmoGatedModifier` — там же.
+[ShootingAmmoDisplayTest.cpp](../../Source/TypicalShooter/Private/Tests/ShootingAmmoDisplayTest.cpp): `TypicalShooter.Shooting.UI.AmmoText`.
 [ShootingFlowTest.cpp](../../Source/TypicalShooter/Private/Tests/ShootingFlowTest.cpp) — PIE `TypicalShooter.Shooting.Flow`:
 стартовые обоймы 30 / 6, ЛКМ и ПКМ попадают по манекену перед игроком, R перезаряжает обе атаки (и списывает запас), с открытым
 инвентарём ЛКМ не стреляет, RT стреляет.

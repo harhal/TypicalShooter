@@ -26,6 +26,10 @@ public:
 	/** Activates the reload ability of Slot granted to Asc, if any. Server. */
 	static bool TryReload(UAbilitySystemComponent& Asc, EAttackSlot Slot);
 
+	/** The reload ability of Slot granted to Asc (its instance if any, else the class default), or nullptr. */
+	static const UReloadGameplayAbility* FindForSlot(const UAbilitySystemComponent& Asc, EAttackSlot Slot,
+		FGameplayAbilitySpecHandle* OutHandle = nullptr);
+
 	virtual void ActivateAbility(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo,
 		const FGameplayAbilityActivationInfo ActivationInfo, const FGameplayEventData* TriggerEventData) override;
 	virtual void EndAbility(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo,
