@@ -268,7 +268,10 @@ UI widgets: `BP_HUD` → `SetContainer(Container)` → `BP_ContainerGrid.SetCont
 (`UInventoryItemInfoWidget`).
 
 The two level containers hold test items (`Test Medkit/Ammo/Grenade`, `Test Armor/Scope`) with
-`FInfo_ItemFragment` (placeholder icon `T_UE_Logo_M`).
+`FInfo_ItemFragment` (placeholder icon `T_UE_Logo_M`); the second one also holds power grid test items (`Particle Core`
+source on `Ammo.Particle`, `Straight` / `Bent Conduit`, `Damage Amplifier` with threshold steps), set on the level
+instance via Unreal MCP. `TypicalShooter.PowerGrid.Flow` saves `Saved/Screenshots/WindowsEditor/PowerGridFlow.png` when
+run in a rendering editor (visual check of the power grid overlay and info panel).
 
 Inventory screen (Tab) and container opening (E) are wired and covered by the automation test
 `TypicalShooter.Inventory.UIFlow` (`Source/TypicalShooter/Private/Tests/InventoryUIFlowTest.cpp`): it

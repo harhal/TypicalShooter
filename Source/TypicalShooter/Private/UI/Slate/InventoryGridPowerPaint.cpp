@@ -80,7 +80,7 @@ int32 SInventoryGrid::PaintPowerGrid(const FGeometry& Geometry, FSlateWindowElem
 			}
 		}
 		DrawText(OutDrawElements, LayerId + 1, Geometry, PowerGridOverlay::GetPowerLabel(Cell), Font,
-			CellCenter + FVector2D(0.f, HexSize * 0.5f), Color);
+			CellCenter + FVector2D(0.f, HexSize * 0.15f), Color); // above the item name
 	}
 
 	if (PowerGrid.bShowSlots)

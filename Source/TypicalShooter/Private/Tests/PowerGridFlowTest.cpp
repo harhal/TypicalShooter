@@ -1,6 +1,6 @@
 // End-to-end power grid check in Play In Editor: the starting set fills all three receiver slots, Space jumps and
 // Space in the air fires the air receiver straight down (its recoil is a double jump), and the player's inventory
-// grid draws the power grid with slot marks.
+// grid draws the power grid with slot marks; a level container shows its power grid items.
 
 #include "Misc/AutomationTest.h"
 
@@ -13,6 +13,12 @@
 #include "GameFramework/CharacterMovementComponent.h"
 #include "GenericPlatform/GenericPlatformInputDeviceMapper.h"
 #include "InputKeyEventArgs.h"
+#include "EngineUtils.h"
+#include "Engine/LocalPlayer.h"
+#include "InventoryItem.h"
+#include "ItemsContainer.h"
+#include "UnrealClient.h"
+#include "UI/InventoryUISubsystem.h"
 #include "PowerGrid/DefaultLoadout.h"
 #include "PowerGrid/PowerGridComponent.h"
 #include "Tests/AutomationEditorCommon.h"
@@ -30,6 +36,7 @@ namespace PowerGridFlowTest
 		TWeakObjectPtr<UWorld> World;
 		TWeakObjectPtr<ATypicalShooterPlayerController> Controller;
 		TWeakObjectPtr<ACharacter> Character;
+		TWeakObjectPtr<AItemsContainer> Container;
 		float SavedVelocityZ = 0.f;
 
 		bool TryResolve()
@@ -148,6 +155,58 @@ bool FPowerGridFlowTest::RunTest(const FString& Parameters)
 			TestEqual(TEXT("Grid draws the core's links to the three receivers"), Display.Links.Num(), 3);
 		}
 	}, 1.f);
+
+	// 4. The level container with power grid test items: walk up, E opens it, its grid draws its own power grid; the
+	//    damage amplifier is shown in the info panel. A screenshot is saved for a visual check (rendering editors only).
+	Step([this, State]()
+	{
+		for (TActorIterator<AItemsContainer> It(State->World.Get()); It; ++It)
+		{
+			const UPowerGridComponent* Grid = It->FindComponentByClass<UPowerGridComponent>();
+			if (Grid && Grid->GetNodeItems().Num() > 0)
+			{
+				State->Container = *It;
+				break;
+			}
+		}
+		if (!TestTrue(TEXT("A level container holds power grid items"), State->Container.IsValid()))
+		{
+			return;
+		}
+		const FVector Target = State->Container->GetActorLocation() + FVector(-60.f, 0.f, 50.f);
+		State->Character->TeleportTo(Target, State->Character->GetActorRotation());
+	}, 1.f);
+	Step([State]() { State->SendKey(EKeys::E, IE_Pressed); }, 0.5f);
+	Step([State]() { State->SendKey(EKeys::E, IE_Released); }, 0.1f);
+	Step([this, State]()
+	{
+		if (!State->Container.IsValid())
+		{
+			return;
+		}
+		TestTrue(TEXT("E opens the power grid container"), State->Controller->GetOpenedItemsContainer() == State->Container.Get());
+		const UPowerGridComponent* Grid = State->Container->FindComponentByClass<UPowerGridComponent>();
+		UInventoryItem* Amplifier = nullptr;
+		for (UInventoryItem* Item : Grid->GetNodeItems())
+		{
+			Amplifier = Item && Item->GetItemName().ToString().Contains(TEXT("Amplifier")) ? Item : Amplifier;
+		}
+		TestNotNull(TEXT("The container holds the damage amplifier"), Amplifier);
+		int32 DrawnContainerCells = 0;
+		for (TObjectIterator<UInventoryGridWidget> It; It; ++It)
+		{
+			if (!It->bShowOwningPawnInventory && It->GetWorld() == State->World.Get() && It->GetSlateGrid().IsValid())
+			{
+				DrawnContainerCells = FMath::Max(DrawnContainerCells, It->GetSlateGrid()->GetPowerGrid().Cells.Num());
+			}
+		}
+		TestEqual(TEXT("The container grid draws its power items"), DrawnContainerCells, Grid->GetNodeItems().Num());		if (UInventoryUISubsystem* UI = State->Controller->GetLocalPlayer()->GetSubsystem<UInventoryUISubsystem>())
+		{
+			UI->SelectItem(Amplifier);
+		}
+		FScreenshotRequest::RequestScreenshot(TEXT("PowerGridFlow"), true, false);
+	}, 0.3f);
+	Step([]() {}, 1.f); // let the screenshot be taken
 
 	ADD_LATENT_AUTOMATION_COMMAND(FEndPlayMapCommand());
 	return true;
