@@ -6,6 +6,7 @@
 #include "HhGridFunctions.h"
 #include "Components/SphereComponent.h"
 #include "InventoryComponent.h"
+#include "PowerGrid/PowerGridComponent.h"
 #include "Net/UnrealNetwork.h"
 #include "TypicalShooter.h"
 
@@ -21,6 +22,7 @@ AItemsContainer::AItemsContainer(const FObjectInitializer& ObjectInitializer) :
 	SphereCollision->SetCollisionResponseToChannel(ECC_GameTraceChannel2, ECR_Overlap);
 	
 	InventoryComponent = ObjectInitializer.CreateDefaultSubobject<UInventoryComponent>(this, TEXT("InventoryComponent"));
+	PowerGrid = ObjectInitializer.CreateDefaultSubobject<UPowerGridComponent>(this, TEXT("PowerGrid"));
 }
 
 void AItemsContainer::BeginPlay()

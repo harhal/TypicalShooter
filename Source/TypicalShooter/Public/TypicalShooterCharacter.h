@@ -16,6 +16,7 @@ class UAttackModifiersComponent;
 class UGameplayEffect;
 class UInteractionComponent;
 class UInventoryComponent;
+class UPowerGridComponent;
 class UInputComponent;
 class USkeletalMeshComponent;
 class UCameraComponent;
@@ -67,6 +68,10 @@ protected:
 	/** The player's own items. */
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category ="Inventory", meta = (AllowPrivateAccess = "true"))
 	TObjectPtr<UInventoryComponent> InventoryComponent;
+
+	/** Power grid of InventoryComponent's items. */
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category ="Inventory", meta = (AllowPrivateAccess = "true"))
+	TObjectPtr<UPowerGridComponent> PowerGrid;
 
 	/** Projectiles start here (tagged "Muzzle"); follows the first person camera. */
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category ="Attack", meta = (AllowPrivateAccess = "true"))

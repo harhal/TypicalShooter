@@ -9,6 +9,7 @@
 #include "InputActionValue.h"
 #include "InteractionComponent.h"
 #include "InventoryComponent.h"
+#include "PowerGrid/PowerGridComponent.h"
 #include "TS_GAS.h"
 #include "Shooting/AmmoAttributeSet.h"
 #include "Shooting/AttackAttributeSet.h"
@@ -75,6 +76,7 @@ ATypicalShooterCharacter::ATypicalShooterCharacter()
 	InteractionComponent = CreateDefaultSubobject<UInteractionComponent>(TEXT("Interaction Component"));
 
 	InventoryComponent = CreateDefaultSubobject<UInventoryComponent>(TEXT("Inventory Component"));
+	PowerGrid = CreateDefaultSubobject<UPowerGridComponent>(TEXT("Power Grid"));
 }
 
 void ATypicalShooterCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputComponent)
