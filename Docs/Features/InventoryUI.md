@@ -77,7 +77,8 @@ IInventoryItem_Model                  UInventoryItem_Presenter ──▶ SInvent
 - `TypicalShooter.Inventory.UIFlow` (PIE, [InventoryUIFlowTest.cpp](../../Source/TypicalShooter/Private/Tests/InventoryUIFlowTest.cpp)):
   клавиши подаются через `UGameViewportClient::InputKey` (Enhanced Input проверяется, фокус ОС → Slate — нет).
   Tab, E у контейнера, перенос, Take / Take All, отказ сервера для дальнего контейнера; геймпад: X, D-pad
-  (курсор рисуется в сетке), A (выбор и перенос в контейнер, без прыжка), RB, Y, B, View; движение и прыжок.
+  (курсор рисуется в сетке), A (выбор и перенос в контейнер, без прыжка), Q / RT (поворот, переносится с предметом;
+  отказ для дальнего контейнера), RB, Y, B, View; движение и прыжок.
 
 ## Ограничения и грабли
 - Синтетический ввод ОС (SendKeys / keybd_event) до игрового вьюпорта редактора не доходит.
@@ -91,4 +92,4 @@ IInventoryItem_Model                  UInventoryItem_Presenter ──▶ SInvent
 - [ ] Переход курсора между сетками при выходе за край (сейчас только LB/RB).
 
 ---
-_Сверено с кодом: 2026-11-24_
+_Сверено с кодом: 2026-11-25_

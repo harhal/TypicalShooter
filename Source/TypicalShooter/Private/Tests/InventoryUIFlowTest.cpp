@@ -341,6 +341,22 @@ bool FInventoryUIFlowTest::RunTest(const FString& Parameters)
 		UInventoryComponent* PlayerInventory = PC->GetPawn()->FindComponentByClass<UInventoryComponent>();
 		TestTrue(TEXT("Gamepad A selects the item under the cursor"),
 			UI->GetSelectedItem() && UI->GetSelectedItem() == PlayerInventory->GetItemAt(FHhAxialCoord(0, 0)));
+		TestEqual(TEXT("The focused item starts unrotated"), PlayerInventory->GetItemAt(FHhAxialCoord(0, 0))->GetRotation(), 0);
+	});
+	// Q / RT rotate the focused item a step clockwise (power grid R3; server RPC path).
+	Tap(EKeys::Q);
+	Step([this, State]()
+	{
+		UInventoryComponent* PlayerInventory = State->Controller->GetPawn()->FindComponentByClass<UInventoryComponent>();
+		TestEqual(TEXT("Q rotates the focused item"), PlayerInventory->GetItemAt(FHhAxialCoord(0, 0))->GetRotation(), 1);
+	});
+	Tap(EKeys::Gamepad_RightTrigger);
+	Step([this, State]()
+	{
+		ATypicalShooterPlayerController* PC = State->Controller.Get();
+		UInventoryComponent* PlayerInventory = PC->GetPawn()->FindComponentByClass<UInventoryComponent>();
+		TestEqual(TEXT("Gamepad RT rotates it again"), PlayerInventory->GetItemAt(FHhAxialCoord(0, 0))->GetRotation(), 2);
+		TestTrue(TEXT("Rotating keeps the selection"), PC->GetLocalPlayer()->GetSubsystem<UInventoryUISubsystem>()->GetSelectedItem() != nullptr);
 	});
 	Tap(EKeys::Gamepad_RightShoulder);
 	Tap(EKeys::Gamepad_FaceButton_Bottom);
@@ -355,6 +371,23 @@ bool FInventoryUIFlowTest::RunTest(const FString& Parameters)
 		TestEqual(TEXT("Player gave one item away"), PlayerInventory->GetNumItems(), State->NumStartingItems + State->NumContainerItems - 1);
 		TestNull(TEXT("Nothing selected after the move"), UI->GetSelectedItem());
 		TestFalse(TEXT("Gamepad A did not jump (inventory input has priority)"), PC->GetPawn()->GetMovementComponent()->IsFalling());
+
+		UInventoryItem* Moved = State->Container->InventoryComponent->GetItemAt(FHhAxialCoord(0, 0));
+		if (!Moved)
+		{
+			return;
+		}
+		TestEqual(TEXT("The rotation travels with the item (R3a)"), Moved->GetRotation(), 2);
+
+		// The server refuses to rotate items of a container the pawn is not next to.
+		AItemsContainer* Container = State->Container.Get();
+		const FVector ContainerLocation = Container->GetActorLocation();
+		Container->SetActorLocation(ContainerLocation + FVector(20000.f, 0.f, 0.f));
+		PC->RequestRotateItem(Container->InventoryComponent, Moved);
+		TestEqual(TEXT("Rotating in a far container is rejected"), Moved->GetRotation(), 2);
+		Container->SetActorLocation(ContainerLocation);
+		PC->RequestRotateItem(Container->InventoryComponent, Moved, -1);
+		TestEqual(TEXT("Rotating in the opened container works, also counter-clockwise"), Moved->GetRotation(), 1);
 	});
 	Tap(EKeys::Gamepad_FaceButton_Top);
 	Step([this, State]()

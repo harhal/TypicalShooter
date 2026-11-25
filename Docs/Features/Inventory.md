@@ -45,7 +45,8 @@
 UI вызывает `IItemsContainer_Model::RequestTransferItem` → `UInventoryComponent` передаёт его первому локальному
 `ATypicalShooterPlayerController::RequestTransferItem` → RPC `ServerTransferItem` (проверка `CanAccessInventory`:
 свой инвентарь или контейнер в радиусе доступа). Take / Take All → `ServerTakeItems` (в первые свободные клетки
-инвентаря пешки). Без контроллера (тесты, инструменты) запрос применяется напрямую при наличии авторитета.
+инвентаря пешки). Поворот — `ATypicalShooterPlayerController::RequestRotateItem` → RPC `ServerRotateItem` (та же
+проверка доступа) → `UInventoryComponent::RotateItem`. Без контроллера (тесты, инструменты) запрос применяется напрямую при наличии авторитета.
 
 ### Репликация
 - `UInventoryItem` реплицируется как subobject компонента (`ReadyForReplication` → `RegisterReplicatedSubObjects`).
@@ -76,4 +77,4 @@ UI вызывает `IItemsContainer_Model::RequestTransferItem` → `UInventory
 - [ ] Проверка репликации в listen/dedicated server (включая событие раскладки на клиенте).
 
 ---
-_Сверено с кодом: 2026-11-24_
+_Сверено с кодом: 2026-11-25_

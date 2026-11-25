@@ -1,6 +1,6 @@
 # Энергосеть предметов: источники, приёмники, коннекторы
 
-**Статус:** 🟡 В работе: готовы итерации 1–12 из 21 (ядро сети, компонент, стрельба без обоймы, прыжок-абилка, приёмники выдают атаки, эффекты по порогам, обойма источника, старые модификаторы атак удалены).
+**Статус:** 🟡 В работе: готовы итерации 1–13 из 21 (ядро сети, компонент, стрельба без обоймы, прыжок-абилка, приёмники выдают атаки, эффекты по порогам, обойма источника, старые модификаторы атак удалены, поворот с клиента).
 
 ## Что это
 Предметы в инвентаре персонажа образуют энергосеть на гекс-сетке. **Источники** выдают мощность через
@@ -159,7 +159,7 @@
 - [x] 11c. Зарядка обоймы из запаса после простоя (R9c) — тест: `TypicalShooter.PowerGrid.SourceAmmo.*`
 - [x] 12. Удаление `FAttackModifier_ItemFragment` / `UAttackModifiersComponent`, перевод тестов стрельбы на
   приёмники (R14b) — тесты: `TypicalShooter.PowerGrid.Effects.ShotUsesBonuses`, `.Receivers.AbilityPattern`
-- [ ] 13. Запрос поворота с клиента (`RequestRotateItem` → серверный RPC с `CanAccessInventory`) и ввод
+- [x] 13. Запрос поворота с клиента (`RequestRotateItem` → серверный RPC с `CanAccessInventory`) и ввод
   Q / RT в экране инвентаря (R3) — тест: `TypicalShooter.Inventory.UIFlow` (дополнить)
 - [ ] 14. UI сети: грани, слоты, соединения, мощность, обойма; инфо-панель (R16) — тест: `TypicalShooter.Inventory.UI.PowerGrid*`
 - [ ] 15. Контент: «воздушный» приёмник (двойной прыжок) в стартовом наборе, тестовые предметы в контейнерах — тест: `TypicalShooter.PowerGrid.Flow` (PIE)
@@ -187,6 +187,9 @@
   остались в инвентаре, но повернулись (`InventoryLayout::DiffRotations`); снимок раскладки компонента хранит
   поворот. Полный оборот события не даёт. На клиентах `UInventoryItem::OnRep_Rotation` вызывает
   `FlushLayoutChange` инвентаря-владельца (outer) — не проверено по сети.
+  Запрос с клиента: Q / RT на экране инвентаря → `ATypicalShooterPlayerController::RotateFocusedItem` (предмет под
+  курсором / выбранный, иначе под мышью) → `RequestRotateItem(Inventory, Item, Steps)` → RPC `ServerRotateItem`
+  (`CanAccessInventory`: свой инвентарь или открытый рядом контейнер) → `RotateItem`.
 - **Слоты приёмников** (`Public/PowerGrid/ReceiverSlots.h`): `EReceiverSlot::Primary (0,-1) / Alternate (-1,1) /
   Air (1,0)`; `ReceiverSlots::GetAll`, `GetLocation(Slot)`, `GetSlotAt(Location)` (unset — обычная клетка),
   `IsSlotCell`. Клетки фиксированы и не зависят от радиуса инвентаря; ограничений на то, что лежит в слоте, нет
@@ -338,6 +341,8 @@
   порт старых `Shooting.ItemModifiers.*` и `Shooting.Ability.AmmoGatedModifier`): бонус усилителя в уроне снаряда,
   ступень, оплаченная батареей, гаснет с её обоймой и возвращается после зарядки; 7 снарядов абилки «дробовика» в
   основном слоте.
+- `TypicalShooter.Inventory.UIFlow` (PIE): Q и RT поворачивают выбранный курсором предмет, поворот переносится в
+  контейнер вместе с предметом, сервер отказывает в повороте в дальнем контейнере, против часовой (`Steps = -1`) работает.
   `OnCharacter`.
 - `TypicalShooter.Movement.*` (`Private/Tests/MovementJumpTest.cpp`, тикающий мир с полом-коробкой, `ACharacter` с
   AI-контроллером): `AttributesDriveMovement` (старт из движения, атрибуты → `JumpZVelocity` / `AirControl`, кламп),

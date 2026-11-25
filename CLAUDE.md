@@ -192,7 +192,8 @@ feature's doc and updated as they change; finished features are merged into `mai
     assets): `GamepadIMC` (always, prio 0: View = toggle inventory, X = interact) and `InventoryIMC` (added
     while the inventory is open, `InventoryIMCPriority` = 1, consumes keys): D-pad / left stick / arrows =
     cursor, A / Enter = confirm, B = deselect or close, LB/RB = switch grid, X / R = take focused item,
-    Y / F = take all. Keyboard Tab / E stay in the `IMC_Default` asset.
+    Y / F = take all, RT / Q = rotate the focused item (`RotateFocusedItem` → `ServerRotateItem`). Keyboard Tab / E stay
+    in the `IMC_Default` asset.
   - The cursor lives in `UInventoryUISubsystem` (`SetNavigableContainers` — the controller passes pawn
     inventory, then opened container; `MoveCursor` picks the hex neighbour best matching the direction and
     zig-zags vertically keeping a column; `SwitchCursorContainer`; `ConfirmAtCursor` selects / moves the
@@ -271,7 +272,7 @@ starts PIE itself, feeds keys through `UGameViewportClient::InputKey` (Enhanced 
 exercised; OS → Slate focus is not) and checks Tab open/close, E at a container (grid shows every
 item), transfer container → player (player grid updates), Take / Take All, server rejection for a far
 container, the gamepad flow (X opens the container, D-pad cursor drawn in the grid, A select + move into the
-container without jumping, RB, Y take all, B close, View toggle), W movement and jump. Gamepad keys go
+container without jumping, Q / RT rotation, RB, Y take all, B close, View toggle), W movement and jump. Gamepad keys go
 through the same `InputKey` path. Real mouse drag & drop is covered only below the Slate event layer
 (`UI.DragDrop*` call `MakeDragPayload` / `DropPayload` directly). Run via MCP: `AutomationTestToolset.DiscoverTests` →
 `RunTests ["TypicalShooter.Inventory.UIFlow"]` → `GetTestResults` (the automation worker ends any
