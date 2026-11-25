@@ -35,6 +35,8 @@ namespace ShootingTest
 		{
 			for (float Elapsed = 0.f; Elapsed < Seconds; Elapsed += Step)
 			{
+				// Tick functions run at most once per engine frame: fake a new frame for every step.
+				++GFrameCounter;
 				World->Tick(LEVELTICK_All, Step);
 			}
 		}

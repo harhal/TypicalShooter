@@ -1,6 +1,6 @@
 # Стрельба: абилки основной и альтернативной атаки
 
-**Статус:** 🟡 В работе (ветка `feature/shooting-abilities`): есть приём урона (простой и GAS-получатели); стрельбы ещё нет.
+**Статус:** 🟡 В работе (ветка `feature/shooting-abilities`): есть приём урона (простой и GAS-получатели), мишень-манекен и снаряды с пробитием; стрельбы с персонажа ещё нет.
 
 ## Что это
 Шутерная составляющая. Основная и альтернативная атаки — это GAS-абилки, которые запускаются
@@ -97,7 +97,7 @@ R17 подтверждено; дистанции от дула, дуло — `Mu
   тест: `TypicalShooter.Shooting.Damage.GasReceiver`, `.HealthClamp`
 - [x] 3. Мишень-манекен: GAS-здоровье, надпись со здоровьем, восстановление при нуле (R13a) —
   тест: `TypicalShooter.Shooting.TargetDummy.*`
-- [ ] 4. Актор снаряда: гравитация, предел дистанции, урон, потеря урона и пробитие (R7–R9) —
+- [x] 4. Актор снаряда: гравитация, предел дистанции, урон, потеря урона и пробитие (R7–R9) —
   тест: `TypicalShooter.Shooting.Projectile.*` (игровой мир без PIE, снаряды по манекенам)
 - [ ] 5. Наборы атрибутов основной/альтернативной атаки + клампы (R1–R3) —
   тест: `TypicalShooter.Shooting.Attributes.*`
@@ -142,6 +142,16 @@ R17 подтверждено; дистанции от дула, дуло — `Mu
   (обновляется по изменению атрибута, в т.ч. на клиентах). Сервер: считает `TotalDamageTaken`, пишет каждое
   попадание в `LogTypicalShooter`, при нуле `++Defeats` и на следующем тике восстанавливает здоровье
   (не внутри исполнения эффекта).
+- [`AShotProjectile`](../../Source/TypicalShooter/Public/Shooting/ShotProjectile.h) — снаряд. Создаётся на сервере
+  `AShotProjectile::SpawnShot(World, Class, Transform, FProjectileShotParams, Owner, Instigator)` и летит вдоль
+  оси X трансформа. `FProjectileShotParams`: урон (`FShotDamage`), скорость, коэффициент гравитации, длина пути
+  `MaxTravelDistance` (абилка передаст «конец огня − начало огня»), потеря урона за попадание. Коллизия — сфера
+  с профилем `Projectile`, игнорирует другие снаряды, трассы `Visibility` / `Camera`, владельца и инстигатора.
+  Пройденный путь считается в `Tick` (`TG_PostPhysics`); дошёл до предела — уничтожается.
+- Пробитие — [`UShotProjectileMovementComponent`](../../Source/TypicalShooter/Public/Shooting/ShotProjectileMovementComponent.h):
+  на каждом блокирующем хите вызывает `AShotProjectile::HandleShotHit` (урон получателю на сервере, затем
+  `Damage *= 1 − потеря`). Если урон остался и потеря < 1 — пробитый актор игнорируется до конца полёта и
+  движение продолжается (`AdvanceNextSubstep`), иначе обычная остановка → уничтожение.
 
 ## Настройка контента
 Простреливаемая стена / ящик: добавить актору компонент `Simple Damage Receiver`, задать `Max Durability`
@@ -157,8 +167,17 @@ R17 подтверждено; дистанции от дула, дуло — `Mu
 [ShootingTargetDummyTest.cpp](../../Source/TypicalShooter/Private/Tests/ShootingTargetDummyTest.cpp) (мир с
 `SetBegunPlay(true)` и ручным тиком — `FWorldFixture(true)` / `Tick`): `TypicalShooter.Shooting.TargetDummy.TakesDamage`,
 `.RefillsWhenDepleted`.
+[ShootingProjectileTest.cpp](../../Source/TypicalShooter/Private/Tests/ShootingProjectileTest.cpp) (снаряды по
+манекенам и стене в тикающем мире): `TypicalShooter.Shooting.Projectile.DamagesDummy` (и не задевает владельца),
+`.PiercesWithDamageLoss`, `.ObstacleReducesDamage`, `.ObstacleStopsWithFullLoss`, `.ExpiresAfterMaxDistance`,
+`.GravityScale`.
 
 ## Ограничения и грабли
+- В тестовом мире `World->Tick` несколько раз за один кадр движка тикает акторов только в первый раз
+  (защита по `GFrameCounter`) — `FWorldFixture::Tick` увеличивает `GFrameCounter` на каждом шаге.
+- `TMap` не реплицируется: урон снаряда (`FShotDamage`) живёт только на сервере, клиентам уходят лишь скорость
+  и гравитация (`Flight`, один раз) и реплицируемое движение.
+- Пробитие игнорирует пробитого актора целиком до конца полёта: снаряд не может попасть в одну цель дважды.
 
 ## Открытые задачи
 - [ ] Хитскан-атаки.
