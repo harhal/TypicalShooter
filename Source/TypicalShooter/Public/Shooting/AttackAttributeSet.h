@@ -1,5 +1,5 @@
 // Parameters of the attack slots as GAS attributes. Items change them with gameplay effects.
-// One set holds both slots (Primary_* / Alternate_*): GAS can't tell two instances of one set class apart.
+// One set holds all slots (Primary_* / Alternate_* / Air_*): GAS can't tell two instances of one set class apart.
 // Access attributes generically with GetAttribute(Slot, Attribute).
 
 #pragma once
@@ -44,6 +44,7 @@ public:
 	UPROPERTY(BlueprintReadOnly, Replicated, Category = "Primary") FGameplayAttributeData Primary_ProjectileSpeed;
 	UPROPERTY(BlueprintReadOnly, Replicated, Category = "Primary") FGameplayAttributeData Primary_GravityScale;
 	UPROPERTY(BlueprintReadOnly, Replicated, Category = "Primary") FGameplayAttributeData Primary_DamageLoss;
+	UPROPERTY(BlueprintReadOnly, Replicated, Category = "Primary") FGameplayAttributeData Primary_Recoil;
 	UPROPERTY(BlueprintReadOnly, Replicated, Category = "Primary") FGameplayAttributeData Primary_DamagePhysical;
 	UPROPERTY(BlueprintReadOnly, Replicated, Category = "Primary") FGameplayAttributeData Primary_DamageAcid;
 	UPROPERTY(BlueprintReadOnly, Replicated, Category = "Primary") FGameplayAttributeData Primary_DamageElectric;
@@ -61,12 +62,31 @@ public:
 	UPROPERTY(BlueprintReadOnly, Replicated, Category = "Alternate") FGameplayAttributeData Alternate_ProjectileSpeed;
 	UPROPERTY(BlueprintReadOnly, Replicated, Category = "Alternate") FGameplayAttributeData Alternate_GravityScale;
 	UPROPERTY(BlueprintReadOnly, Replicated, Category = "Alternate") FGameplayAttributeData Alternate_DamageLoss;
+	UPROPERTY(BlueprintReadOnly, Replicated, Category = "Alternate") FGameplayAttributeData Alternate_Recoil;
 	UPROPERTY(BlueprintReadOnly, Replicated, Category = "Alternate") FGameplayAttributeData Alternate_DamagePhysical;
 	UPROPERTY(BlueprintReadOnly, Replicated, Category = "Alternate") FGameplayAttributeData Alternate_DamageAcid;
 	UPROPERTY(BlueprintReadOnly, Replicated, Category = "Alternate") FGameplayAttributeData Alternate_DamageElectric;
 	UPROPERTY(BlueprintReadOnly, Replicated, Category = "Alternate") FGameplayAttributeData Alternate_DamagePlasma;
 	UPROPERTY(BlueprintReadOnly, Replicated, Category = "Alternate") FGameplayAttributeData Alternate_DamageIce;
 	UPROPERTY(BlueprintReadOnly, Replicated, Category = "Alternate") FGameplayAttributeData Alternate_DamageRadiation;
+
+	// --- Air (jump while airborne, fires down) ---
+	UPROPERTY(BlueprintReadOnly, Replicated, Category = "Air") FGameplayAttributeData Air_FireStartDistance;
+	UPROPERTY(BlueprintReadOnly, Replicated, Category = "Air") FGameplayAttributeData Air_FireEndDistance;
+	UPROPERTY(BlueprintReadOnly, Replicated, Category = "Air") FGameplayAttributeData Air_PatternScale;
+	UPROPERTY(BlueprintReadOnly, Replicated, Category = "Air") FGameplayAttributeData Air_ShotsPerBurst;
+	UPROPERTY(BlueprintReadOnly, Replicated, Category = "Air") FGameplayAttributeData Air_ShotInterval;
+	UPROPERTY(BlueprintReadOnly, Replicated, Category = "Air") FGameplayAttributeData Air_BurstInterval;
+	UPROPERTY(BlueprintReadOnly, Replicated, Category = "Air") FGameplayAttributeData Air_ProjectileSpeed;
+	UPROPERTY(BlueprintReadOnly, Replicated, Category = "Air") FGameplayAttributeData Air_GravityScale;
+	UPROPERTY(BlueprintReadOnly, Replicated, Category = "Air") FGameplayAttributeData Air_DamageLoss;
+	UPROPERTY(BlueprintReadOnly, Replicated, Category = "Air") FGameplayAttributeData Air_Recoil;
+	UPROPERTY(BlueprintReadOnly, Replicated, Category = "Air") FGameplayAttributeData Air_DamagePhysical;
+	UPROPERTY(BlueprintReadOnly, Replicated, Category = "Air") FGameplayAttributeData Air_DamageAcid;
+	UPROPERTY(BlueprintReadOnly, Replicated, Category = "Air") FGameplayAttributeData Air_DamageElectric;
+	UPROPERTY(BlueprintReadOnly, Replicated, Category = "Air") FGameplayAttributeData Air_DamagePlasma;
+	UPROPERTY(BlueprintReadOnly, Replicated, Category = "Air") FGameplayAttributeData Air_DamageIce;
+	UPROPERTY(BlueprintReadOnly, Replicated, Category = "Air") FGameplayAttributeData Air_DamageRadiation;
 
 private:
 	void ClampAttribute(const FGameplayAttribute& Attribute, float& NewValue) const;

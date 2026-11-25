@@ -5,7 +5,7 @@
 
 namespace AttackAttributeSetPrivate
 {
-	constexpr int32 NumSlots = 2;
+	constexpr int32 NumSlots = static_cast<int32>(EAttackSlot::Air) + 1;
 	constexpr int32 NumAttributes = static_cast<int32>(EAttackAttribute::Count);
 
 	using FTable = TStaticArray<TStaticArray<FGameplayAttribute, NumAttributes>, NumSlots>;
@@ -108,6 +108,7 @@ FAttackStats UAttackAttributeSet::ReadStats(const UAbilitySystemComponent& Asc, 
 	Stats.ProjectileSpeed = Read(EAttackAttribute::ProjectileSpeed);
 	Stats.GravityScale = Read(EAttackAttribute::GravityScale);
 	Stats.DamageLoss = Read(EAttackAttribute::DamageLoss);
+	Stats.Recoil = Read(EAttackAttribute::Recoil);
 
 	// Damage attributes follow the order of ShootingTags::GetDamageTypes().
 	const TConstArrayView<FGameplayTag> DamageTypes = ShootingTags::GetDamageTypes();
@@ -135,6 +136,7 @@ void UAttackAttributeSet::AddToStats(FAttackStats& Stats, const EAttackAttribute
 	case EAttackAttribute::ProjectileSpeed: Add(Stats.ProjectileSpeed); break;
 	case EAttackAttribute::GravityScale: Add(Stats.GravityScale); break;
 	case EAttackAttribute::DamageLoss: Add(Stats.DamageLoss); break;
+	case EAttackAttribute::Recoil: Add(Stats.Recoil); break;
 	case EAttackAttribute::ShotsPerBurst:
 	case EAttackAttribute::Count:
 		break; // not per-shot parameters
@@ -193,7 +195,8 @@ void UAttackAttributeSet::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& 
 
 #define TS_REP_ATTACK_ATTRIBUTE(Name) \
 	DOREPLIFETIME_CONDITION_NOTIFY(UAttackAttributeSet, Primary_##Name, COND_None, REPNOTIFY_Always); \
-	DOREPLIFETIME_CONDITION_NOTIFY(UAttackAttributeSet, Alternate_##Name, COND_None, REPNOTIFY_Always);
+	DOREPLIFETIME_CONDITION_NOTIFY(UAttackAttributeSet, Alternate_##Name, COND_None, REPNOTIFY_Always); \
+	DOREPLIFETIME_CONDITION_NOTIFY(UAttackAttributeSet, Air_##Name, COND_None, REPNOTIFY_Always);
 
 	TS_REP_ATTACK_ATTRIBUTE(FireStartDistance)
 	TS_REP_ATTACK_ATTRIBUTE(FireEndDistance)
@@ -204,6 +207,7 @@ void UAttackAttributeSet::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& 
 	TS_REP_ATTACK_ATTRIBUTE(ProjectileSpeed)
 	TS_REP_ATTACK_ATTRIBUTE(GravityScale)
 	TS_REP_ATTACK_ATTRIBUTE(DamageLoss)
+	TS_REP_ATTACK_ATTRIBUTE(Recoil)
 	TS_REP_ATTACK_ATTRIBUTE(DamagePhysical)
 	TS_REP_ATTACK_ATTRIBUTE(DamageAcid)
 	TS_REP_ATTACK_ATTRIBUTE(DamageElectric)

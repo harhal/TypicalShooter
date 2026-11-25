@@ -217,7 +217,7 @@ feature's doc and updated as they change; finished features are merged into `mai
 - Custom content lives in `Content/Inventory` (note the folder typo `Bllueprints`).
 - **Shooting** (`Public|Private/Shooting/`, doc `Docs/Features/Shooting.md`): primary / alternate attacks are
   server-only GAS abilities (`UAttackGameplayAbility`, slot = `EAttackSlot`) driven by
-  attributes: `UAttackAttributeSet` (`Primary_*` / `Alternate_*`, read via `GetAttribute(Slot, EAttackAttribute)` /
+  attributes: `UAttackAttributeSet` (`Primary_*` / `Alternate_*` / `Air_*`, incl. `Recoil`, read via `GetAttribute(Slot, EAttackAttribute)` /
   `ReadStats`) and `UAmmoAttributeSet` (reserve per `Ammo.*` kind). Attacks have no clip / reload (moved to power
   grid sources, `Docs/Features/ItemPowerGrid.md`). A shot spawns one
   `AShotProjectile` per `FShotPattern` point from the `Muzzle`-tagged component towards the camera aim point;

@@ -20,7 +20,8 @@ GameplayEffect'ы на цель / на себя при попадании.
   дистанция начала огня, дистанция конца огня,
   масштаб паттерна выстрела, скорость снаряда, выстрелов в очереди, интервал между выстрелами
   в очереди, интервал между очередями, урон за попадание по каждому типу
-  (физ., кислота, электричество, плазма, лёд, радиация), коэффициент гравитации, потеря урона при столкновении.
+  (физ., кислота, электричество, плазма, лёд, радиация), коэффициент гравитации, потеря урона при столкновении,
+  отдача ([энергосеть](ItemPowerGrid.md) R5c). Третий набор — **воздушная** атака (`Air_*`, энергосеть R5b).
   (Патроны в обойме, размер обоймы и время перезарядки убраны — [энергосеть](ItemPowerGrid.md) R9a.)
 - R3. Значения атрибутов клампятся: выстрелы в очереди ≥ 1 и целые; интервалы, дистанции, урон, масштаб паттерна ≥ 0;
   потеря урона ∈ [0, 1]; скорость снаряда ≥ 1; конец огня ≥ начала огня; гравитация не ограничена.
@@ -118,6 +119,7 @@ R17 подтверждено; дистанции от дула, дуло — `Mu
   тестовые предметы-модификаторы в контейнерах перенесены в «Открытые задачи»
 - [x] 13. (Энергосеть, итерация 7) Удалены атрибуты обоймы и перезарядки, абилки перезарядки и кнопка R / B; HUD
   показывает запас по видам — тесты: `TypicalShooter.Shooting.Ability.NoClipLimit`, `.UI.AmmoText`, `.Flow` (обновлены)
+- [x] 14. (Энергосеть, итерация 7a) Слот `Air` (`Air_*`) и атрибут отдачи `Recoil` — тест: `TypicalShooter.Shooting.Attributes.AirSlot`, `.Recoil`
 
 ## Как устроено
 - Теги типов урона `Damage.Type.{Physical,Acid,Electric,Plasma,Ice,Radiation}` — нативные, в
@@ -155,7 +157,7 @@ R17 подтверждено; дистанции от дула, дуло — `Mu
   `Damage *= 1 − потеря`). Если урон остался и потеря < 1 — пробитый актор игнорируется до конца полёта и
   движение продолжается (`AdvanceNextSubstep`), иначе обычная остановка → уничтожение.
 - Параметры атак — [`UAttackAttributeSet`](../../Source/TypicalShooter/Public/Shooting/AttackAttributeSet.h): один
-  набор на оба слота, атрибуты `Primary_<Параметр>` / `Alternate_<Параметр>` (GAS не различает два экземпляра одного
+  набор на все слоты, атрибуты `Primary_<Параметр>` / `Alternate_<Параметр>` / `Air_<Параметр>` (GAS не различает два экземпляра одного
   класса набора). Параметры — `EAttackAttribute` в [AttackTypes.h](../../Source/TypicalShooter/Public/Shooting/AttackTypes.h);
   атрибут ищется по имени свойства: `GetAttribute(Slot, Attribute)`. Клампы R3 — `ClampValue` в
   `PreAttributeChange` / `PreAttributeBaseChange`.
@@ -242,7 +244,7 @@ R17 подтверждено; дистанции от дула, дуло — `Mu
 `.PiercesWithDamageLoss`, `.ObstacleReducesDamage`, `.ObstacleStopsWithFullLoss`, `.ExpiresAfterMaxDistance`,
 `.GravityScale`.
 [ShootingAttributesTest.cpp](../../Source/TypicalShooter/Private/Tests/ShootingAttributesTest.cpp):
-`TypicalShooter.Shooting.Attributes.SlotsIndependent`, `.Clamp`, `.ReadStats`.
+`TypicalShooter.Shooting.Attributes.SlotsIndependent`, `.Clamp`, `.AirSlot`, `.Recoil`, `.ReadStats`.
 [ShootingPatternTest.cpp](../../Source/TypicalShooter/Private/Tests/ShootingPatternTest.cpp):
 `TypicalShooter.Shooting.Pattern.SinglePointFollowsAim`, `.OffsetsScaled`, `.AimFromMuzzle`.
 [ShootingAbilityTest.cpp](../../Source/TypicalShooter/Private/Tests/ShootingAbilityTest.cpp) (актор с ASC стреляет

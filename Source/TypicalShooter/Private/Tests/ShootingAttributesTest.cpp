@@ -70,6 +70,48 @@ bool FAttackClampTest::RunTest(const FString& Parameters)
 	return true;
 }
 
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FAttackAirSlotTest, "TypicalShooter.Shooting.Attributes.AirSlot", ShootingTest::Flags)
+bool FAttackAirSlotTest::RunTest(const FString& Parameters)
+{
+	using namespace ShootingAttributesTest;
+	const ShootingTest::FWorldFixture F;
+	UAbilitySystemComponent* Asc = SpawnAsc(F);
+
+	for (int32 Index = 0; Index < static_cast<int32>(EAttackAttribute::Count); ++Index)
+	{
+		const EAttackAttribute Attribute = static_cast<EAttackAttribute>(Index);
+		TestTrue(FString::Printf(TEXT("Air slot has attribute %d (power grid R5b)"), Index),
+			UAttackAttributeSet::GetAttribute(EAttackSlot::Air, Attribute).IsValid());
+		TestFalse(FString::Printf(TEXT("Air attribute %d is its own"), Index),
+			UAttackAttributeSet::GetAttribute(EAttackSlot::Air, Attribute) == UAttackAttributeSet::GetAttribute(EAttackSlot::Primary, Attribute)
+			|| UAttackAttributeSet::GetAttribute(EAttackSlot::Air, Attribute) == UAttackAttributeSet::GetAttribute(EAttackSlot::Alternate, Attribute));
+	}
+
+	Set(Asc, EAttackSlot::Air, EAttackAttribute::DamagePhysical, 7.f);
+	TestEqual(TEXT("Air keeps its value"), Get(Asc, EAttackSlot::Air, EAttackAttribute::DamagePhysical), 7.f);
+	TestEqual(TEXT("Primary is untouched"), Get(Asc, EAttackSlot::Primary, EAttackAttribute::DamagePhysical), 0.f);
+	TestEqual(TEXT("Air reads its own stats"), UAttackAttributeSet::ReadStats(*Asc, EAttackSlot::Air).Damage.GetTotal(), 7.f);
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FAttackRecoilTest, "TypicalShooter.Shooting.Attributes.Recoil", ShootingTest::Flags)
+bool FAttackRecoilTest::RunTest(const FString& Parameters)
+{
+	using namespace ShootingAttributesTest;
+	const ShootingTest::FWorldFixture F;
+	UAbilitySystemComponent* Asc = SpawnAsc(F);
+
+	TestEqual(TEXT("No recoil by default"), UAttackAttributeSet::ReadStats(*Asc, EAttackSlot::Primary).Recoil, 0.f);
+	Set(Asc, EAttackSlot::Air, EAttackAttribute::Recoil, 900.f);
+	TestEqual(TEXT("Recoil is read into the stats (power grid R5c)"), UAttackAttributeSet::ReadStats(*Asc, EAttackSlot::Air).Recoil, 900.f);
+	Set(Asc, EAttackSlot::Primary, EAttackAttribute::Recoil, -5.f);
+	TestEqual(TEXT("Recoil is not negative"), Get(Asc, EAttackSlot::Primary, EAttackAttribute::Recoil), 0.f);
+
+	FAttackStats Stats;
+	UAttackAttributeSet::AddToStats(Stats, EAttackAttribute::Recoil, 50.f);
+	TestEqual(TEXT("Per-shot bonuses can add recoil"), Stats.Recoil, 50.f);
+	return true;
+}
 
 IMPLEMENT_SIMPLE_AUTOMATION_TEST(FAttackReadStatsTest, "TypicalShooter.Shooting.Attributes.ReadStats", ShootingTest::Flags)
 bool FAttackReadStatsTest::RunTest(const FString& Parameters)

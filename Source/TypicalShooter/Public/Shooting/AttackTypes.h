@@ -7,12 +7,13 @@
 #include "Templates/SubclassOf.h"
 #include "AttackTypes.generated.h"
 
-/** Which attack: primary (LMB / RT) or alternate (RMB / LT). */
+/** Which attack: primary (LMB / RT), alternate (RMB / LT) or air (jump while airborne, fires down; power grid R5). */
 UENUM(BlueprintType)
 enum class EAttackSlot : uint8
 {
 	Primary,
 	Alternate,
+	Air,
 };
 
 /** Numeric parameter of an attack. Every slot has one attribute per value (UAttackAttributeSet). */
@@ -28,6 +29,8 @@ enum class EAttackAttribute : uint8
 	ProjectileSpeed,
 	GravityScale,
 	DamageLoss,
+	/** Push of the shooter opposite to the shot per shot (power grid R5c). Keep before the damage block. */
+	Recoil,
 	DamagePhysical,
 	DamageAcid,
 	DamageElectric,
@@ -77,6 +80,8 @@ struct TYPICALSHOOTER_API FAttackStats
 	UPROPERTY(BlueprintReadOnly, Category = "Attack") float ProjectileSpeed = 0.f;
 	UPROPERTY(BlueprintReadOnly, Category = "Attack") float GravityScale = 0.f;
 	UPROPERTY(BlueprintReadOnly, Category = "Attack") float DamageLoss = 1.f;
+	/** Speed change of the shooter opposite to the shot, cm/s. */
+	UPROPERTY(BlueprintReadOnly, Category = "Attack") float Recoil = 0.f;
 	/** Damage per hit by type (Damage.Type.* tags). */
 	UPROPERTY(BlueprintReadOnly, Category = "Attack") FShotDamage Damage;
 };
