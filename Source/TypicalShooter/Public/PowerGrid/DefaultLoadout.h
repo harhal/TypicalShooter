@@ -1,5 +1,6 @@
 // The character's starting items (power grid R6a: base attacks come from the starting set): a source in the
-// centre, a rifle-like receiver in the primary slot and a shotgun-like receiver in the alternate slot.
+// centre, a rifle-like receiver in the primary slot, a shotgun-like receiver in the alternate slot and a double jump
+// receiver in the air slot.
 
 #pragma once
 
@@ -29,6 +30,8 @@ namespace DefaultLoadout
 	TYPICALSHOOTER_API FInventoryItemManifest MakeRifleReceiver();
 	/** Receiver repeating the old alternate attack: 7-pellet shotgun, 6 physical per pellet, 3000 cm. */
 	TYPICALSHOOTER_API FInventoryItemManifest MakeShotgunReceiver();
+	/** Receiver for the air slot: a weak shot straight down whose recoil is a double jump (900 cm/s up). */
+	TYPICALSHOOTER_API FInventoryItemManifest MakeDoubleJumpReceiver();
 
 	TYPICALSHOOTER_API TArray<FStartingInventoryItem> MakeStartingItems();
 }

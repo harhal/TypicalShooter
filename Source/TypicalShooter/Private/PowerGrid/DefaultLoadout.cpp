@@ -59,12 +59,23 @@ namespace DefaultLoadout
 			LOCTEXT("ShotgunDescription", "Receiver: seven pellets per shot. Needs 1 power."));
 	}
 
+	FInventoryItemManifest MakeDoubleJumpReceiver()
+	{
+		using A = EAttackAttribute;
+		return Private::MakeManifest(Private::MakeReceiver(UAttackGameplayAbility::StaticClass(), {
+				{ A::FireEndDistance, 1500.f }, { A::BurstInterval, 0.5f }, { A::ProjectileSpeed, 5000.f },
+				{ A::DamagePhysical, 5.f }, { A::Recoil, 900.f } }),
+			LOCTEXT("DoubleJumpName", "Double Jump Receiver"),
+			LOCTEXT("DoubleJumpDescription", "Receiver for the air slot: in the air, jump fires down and the recoil throws you up. Needs 1 power."));
+	}
+
 	TArray<FStartingInventoryItem> MakeStartingItems()
 	{
 		return {
 			{ MakeStarterSource(), FHhAxialCoord(0, 0) },
 			{ MakeRifleReceiver(), ReceiverSlots::GetLocation(EReceiverSlot::Primary) },
-			{ MakeShotgunReceiver(), ReceiverSlots::GetLocation(EReceiverSlot::Alternate) } };
+			{ MakeShotgunReceiver(), ReceiverSlots::GetLocation(EReceiverSlot::Alternate) },
+			{ MakeDoubleJumpReceiver(), ReceiverSlots::GetLocation(EReceiverSlot::Air) } };
 	}
 }
 

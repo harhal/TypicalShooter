@@ -230,7 +230,7 @@ feature's doc and updated as they change; finished features are merged into `mai
   through `IShotDamageReceiver` components (`UGasDamageReceiverComponent` → `UShotDamageEffect` SetByCaller per
   `Damage.Type.*` → `UHealthAttributeSet`; `USimpleDamageReceiverComponent` for plain durability). The character
   gets its attacks only from power grid receivers (`UReceiverAbilitiesComponent`; the receiver's `BaseStats` become
-  the slot attributes' base values) and places `StartingItems` (`DefaultLoadout`: source + rifle / shotgun receivers)
+  the slot attributes' base values) and places `StartingItems` (`DefaultLoadout`: source + rifle / shotgun / double jump receivers)
   plus `UDefaultAttackStatsEffect` (reserve ammo only) at BeginPlay; input is generated in
   `UAttackInputComponent` (LMB / RT, RMB / LT → ability InputIDs, ignored while the inventory is open).
   Items change attacks only through the power grid (threshold effects, receiver ability pattern, source clips). `ATargetDummy` is a refilling GAS target;
