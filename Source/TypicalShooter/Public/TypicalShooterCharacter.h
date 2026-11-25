@@ -6,8 +6,12 @@
 #include "AbilitySystemInterface.h"
 #include "GameFramework/Character.h"
 #include "Logging/LogMacros.h"
+#include "Shooting/AttackTypes.h"
 #include "TypicalShooterCharacter.generated.h"
 
+class UAttackAttributeSet;
+class UAttackInputComponent;
+class UGameplayEffect;
 class UInteractionComponent;
 class UInventoryComponent;
 class UInputComponent;
@@ -61,11 +65,33 @@ protected:
 	/** The player's own items. */
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category ="Inventory", meta = (AllowPrivateAccess = "true"))
 	TObjectPtr<UInventoryComponent> InventoryComponent;
-	
+
+	/** Projectiles start here (tagged "Muzzle"); follows the first person camera. */
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category ="Attack", meta = (AllowPrivateAccess = "true"))
+	TObjectPtr<USceneComponent> Muzzle;
+
+	UPROPERTY(VisibleAnywhere, Category ="Attack")
+	TObjectPtr<UAttackInputComponent> AttackInput;
+
+	UPROPERTY()
+	TObjectPtr<UAttackAttributeSet> AttackAttributes;
+
+	/** Attack / reload abilities granted on the server at BeginPlay. */
+	UPROPERTY(EditDefaultsOnly, Category ="Attack")
+	TArray<FAttackAbilityGrant> AttackAbilities;
+
+	/** Applied once on the server at BeginPlay: base values of the attack attributes. */
+	UPROPERTY(EditDefaultsOnly, Category ="Attack")
+	TSubclassOf<UGameplayEffect> AttackDefaultsEffect;
+
 public:
 	ATypicalShooterCharacter();
 
 protected:
+	virtual void BeginPlay() override;
+
+	/** Server: grants AttackAbilities and applies AttackDefaultsEffect. */
+	void GrantAttacks();
 
 	/** Called from Input Actions for movement input */
 	void MoveInput(const FInputActionValue& Value);

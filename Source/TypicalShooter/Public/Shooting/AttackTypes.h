@@ -4,6 +4,7 @@
 
 #include "CoreMinimal.h"
 #include "Shooting/ShotDamage.h"
+#include "Templates/SubclassOf.h"
 #include "AttackTypes.generated.h"
 
 /** Which attack: primary (LMB / RT) or alternate (RMB / LT). */
@@ -37,6 +38,32 @@ enum class EAttackAttribute : uint8
 	DamageIce,
 	DamageRadiation,
 	Count UMETA(Hidden),
+};
+
+class UGameplayAbility;
+
+/** Ability input ids (FGameplayAbilitySpec::InputID) bound by UAttackInputComponent. */
+UENUM(BlueprintType)
+enum class EAttackInputID : uint8
+{
+	None = 0,
+	PrimaryAttack = 1,
+	AlternateAttack = 2,
+	/** Every reload ability shares it: one button reloads both attacks. */
+	Reload = 3,
+};
+
+/** An ability granted to the character on spawn, bound to an input. */
+USTRUCT(BlueprintType)
+struct TYPICALSHOOTER_API FAttackAbilityGrant
+{
+	GENERATED_BODY()
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Attack")
+	TSubclassOf<UGameplayAbility> Ability;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Attack")
+	EAttackInputID Input = EAttackInputID::None;
 };
 
 /** All parameters of one attack slot, resolved and clamped (R3) — what the attack ability works with. */

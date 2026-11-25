@@ -1,6 +1,6 @@
 # Стрельба: абилки основной и альтернативной атаки
 
-**Статус:** 🟡 В работе (ветка `feature/shooting-abilities`): есть приём урона (простой и GAS-получатели), мишень-манекен и снаряды с пробитием; стрельбы с персонажа ещё нет.
+**Статус:** 🟡 В работе (ветка `feature/shooting-abilities`): игрок стреляет (ЛКМ / ПКМ / RT / LT), перезаряжается (R / B), снаряды бьют манекены; запас патронов бесконечный, предметы на атаки пока не влияют.
 
 ## Что это
 Шутерная составляющая. Основная и альтернативная атаки — это GAS-абилки, которые запускаются
@@ -108,7 +108,7 @@ R17 подтверждено; дистанции от дула, дуло — `Mu
   тест: `TypicalShooter.Shooting.Ability.Burst`
 - [x] 7. Абилка перезарядки с бесконечным запасом + автоперезарядка на пустой обойме (R11, R12) —
   тест: `TypicalShooter.Shooting.Ability.Reload`
-- [ ] 8. Подключение к персонажу: выдача абилок и стартового GE, ввод ЛКМ/ПКМ/R + геймпад, блокировка при
+- [x] 8. Подключение к персонажу: выдача абилок и стартового GE, ввод ЛКМ/ПКМ/R + геймпад, блокировка при
   открытом инвентаре (R4, R17) — тест: `TypicalShooter.Shooting.Flow` (PIE, стрельба по мишени)
 - [ ] 9. Запас боеприпасов: набор атрибутов по видам, вид у атаки, перезарядка тратит запас (R15) —
   тест: `TypicalShooter.Shooting.Ability.ReloadFromReserve`
@@ -178,12 +178,29 @@ R17 подтверждено; дистанции от дула, дуло — `Mu
 - Перезарядка — [`UReloadGameplayAbility`](../../Source/TypicalShooter/Public/Shooting/ReloadGameplayAbility.h) (`Slot`,
   `ServerOnly`): полная обойма — сразу завершается; иначе вешает loose-тег `State.Reloading.<Слот>` (блокирует атаку
   слота в её `CanActivateAbility`), ждёт время перезарядки и заполняет обойму до размера. Запас пока бесконечный.
+- Персонаж — [`ATypicalShooterCharacter`](../../Source/TypicalShooter/Public/TypicalShooterCharacter.h): `UTS_GAS`
+  (реплицируется, Mixed) + `UAttackAttributeSet`, компонент `Muzzle` (тег `Muzzle`, у камеры: 40 вперёд, 15 вправо,
+  12 вниз). На сервере в `BeginPlay` выдаёт `AttackAbilities` (класс + `EAttackInputID` как InputID спека) и
+  применяет `AttackDefaultsEffect`. По умолчанию — [DefaultAttackSetup.h](../../Source/TypicalShooter/Public/Shooting/DefaultAttackSetup.h):
+  `UPrimaryAttackAbility` («автомат»: обойма 30, очередь 1, интервал 0.12 с при удержании, 10 физ., 8000 см/с),
+  `UAlternateAttackAbility` («дробовик»: 7 снарядов — центр + кольцо 3°, обойма 6, интервал 0.8 с, 6 физ. за
+  снаряд, 3000 см, гравитация 0.2), `UPrimaryReloadAbility` / `UAlternateReloadAbility` (1.5 / 2 с) и
+  `UDefaultAttackStatsEffect` (мгновенный GE с Override; обойма раньше патронов).
+- Ввод — [`UAttackInputComponent`](../../Source/TypicalShooter/Public/Shooting/AttackInputComponent.h) на персонаже,
+  действия и контекст генерируются в коде (как у инвентаря): ЛКМ / RT → `PrimaryAttack`, ПКМ / LT →
+  `AlternateAttack`, R / B → `Reload` (обе перезарядки). Нажатие → `AbilityLocalInputPressed(InputID)` (активирует
+  или отмечает удержание; на клиенте уходит на сервер), отпускание → `AbilityLocalInputReleased`. Пока открыт
+  экран инвентаря, нажатия игнорируются (отпускания — нет).
 
 ## Настройка контента
 Простреливаемая стена / ящик: добавить актору компонент `Simple Damage Receiver`, задать `Max Durability`
 и при необходимости `Destroy Owner On Depleted`.
 
 Мишень: перетащить `Target Dummy` (C++-класс) на уровень, при желании поменять `Max Health`.
+
+Атаки персонажа: в `BP_FirstPersonCharacter` → `Attack Abilities` (какие абилки и на какие кнопки) и
+`Attack Defaults Effect` (базовые значения; можно заменить своим GE-ассетом с Override-модификаторами атрибутов
+`AttackAttributeSet.Primary_*` / `Alternate_*`). Паттерн альтернативной атаки — в её классе (`Pattern`).
 
 ## Тесты
 [ShootingDamageTest.cpp](../../Source/TypicalShooter/Private/Tests/ShootingDamageTest.cpp) (игровой мир без PIE,
@@ -207,6 +224,9 @@ R17 подтверждено; дистанции от дула, дуло — `Mu
 [ShootingReloadTest.cpp](../../Source/TypicalShooter/Private/Tests/ShootingReloadTest.cpp) (общий стрелок —
 [ShootingAbilityFixture.h](../../Source/TypicalShooter/Private/Tests/ShootingAbilityFixture.h)):
 `TypicalShooter.Shooting.Ability.Reload`, `.ReloadSkipsFullClip`, `.AutoReloadWhenEmpty`, `.EmptyPressReloads`.
+[ShootingFlowTest.cpp](../../Source/TypicalShooter/Private/Tests/ShootingFlowTest.cpp) — PIE `TypicalShooter.Shooting.Flow`:
+стартовые обоймы 30 / 6, ЛКМ и ПКМ попадают по манекену перед игроком, R перезаряжает обе атаки, с открытым
+инвентарём ЛКМ не стреляет, RT стреляет.
 
 ## Ограничения и грабли
 - В тестовом мире `World->Tick` несколько раз за один кадр движка тикает акторов только в первый раз
