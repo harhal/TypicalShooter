@@ -51,6 +51,13 @@ void SInventoryItemInfo::Construct(const FArguments& InArgs)
 			.Font(FCoreStyle::GetDefaultFontStyle("Regular", 11))
 			.AutoWrapText(true)
 		]
+
+		+ SVerticalBox::Slot()
+		.AutoHeight()
+		.Padding(FMargin(0.f, 8.f, 0.f, 0.f))
+		[
+			SAssignNew(PowerLines, SVerticalBox)
+		]
 	];
 }
 
@@ -86,4 +93,46 @@ FText SInventoryItemInfo::GetDisplayedName() const
 FText SInventoryItemInfo::GetDisplayedDescription() const
 {
 	return DescriptionText->GetText();
+}
+
+void SInventoryItemInfo::SetPowerInfo(const FItemPowerInfo& Info)
+{
+	PowerInfo = Info;
+	RebuildPowerLines();
+}
+
+void SInventoryItemInfo::RebuildPowerLines()
+{
+	PowerLines->ClearChildren();
+	NumPowerLines = 0;
+	auto AddLine = [this](const FText& Text, const FSlateFontInfo& Font, const FLinearColor& Color)
+	{
+		PowerLines->AddSlot()
+		.AutoHeight()
+		[
+			SNew(STextBlock)
+			.Text(Text)
+			.Font(Font)
+			.ColorAndOpacity(Color)
+			.AutoWrapText(true)
+		];
+		++NumPowerLines;
+	};
+	if (!PowerInfo.TypeText.IsEmpty())
+	{
+		AddLine(PowerInfo.TypeText, FCoreStyle::GetDefaultFontStyle("Bold", 11), FLinearColor::White);
+		AddLine(PowerInfo.PowerText, FCoreStyle::GetDefaultFontStyle("Regular", 11), FLinearColor::White);
+	}
+	for (int32 Index = 0; Index < PowerInfo.Steps.Num(); ++Index)
+	{
+		// Reached steps stand out; the rest are dimmed (R16).
+		const bool bReached = IsPowerStepHighlighted(Index);
+		AddLine(PowerInfo.Steps[Index].Text, FCoreStyle::GetDefaultFontStyle(bReached ? "Bold" : "Regular", 10),
+			bReached ? ReachedStepColor : PendingStepColor);
+	}
+}
+
+bool SInventoryItemInfo::IsPowerStepHighlighted(const int32 StepIndex) const
+{
+	return PowerInfo.Steps.IsValidIndex(StepIndex) && PowerInfo.Steps[StepIndex].bReached;
 }

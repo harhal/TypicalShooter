@@ -12,6 +12,9 @@
 #include "Tests/InventoryTestFixture.h"
 #include "Tests/PowerGridTestEffect.h"
 #include "UI/PowerGrid/PowerGridDisplay.h"
+#include "UI/InventoryItem/InventoryItem_Presenter.h"
+#include "UI/Slate/InventoryItemInfo.h"
+#include "UObject/StrongObjectPtr.h"
 
 namespace PowerGridDisplayTest
 {
@@ -138,6 +141,34 @@ bool FPowerItemInfoTest::RunTest(const FString& Parameters)
 	TestTrue(TEXT("An item outside the grid has no type"), LooseInfo.TypeText.IsEmpty());
 	TestTrue(TEXT("... but its steps are listed, none reached at power 0"), LooseInfo.Steps.Num() == 2 && !LooseInfo.Steps[0].bReached);
 	TestTrue(TEXT("A plain item has no power info"), PowerGridDisplay::DescribeItem(*Plain, Grid).IsEmpty());
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FPowerItemInfoPanelTest, "TypicalShooter.Inventory.UI.PowerItemInfoPanel", InventoryCoreTest::Flags)
+bool FPowerItemInfoPanelTest::RunTest(const FString& Parameters)
+{
+	using namespace PowerGridDisplayTest;
+	InventoryCoreTest::FFixture F;
+	NewObject<UPowerGridComponent>(F.Actor)->RegisterComponent();
+	UInventoryItem* Booster = F.Inventory->AddItem(WithSteps(Power(EPowerItemType::Connector)), FHhAxialCoord(1, 0));
+	UInventoryItem* Plain = F.Inventory->AddItem(FInventoryItemManifest(), FHhAxialCoord(1, 1));
+
+	const TSharedRef<SInventoryItemInfo> Info = SNew(SInventoryItemInfo);
+	const TStrongObjectPtr<UInventoryItem_Presenter> Presenter(NewObject<UInventoryItem_Presenter>());
+	Presenter->SetView(Info);
+	Presenter->SetModel(Booster);
+	TestEqual(TEXT("Panel shows the power type"), Info->GetPowerInfo().TypeText.ToString(), FString(TEXT("Connector")));
+	TestEqual(TEXT("Panel lists the effect steps"), Info->GetNumPowerLines(), 4); // type, power, two steps
+	TestFalse(TEXT("Unpowered: step 1 not reached"), Info->GetPowerInfo().Steps.Num() > 0 && Info->GetPowerInfo().Steps[0].bReached);
+
+	F.Inventory->AddItem(Power(EPowerItemType::Source, HexFaces::AllFaces, 3), FHhAxialCoord(0, 0));
+	TestTrue(TEXT("A power grid change refreshes the shown item: both steps reached"),
+		Info->GetPowerInfo().Steps.Num() == 2 && Info->GetPowerInfo().Steps[0].bReached && Info->GetPowerInfo().Steps[1].bReached);
+	TestTrue(TEXT("Reached steps are highlighted"), Info->IsPowerStepHighlighted(0));
+
+	Presenter->SetModel(Plain);
+	TestEqual(TEXT("A plain item shows no power lines"), Info->GetNumPowerLines(), 0);
+	Presenter->SetView(nullptr);
 	return true;
 }
 

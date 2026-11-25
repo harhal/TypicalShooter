@@ -214,7 +214,11 @@ feature's doc and updated as they change; finished features are merged into `mai
     displayed item = hovered, else selected; items leaving a grid are forgotten. Clicking the selected
     item or an empty cell deselects.
   - `UInventoryItemInfoWidget` (UMG wrapper of `SInventoryItemInfo`, an `IInventoryItem_View`) shows
-    the displayed item's icon / name / description; it lives in `BP_ItemInfo`.
+    the displayed item's icon / name / description plus its power grid info (type, power, effect steps); it lives in
+    `BP_ItemInfo`.
+  - Power grid on screen (`UI/PowerGrid/PowerGridDisplay.h`, `UI/Slate/PowerGridOverlay.h`): the container presenter
+    pushes `PowerGridDisplay::Build(grid)` into `SInventoryGrid::SetPowerGrid` on every grid change; the grid paints
+    faces, links, power / clip labels and slot marks over the items (`InventoryGridPowerPaint.cpp`).
 - Custom content lives in `Content/Inventory` (note the folder typo `Bllueprints`).
 - **Shooting** (`Public|Private/Shooting/`, doc `Docs/Features/Shooting.md`): primary / alternate attacks are
   server-only GAS abilities (`UAttackGameplayAbility`, slot = `EAttackSlot`) driven by

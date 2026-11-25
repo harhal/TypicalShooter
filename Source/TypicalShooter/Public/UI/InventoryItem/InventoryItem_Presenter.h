@@ -8,8 +8,11 @@
 #include "InventoryItem_Presenter.generated.h"
 
 class IInventoryItem_View;
+class UPowerGridComponent;
+
 /**
- * Pushes item model data into an item view.
+ * Pushes item model data into an item view. For inventory items it also follows the power grid of the item's
+ * inventory and refreshes the view's power info on every grid change (power grid R16).
  */
 UCLASS(BlueprintType)
 class TYPICALSHOOTER_API UInventoryItem_Presenter : public UObject
@@ -21,10 +24,19 @@ class TYPICALSHOOTER_API UInventoryItem_Presenter : public UObject
 
 	TWeakPtr<IInventoryItem_View> View;
 
+	TWeakObjectPtr<UPowerGridComponent> PowerGrid;
+	FDelegateHandle PowerGridChangedHandle;
+
 public:
 	UFUNCTION(BlueprintCallable, Category = "Inventory")
 	void SetModel(const TScriptInterface<IInventoryItem_Model>& InModel);
 	void SetView(const TSharedPtr<IInventoryItem_View>& InView);
 
 	void UpdateView() const;
+
+	virtual void BeginDestroy() override;
+
+private:
+	void BindPowerGrid();
+	void UnbindPowerGrid();
 };
