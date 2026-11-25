@@ -23,14 +23,18 @@ public:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Attack")
 	EAttackSlot Slot = EAttackSlot::Primary;
 
-	/** One projectile per point; items may replace it later. */
+	/** One projectile per point: the receiver's ability defines its pattern (power grid R14b). */
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Attack")
 	FShotPattern Pattern;
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Attack")
 	TSubclassOf<AShotProjectile> ProjectileClass;
 
-	/** Blocked while this slot reloads. */
+	/** False = a shot spawns nothing and only applies recoil (the double jump receiver's ability). */
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Attack")
+	bool bSpawnsProjectiles = true;
+
+	/** The air slot works only while the avatar character is airborne (power grid R5). */
 	virtual bool CanActivateAbility(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo,
 		const FGameplayTagContainer* SourceTags, const FGameplayTagContainer* TargetTags,
 		FGameplayTagContainer* OptionalRelevantTags) const override;
@@ -45,12 +49,15 @@ private:
 	void FireNextShot();
 	void OnBurstIntervalElapsed();
 
-	/** Spends one round and spawns the pattern's projectiles. False if the clip is empty. */
-	bool FireShot();
-	void SpawnProjectiles(const FAttackStats& Stats) const;
+	/** Spawns the pattern's projectiles (attacks have no clip, power grid R9a). */
+	void FireShot();
+	/** Spawns the shot's projectiles; returns the shot direction (centre of the pattern). */
+	FVector SpawnProjectiles(const FAttackStats& Stats) const;
+	/** Pushes the avatar character opposite to the shot by Recoil cm/s (power grid R5c). */
+	void ApplyRecoil(const FVector& ShotDirection, float Recoil) const;
+	/** Tells the power sources feeding this ability's receiver that it was used once (power grid R9b). */
+	void ReportUse() const;
 
-	/** Pays the held items' ammo-gated modifiers for this shot and adds their bonuses to Stats (R15a). */
-	void ApplyShotModifiers(UAbilitySystemComponent& Asc, FAttackStats& Stats) const;
 	void Finish();
 	void SetTimer(float Delay, void (UAttackGameplayAbility::*Callback)());
 

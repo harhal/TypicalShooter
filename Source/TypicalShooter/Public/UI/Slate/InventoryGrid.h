@@ -7,6 +7,7 @@
 #include "HhAxialCoord.h"
 #include "Input/DragAndDrop.h"
 #include "UI/ItemsContainer/ItemsContainer_View.h"
+#include "UI/PowerGrid/PowerGridDisplay.h"
 #include "Widgets/SCompoundWidget.h"
 
 class SHhGridPanel;
@@ -86,7 +87,9 @@ public:
 	virtual void MoveInventoryItem(const FGuid& SlotGuid, const FHhAxialCoord& Location) override;
 	virtual void RemoveInventoryItem(const FGuid& SlotGuid) override;
 	virtual void ClearInventoryItems() override;
+	virtual void SetPowerGrid(const FPowerGridDisplay& Display) override;
 
+	const FPowerGridDisplay& GetPowerGrid() const { return PowerGrid; }
 	int32 GetGridRadius() const { return GridRadius; }
 	int32 GetNumCells() const { return NumCells; }
 	int32 GetNumItemViews() const { return ItemWidgets.Num(); }
@@ -116,6 +119,8 @@ public:
 	EInventoryCellHighlight GetCellHighlight(const FHhAxialCoord& Location) const;
 
 	// SWidget
+	virtual int32 OnPaint(const FPaintArgs& Args, const FGeometry& AllottedGeometry, const FSlateRect& MyCullingRect,
+		FSlateWindowElementList& OutDrawElements, int32 LayerId, const FWidgetStyle& InWidgetStyle, bool bParentEnabled) const override;
 	virtual FReply OnMouseButtonDown(const FGeometry& MyGeometry, const FPointerEvent& MouseEvent) override;
 	virtual FReply OnMouseButtonUp(const FGeometry& MyGeometry, const FPointerEvent& MouseEvent) override;
 	virtual FReply OnMouseMove(const FGeometry& MyGeometry, const FPointerEvent& MouseEvent) override;
@@ -130,6 +135,8 @@ private:
 	void RebuildCells();
 	FSlateColor GetHighlightColor(FHhAxialCoord Location) const;
 	FHhAxialCoord GetCoordUnderCursor(const FGeometry& MyGeometry, const FPointerEvent& MouseEvent) const;
+	/** Power grid over the items: links, open faces, slot marks, power labels (R16). Returns the last layer used. */
+	int32 PaintPowerGrid(const FGeometry& Geometry, FSlateWindowElementList& OutDrawElements, int32 LayerId) const;
 	TOptional<FHhAxialCoord> GetSlotLocation(const FGuid& SlotGuid) const;
 
 	TSharedPtr<SHhGridPanel> CellsPanel;
@@ -160,4 +167,7 @@ private:
 	TOptional<FHhAxialCoord> CursorCell;
 	/** Cell the left mouse button went down on (click / drag source). */
 	TOptional<FHhAxialCoord> PressedCell;
+
+	/** Drawn over the items in OnPaint (power grid R16). */
+	FPowerGridDisplay PowerGrid;
 };

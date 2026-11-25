@@ -10,6 +10,7 @@
 #include "ItemsContainer.generated.h"
 
 class UInventoryComponent;
+class UPowerGridComponent;
 class USphereComponent;
 
 UCLASS()
@@ -48,6 +49,10 @@ public:
 	
 	UPROPERTY(BlueprintReadOnly, EditAnywhere)
 	UInventoryComponent* InventoryComponent;
+
+	/** Power grid of InventoryComponent's items (R6b: computed in containers too). */
+	UPROPERTY(BlueprintReadOnly, VisibleAnywhere)
+	TObjectPtr<UPowerGridComponent> PowerGrid;
 	
 	UPROPERTY(EditAnywhere, meta = (BaseStruct = "/Script/TypicalShooter.InventoryItemManifest"), Replicated)
 	TArray<FInstancedStruct> ItemsManifest;

@@ -4,10 +4,12 @@
 
 #include "CoreMinimal.h"
 #include "UI/InventoryItem/InventoryItem_View.h"
+#include "UI/PowerGrid/PowerGridDisplay.h"
 #include "Widgets/SCompoundWidget.h"
 
 class SImage;
 class STextBlock;
+class SVerticalBox;
 
 /**
  * Item details panel: large icon, name and description. Empty (collapsed content) when no item is shown.
@@ -27,10 +29,15 @@ public:
 	virtual void SetName(const FText& InName) override;
 	virtual void SetDescription(const FText& InDescription) override;
 	virtual void SetCount(int32 InCount) override;
+	virtual void SetPowerInfo(const FItemPowerInfo& Info) override;
 
 	bool HasItem() const { return Count > 0; }
 	FText GetDisplayedName() const;
 	FText GetDisplayedDescription() const;
+	const FItemPowerInfo& GetPowerInfo() const { return PowerInfo; }
+	/** Text lines of the power section: type, power, one per effect step (0 when hidden). */
+	int32 GetNumPowerLines() const { return NumPowerLines; }
+	bool IsPowerStepHighlighted(int32 StepIndex) const;
 
 private:
 	FSlateBrush IconBrush;
@@ -39,4 +46,12 @@ private:
 	TSharedPtr<SImage> IconImage;
 	TSharedPtr<STextBlock> NameText;
 	TSharedPtr<STextBlock> DescriptionText;
+
+	void RebuildPowerLines();
+
+	FItemPowerInfo PowerInfo;
+	int32 NumPowerLines = 0;
+	TSharedPtr<SVerticalBox> PowerLines;
+	FLinearColor ReachedStepColor = FLinearColor(1.f, 0.8f, 0.15f, 1.f);
+	FLinearColor PendingStepColor = FLinearColor(0.6f, 0.6f, 0.65f, 1.f);
 };

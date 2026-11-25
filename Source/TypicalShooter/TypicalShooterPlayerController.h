@@ -93,6 +93,13 @@ public:
 	 */
 	void RequestTransferItem(UInventoryComponent* Source, UInventoryItem* Item, UInventoryComponent* Target, const FHhAxialCoord& Location);
 
+	/** Asks the server to rotate Item (placed in Inventory) by Steps clockwise 60-degree steps; Inventory must be accessible. */
+	void RequestRotateItem(UInventoryComponent* Inventory, UInventoryItem* Item, int32 Steps = 1);
+
+	/** Rotates the focused item (cursor / selection, else the hovered one) a step clockwise (power grid R3). */
+	UFUNCTION(BlueprintCallable, Category="Inventory")
+	void RotateFocusedItem();
+
 	/** The controlled pawn's own inventory, or a container the pawn stands next to. */
 	bool CanAccessInventory(const UInventoryComponent* Inventory) const;
 
@@ -111,6 +118,9 @@ public:
 protected:
 	UFUNCTION(Server, Reliable)
 	void ServerTransferItem(UInventoryComponent* Source, UInventoryItem* Item, UInventoryComponent* Target, FHhAxialCoord Location);
+
+	UFUNCTION(Server, Reliable)
+	void ServerRotateItem(UInventoryComponent* Inventory, UInventoryItem* Item, int32 Steps);
 
 	/** Items == empty takes everything Source holds. */
 	UFUNCTION(Server, Reliable)
@@ -142,7 +152,7 @@ private:
 	UPROPERTY(Transient)
 	TObjectPtr<UInputMappingContext> GamepadIMC;
 
-	/** Active while the inventory is open: cursor navigation, confirm / cancel, grid switching, take / take all. */
+	/** Active while the inventory is open: cursor navigation, confirm / cancel, grid switching, take / take all, rotate. */
 	UPROPERTY(Transient)
 	TObjectPtr<UInputMappingContext> InventoryIMC;
 
@@ -163,6 +173,9 @@ private:
 
 	UPROPERTY(Transient)
 	TObjectPtr<UInputAction> InventoryTakeAllAction;
+
+	UPROPERTY(Transient)
+	TObjectPtr<UInputAction> InventoryRotateAction;
 
 	/** Held stick / D-pad direction: one step on press, then auto-repeat. */
 	bool bNavigationHeld = false;

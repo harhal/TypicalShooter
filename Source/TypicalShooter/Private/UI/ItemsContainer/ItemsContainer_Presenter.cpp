@@ -5,6 +5,9 @@
 #include "InventoryItem.h"
 #include "UI/InventoryItem/InventoryItem_Presenter.h"
 #include "UI/ItemsContainer/ItemsContainer_View.h"
+#include "InventoryComponent.h"
+#include "PowerGrid/PowerGridComponent.h"
+#include "UI/PowerGrid/PowerGridDisplay.h"
 
 UItemsContainer_Presenter* UItemsContainer_Presenter::CreatePresenter(const TScriptInterface<IItemsContainer_Model>& InModel)
 {
@@ -30,6 +33,7 @@ void UItemsContainer_Presenter::SetModel(const TScriptInterface<IItemsContainer_
 		Model->GetItemRemovedDelegate().AddUObject(this, &UItemsContainer_Presenter::OnItemRemoved);
 		Model->GetItemMovedDelegate().AddUObject(this, &UItemsContainer_Presenter::OnItemMoved);
 	}
+	BindPowerGrid();
 
 	RebuildView();
 }
@@ -92,6 +96,7 @@ void UItemsContainer_Presenter::UnbindModel()
 		Model->GetItemRemovedDelegate().RemoveAll(this);
 		Model->GetItemMovedDelegate().RemoveAll(this);
 	}
+	UnbindPowerGrid();
 	Model = nullptr;
 }
 
@@ -108,6 +113,7 @@ void UItemsContainer_Presenter::RebuildView()
 	}
 
 	PinnedView->ClearInventoryItems();
+	UpdatePowerGridView();
 
 	if (!IsValid(Model.GetObject()))
 	{
@@ -177,5 +183,45 @@ void UItemsContainer_Presenter::OnItemMoved(const UInventoryItem* Item, const FH
 	if (const TSharedPtr<IItemsContainer_View> PinnedView = View.Pin())
 	{
 		PinnedView->MoveInventoryItem(*SlotGuid, Location);
+	}
+}
+
+void UItemsContainer_Presenter::BindPowerGrid()
+{
+	const UInventoryComponent* Inventory = UInventoryComponent::FindInventory(Model.GetObject());
+	const AActor* Owner = Inventory ? Inventory->GetOwner() : nullptr;
+	TArray<UPowerGridComponent*> Grids;
+	if (Owner)
+	{
+		Owner->GetComponents(Grids);
+	}
+	UPowerGridComponent* const* Found = Grids.FindByPredicate([Inventory](const UPowerGridComponent* Grid) { return Grid->GetInventory() == Inventory; });
+	if (!Found)
+	{
+		return;
+	}
+	PowerGrid = *Found;
+	PowerGridChangedHandle = (*Found)->GetPowerGridChangedDelegate().AddWeakLambda(this, [this](UPowerGridComponent*)
+	{
+		UpdatePowerGridView();
+	});
+}
+
+void UItemsContainer_Presenter::UnbindPowerGrid()
+{
+	if (UPowerGridComponent* Grid = PowerGrid.Get())
+	{
+		Grid->GetPowerGridChangedDelegate().Remove(PowerGridChangedHandle);
+	}
+	PowerGrid.Reset();
+	PowerGridChangedHandle.Reset();
+}
+
+void UItemsContainer_Presenter::UpdatePowerGridView() const
+{
+	if (const TSharedPtr<IItemsContainer_View> PinnedView = View.Pin())
+	{
+		const UPowerGridComponent* Grid = PowerGrid.Get();
+		PinnedView->SetPowerGrid(Grid ? PowerGridDisplay::Build(*Grid) : FPowerGridDisplay());
 	}
 }

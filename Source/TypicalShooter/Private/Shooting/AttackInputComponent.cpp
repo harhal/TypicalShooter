@@ -35,7 +35,6 @@ void UAttackInputComponent::BindInput(UEnhancedInputComponent& Input)
 	};
 	Bind(PrimaryAction, EAttackInputID::PrimaryAttack);
 	Bind(AlternateAction, EAttackInputID::AlternateAttack);
-	Bind(ReloadAction, EAttackInputID::Reload);
 	AddMappingContext();
 }
 
@@ -48,15 +47,12 @@ void UAttackInputComponent::CreateInput()
 	}
 	PrimaryAction = MakeAction(this, TEXT("IA_PrimaryAttack_Generated"));
 	AlternateAction = MakeAction(this, TEXT("IA_AlternateAttack_Generated"));
-	ReloadAction = MakeAction(this, TEXT("IA_Reload_Generated"));
 
 	MappingContext = NewObject<UInputMappingContext>(this, TEXT("IMC_Attack_Generated"), RF_Transient);
 	MappingContext->MapKey(PrimaryAction, EKeys::LeftMouseButton);
 	MappingContext->MapKey(PrimaryAction, EKeys::Gamepad_RightTrigger);
 	MappingContext->MapKey(AlternateAction, EKeys::RightMouseButton);
 	MappingContext->MapKey(AlternateAction, EKeys::Gamepad_LeftTrigger);
-	MappingContext->MapKey(ReloadAction, EKeys::R);
-	MappingContext->MapKey(ReloadAction, EKeys::Gamepad_FaceButton_Right);
 }
 
 void UAttackInputComponent::AddMappingContext() const

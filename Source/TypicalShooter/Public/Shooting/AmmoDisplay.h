@@ -1,14 +1,13 @@
-// Text of the HUD ammo counter: "clip / reserve" of an attack slot, plus a reload marker.
+// Text of the HUD ammo counter: the character's reserve per ammo kind (attacks have no clips, power grid R9a).
 
 #pragma once
 
 #include "CoreMinimal.h"
-#include "Shooting/AttackTypes.h"
 
 class UAbilitySystemComponent;
 
 namespace AmmoDisplay
 {
-	/** "7 / 40" (reserve of the slot reload's ammo kind; "∞" when unlimited), "7 / 40  Reloading..." while reloading. */
-	TYPICALSHOOTER_API FText GetSlotText(const UAbilitySystemComponent& Asc, EAttackSlot Slot);
+	/** "Bullet: 120\nParticle: 24": one line per ammo kind with a non-empty reserve, in ShootingTags::GetAmmoTypes() order. */
+	TYPICALSHOOTER_API FText GetReserveText(const UAbilitySystemComponent& Asc);
 }

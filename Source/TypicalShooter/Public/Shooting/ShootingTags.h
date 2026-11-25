@@ -18,10 +18,6 @@ namespace ShootingTags
 	/** All concrete damage types, in a fixed order. */
 	TYPICALSHOOTER_API TConstArrayView<FGameplayTag> GetDamageTypes();
 
-	/** Owned (loose, server) while an attack slot reloads; blocks that slot's attack. */
-	TYPICALSHOOTER_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(State_Reloading_Primary);
-	TYPICALSHOOTER_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(State_Reloading_Alternate);
-
 	/** Ammo kinds (R15): each has a reserve attribute in UAmmoAttributeSet. */
 	TYPICALSHOOTER_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(Ammo);
 	TYPICALSHOOTER_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(Ammo_Bullet);
@@ -30,6 +26,6 @@ namespace ShootingTags
 	TYPICALSHOOTER_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(Ammo_Radiator);
 	TYPICALSHOOTER_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(Ammo_Particle);
 
-	/** State_Reloading_* of a slot (0 = primary, 1 = alternate). */
-	TYPICALSHOOTER_API FGameplayTag GetReloadingTag(uint8 SlotIndex);
+	/** All concrete ammo kinds, in a fixed order. */
+	TYPICALSHOOTER_API TConstArrayView<FGameplayTag> GetAmmoTypes();
 }

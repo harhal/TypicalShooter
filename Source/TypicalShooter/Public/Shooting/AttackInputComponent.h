@@ -1,6 +1,5 @@
-// Attack controls of a player pawn, built in code (no assets yet): LMB / RT primary, RMB / LT alternate,
-// R / gamepad B reload. Presses go to the pawn's ASC as ability input ids (EAttackInputID); ignored while the
-// inventory screen is open.
+// Attack controls of a player pawn, built in code (no assets yet): LMB / RT primary, RMB / LT alternate.
+// Presses go to the pawn's ASC as ability input ids (EAttackInputID); ignored while the inventory screen is open.
 
 #pragma once
 
@@ -44,7 +43,4 @@ private:
 
 	UPROPERTY(Transient)
 	TObjectPtr<UInputAction> AlternateAction;
-
-	UPROPERTY(Transient)
-	TObjectPtr<UInputAction> ReloadAction;
 };

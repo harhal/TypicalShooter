@@ -3,6 +3,7 @@
 
 #include "InventoryItem.h"
 #include "Engine/Texture2D.h"
+#include "InventoryComponent.h"
 #include "Net/UnrealNetwork.h"
 
 void UInventoryItem::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
@@ -10,11 +11,54 @@ void UInventoryItem::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLi
 	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
 
 	DOREPLIFETIME(ThisClass, ItemManifest);
+	DOREPLIFETIME(ThisClass, Rotation);
+	DOREPLIFETIME(ThisClass, Clip);
 }
 
 void UInventoryItem::SetItemManifest(const FInventoryItemManifest& NewItemManifest)
 {
 	ItemManifest = FInstancedStruct::Make(NewItemManifest);
+}
+
+void UInventoryItem::SetRotation(const int32 NewRotation)
+{
+	constexpr int32 NumSteps = 6;
+	Rotation = ((NewRotation % NumSteps) + NumSteps) % NumSteps;
+}
+
+void UInventoryItem::OnRep_Rotation()
+{
+	if (UInventoryComponent* Inventory = GetTypedOuter<UInventoryComponent>())
+	{
+		Inventory->FlushLayoutChange();
+	}
+}
+
+void UInventoryItem::SetClip(const int32 NewClip)
+{
+	Clip = FMath::Max(0, NewClip);
+	NotifyStateChanged();
+}
+
+void UInventoryItem::OnRep_Clip()
+{
+	NotifyStateChanged();
+}
+
+void UInventoryItem::NotifyStateChanged()
+{
+	if (UInventoryComponent* Inventory = GetTypedOuter<UInventoryComponent>())
+	{
+		Inventory->NotifyItemStateChanged(this);
+	}
+}
+
+UInventoryItem* UInventoryItem::CloneFor(UObject* Outer) const
+{
+	UInventoryItem* Clone = NewObject<UInventoryItem>(Outer);
+	Clone->ItemManifest = ItemManifest;
+	Clone->Rotation = Rotation;
+	return Clone;
 }
 
 const FInfo_ItemFragment* UInventoryItem::GetInfoFragment() const

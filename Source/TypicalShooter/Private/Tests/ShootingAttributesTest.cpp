@@ -1,4 +1,4 @@
-// Tests for UAttackAttributeSet: independent primary / alternate slots, clamping (R1-R3), resolved stats.
+// Tests for UAttackAttributeSet: independent attack slots, clamping (R1-R3), resolved stats.
 
 #include "Misc/AutomationTest.h"
 
@@ -41,13 +41,13 @@ bool FAttackSlotsIndependentTest::RunTest(const FString& Parameters)
 	TestTrue(TEXT("Every slot parameter has an attribute"),
 		UAttackAttributeSet::GetAttribute(EAttackSlot::Alternate, EAttackAttribute::DamageRadiation).IsValid());
 	TestFalse(TEXT("Slots use different attributes"),
-		UAttackAttributeSet::GetAttribute(EAttackSlot::Primary, EAttackAttribute::ReloadTime)
-		== UAttackAttributeSet::GetAttribute(EAttackSlot::Alternate, EAttackAttribute::ReloadTime));
+		UAttackAttributeSet::GetAttribute(EAttackSlot::Primary, EAttackAttribute::ShotInterval)
+		== UAttackAttributeSet::GetAttribute(EAttackSlot::Alternate, EAttackAttribute::ShotInterval));
 
-	Set(Asc, EAttackSlot::Primary, EAttackAttribute::ReloadTime, 2.f);
-	Set(Asc, EAttackSlot::Alternate, EAttackAttribute::ReloadTime, 5.f);
-	TestEqual(TEXT("Primary keeps its value"), Get(Asc, EAttackSlot::Primary, EAttackAttribute::ReloadTime), 2.f);
-	TestEqual(TEXT("Alternate keeps its value"), Get(Asc, EAttackSlot::Alternate, EAttackAttribute::ReloadTime), 5.f);
+	Set(Asc, EAttackSlot::Primary, EAttackAttribute::ShotInterval, 2.f);
+	Set(Asc, EAttackSlot::Alternate, EAttackAttribute::ShotInterval, 5.f);
+	TestEqual(TEXT("Primary keeps its value"), Get(Asc, EAttackSlot::Primary, EAttackAttribute::ShotInterval), 2.f);
+	TestEqual(TEXT("Alternate keeps its value"), Get(Asc, EAttackSlot::Alternate, EAttackAttribute::ShotInterval), 5.f);
 	return true;
 }
 
@@ -58,16 +58,6 @@ bool FAttackClampTest::RunTest(const FString& Parameters)
 	const ShootingTest::FWorldFixture F;
 	UAbilitySystemComponent* Asc = SpawnAsc(F);
 	constexpr EAttackSlot S = EAttackSlot::Primary;
-
-	Set(Asc, S, EAttackAttribute::ClipSize, 0.f);
-	TestEqual(TEXT("Clip size is at least 1"), Get(Asc, S, EAttackAttribute::ClipSize), 1.f);
-	Set(Asc, S, EAttackAttribute::ClipSize, 7.6f);
-	TestEqual(TEXT("Clip size is whole"), Get(Asc, S, EAttackAttribute::ClipSize), 8.f);
-
-	Set(Asc, S, EAttackAttribute::Ammo, 20.f);
-	TestEqual(TEXT("Ammo is limited by the clip size"), Get(Asc, S, EAttackAttribute::Ammo), 8.f);
-	Set(Asc, S, EAttackAttribute::Ammo, -3.f);
-	TestEqual(TEXT("Ammo is not negative"), Get(Asc, S, EAttackAttribute::Ammo), 0.f);
 
 	Set(Asc, S, EAttackAttribute::ShotsPerBurst, 0.f);
 	TestEqual(TEXT("At least one shot per burst"), Get(Asc, S, EAttackAttribute::ShotsPerBurst), 1.f);
@@ -80,18 +70,46 @@ bool FAttackClampTest::RunTest(const FString& Parameters)
 	return true;
 }
 
-IMPLEMENT_SIMPLE_AUTOMATION_TEST(FAttackAmmoFollowsClipTest, "TypicalShooter.Shooting.Attributes.AmmoFollowsClipSize", ShootingTest::Flags)
-bool FAttackAmmoFollowsClipTest::RunTest(const FString& Parameters)
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FAttackAirSlotTest, "TypicalShooter.Shooting.Attributes.AirSlot", ShootingTest::Flags)
+bool FAttackAirSlotTest::RunTest(const FString& Parameters)
 {
 	using namespace ShootingAttributesTest;
 	const ShootingTest::FWorldFixture F;
 	UAbilitySystemComponent* Asc = SpawnAsc(F);
-	constexpr EAttackSlot S = EAttackSlot::Alternate;
 
-	Set(Asc, S, EAttackAttribute::ClipSize, 10.f);
-	Set(Asc, S, EAttackAttribute::Ammo, 10.f);
-	Set(Asc, S, EAttackAttribute::ClipSize, 4.f);
-	TestEqual(TEXT("Shrinking the clip drops extra ammo"), Get(Asc, S, EAttackAttribute::Ammo), 4.f);
+	for (int32 Index = 0; Index < static_cast<int32>(EAttackAttribute::Count); ++Index)
+	{
+		const EAttackAttribute Attribute = static_cast<EAttackAttribute>(Index);
+		TestTrue(FString::Printf(TEXT("Air slot has attribute %d (power grid R5b)"), Index),
+			UAttackAttributeSet::GetAttribute(EAttackSlot::Air, Attribute).IsValid());
+		TestFalse(FString::Printf(TEXT("Air attribute %d is its own"), Index),
+			UAttackAttributeSet::GetAttribute(EAttackSlot::Air, Attribute) == UAttackAttributeSet::GetAttribute(EAttackSlot::Primary, Attribute)
+			|| UAttackAttributeSet::GetAttribute(EAttackSlot::Air, Attribute) == UAttackAttributeSet::GetAttribute(EAttackSlot::Alternate, Attribute));
+	}
+
+	Set(Asc, EAttackSlot::Air, EAttackAttribute::DamagePhysical, 7.f);
+	TestEqual(TEXT("Air keeps its value"), Get(Asc, EAttackSlot::Air, EAttackAttribute::DamagePhysical), 7.f);
+	TestEqual(TEXT("Primary is untouched"), Get(Asc, EAttackSlot::Primary, EAttackAttribute::DamagePhysical), 0.f);
+	TestEqual(TEXT("Air reads its own stats"), UAttackAttributeSet::ReadStats(*Asc, EAttackSlot::Air).Damage.GetTotal(), 7.f);
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FAttackRecoilTest, "TypicalShooter.Shooting.Attributes.Recoil", ShootingTest::Flags)
+bool FAttackRecoilTest::RunTest(const FString& Parameters)
+{
+	using namespace ShootingAttributesTest;
+	const ShootingTest::FWorldFixture F;
+	UAbilitySystemComponent* Asc = SpawnAsc(F);
+
+	TestEqual(TEXT("No recoil by default"), UAttackAttributeSet::ReadStats(*Asc, EAttackSlot::Primary).Recoil, 0.f);
+	Set(Asc, EAttackSlot::Air, EAttackAttribute::Recoil, 900.f);
+	TestEqual(TEXT("Recoil is read into the stats (power grid R5c)"), UAttackAttributeSet::ReadStats(*Asc, EAttackSlot::Air).Recoil, 900.f);
+	Set(Asc, EAttackSlot::Primary, EAttackAttribute::Recoil, -5.f);
+	TestEqual(TEXT("Recoil is not negative"), Get(Asc, EAttackSlot::Primary, EAttackAttribute::Recoil), 0.f);
+
+	FAttackStats Stats;
+	UAttackAttributeSet::AddToStats(Stats, EAttackAttribute::Recoil, 50.f);
+	TestEqual(TEXT("Per-shot bonuses can add recoil"), Stats.Recoil, 50.f);
 	return true;
 }
 
@@ -103,8 +121,6 @@ bool FAttackReadStatsTest::RunTest(const FString& Parameters)
 	UAbilitySystemComponent* Asc = SpawnAsc(F);
 	constexpr EAttackSlot S = EAttackSlot::Primary;
 
-	Set(Asc, S, EAttackAttribute::ClipSize, 30.f);
-	Set(Asc, S, EAttackAttribute::Ammo, 12.f);
 	Set(Asc, S, EAttackAttribute::FireStartDistance, 500.f);
 	Set(Asc, S, EAttackAttribute::FireEndDistance, 200.f);
 	Set(Asc, S, EAttackAttribute::DamagePhysical, 10.f);
@@ -112,8 +128,6 @@ bool FAttackReadStatsTest::RunTest(const FString& Parameters)
 	Set(Asc, EAttackSlot::Alternate, EAttackAttribute::DamagePhysical, 99.f);
 
 	const FAttackStats Stats = UAttackAttributeSet::ReadStats(*Asc, S);
-	TestEqual(TEXT("Ammo"), Stats.Ammo, 12);
-	TestEqual(TEXT("Clip size"), Stats.ClipSize, 30);
 	TestEqual(TEXT("Fire end is never before fire start"), Stats.FireEndDistance, 500.f);
 	TestEqual(TEXT("Physical damage from its attribute"), Stats.Damage.Get(ShootingTags::Damage_Type_Physical), 10.f);
 	TestEqual(TEXT("Plasma damage from its attribute"), Stats.Damage.Get(ShootingTags::Damage_Type_Plasma), 4.f);

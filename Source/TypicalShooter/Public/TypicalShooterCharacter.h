@@ -6,16 +6,23 @@
 #include "AbilitySystemInterface.h"
 #include "GameFramework/Character.h"
 #include "Logging/LogMacros.h"
+#include "PowerGrid/DefaultLoadout.h"
 #include "Shooting/AttackTypes.h"
 #include "TypicalShooterCharacter.generated.h"
 
 class UAmmoAttributeSet;
 class UAttackAttributeSet;
 class UAttackInputComponent;
-class UAttackModifiersComponent;
+class UGameplayAbility;
 class UGameplayEffect;
+class UMovementAttributeSet;
+class UMovementAttributesComponent;
 class UInteractionComponent;
 class UInventoryComponent;
+class UPowerGridComponent;
+class UPowerEffectsComponent;
+class UReceiverAbilitiesComponent;
+class USourceAmmoComponent;
 class UInputComponent;
 class USkeletalMeshComponent;
 class UCameraComponent;
@@ -68,6 +75,10 @@ protected:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category ="Inventory", meta = (AllowPrivateAccess = "true"))
 	TObjectPtr<UInventoryComponent> InventoryComponent;
 
+	/** Power grid of InventoryComponent's items. */
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category ="Inventory", meta = (AllowPrivateAccess = "true"))
+	TObjectPtr<UPowerGridComponent> PowerGrid;
+
 	/** Projectiles start here (tagged "Muzzle"); follows the first person camera. */
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category ="Attack", meta = (AllowPrivateAccess = "true"))
 	TObjectPtr<USceneComponent> Muzzle;
@@ -75,24 +86,43 @@ protected:
 	UPROPERTY(VisibleAnywhere, Category ="Attack")
 	TObjectPtr<UAttackInputComponent> AttackInput;
 
-	/** Applies attack modifiers of the items in InventoryComponent. */
-	UPROPERTY(VisibleAnywhere, Category ="Attack")
-	TObjectPtr<UAttackModifiersComponent> AttackModifiers;
-
 	UPROPERTY()
 	TObjectPtr<UAttackAttributeSet> AttackAttributes;
 
-	/** Reserve ammo per kind, spent by reloads. */
+	/** Reserve ammo per kind. */
 	UPROPERTY()
 	TObjectPtr<UAmmoAttributeSet> AmmoAttributes;
 
-	/** Attack / reload abilities granted on the server at BeginPlay. */
-	UPROPERTY(EditDefaultsOnly, Category ="Attack")
-	TArray<FAttackAbilityGrant> AttackAbilities;
+	/** Jump power / air control (power grid R6c), mirrored into the movement component by MovementAttributes. */
+	UPROPERTY()
+	TObjectPtr<UMovementAttributeSet> MovementAttributeSet;
 
-	/** Applied once on the server at BeginPlay: base values of the attack attributes. */
+	UPROPERTY(VisibleAnywhere, Category ="Movement")
+	TObjectPtr<UMovementAttributesComponent> MovementAttributes;
+
+	/** Ground jump, granted on the server at BeginPlay and bound to the jump button (EAttackInputID::Jump). */
+	UPROPERTY(EditDefaultsOnly, Category ="Movement")
+	TSubclassOf<UGameplayAbility> JumpAbility;
+
+	/** Grants the abilities of the receivers working in the power grid's slots (attacks come only from them). */
+	UPROPERTY(VisibleAnywhere, Category ="Attack")
+	TObjectPtr<UReceiverAbilitiesComponent> ReceiverAbilities;
+
+	/** Applies the threshold effects of the inventory items (power grid R13-R14a). */
+	UPROPERTY(VisibleAnywhere, Category ="Attack")
+	TObjectPtr<UPowerEffectsComponent> PowerEffects;
+
+	/** Clips of the ammo-fed power sources in the inventory (power grid R9, R9d). */
+	UPROPERTY(VisibleAnywhere, Category ="Attack")
+	TObjectPtr<USourceAmmoComponent> SourceAmmo;
+
+	/** Applied once on the server at BeginPlay: starting reserve ammo (attack attributes stay neutral). */
 	UPROPERTY(EditDefaultsOnly, Category ="Attack")
 	TSubclassOf<UGameplayEffect> AttackDefaultsEffect;
+
+	/** Placed into the inventory on the server at BeginPlay (power grid R6a: the base attacks come from them). */
+	UPROPERTY(EditDefaultsOnly, Category ="Inventory")
+	TArray<FStartingInventoryItem> StartingItems;
 
 public:
 	ATypicalShooterCharacter();
@@ -100,8 +130,8 @@ public:
 protected:
 	virtual void BeginPlay() override;
 
-	/** Server: grants AttackAbilities and applies AttackDefaultsEffect. */
-	void GrantAttacks();
+	/** Server: grants JumpAbility, applies AttackDefaultsEffect and places StartingItems. */
+	void GrantStartingLoadout();
 
 	/** Called from Input Actions for movement input */
 	void MoveInput(const FInputActionValue& Value);

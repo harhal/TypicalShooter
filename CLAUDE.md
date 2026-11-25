@@ -108,7 +108,7 @@ feature's doc and updated as they change; finished features are merged into `mai
   info view without a window), `TypicalShooter.Inventory.UIFlow` (PIE), `HarhalHexagonalGrid.*` (pure math),
   `TypicalShooter.Shooting.*` (bare world, `Private/Tests/ShootingTestFixture.h`; `FWorldFixture(true)` marks
   the world as playing and `Tick` steps it — bumps `GFrameCounter`, since tick functions run once per engine
-  frame; attack/reload tests share `ShootingAbilityFixture.h`), `TypicalShooter.Shooting.Flow` (PIE).
+  frame; attack tests share `ShootingAbilityFixture.h`, which counts shots by spawned projectiles), `TypicalShooter.Shooting.Flow` (PIE).
 - Headless alternative (editor closed, also runs the PIE test):
   `UnrealEditor-Cmd.exe <uproject> "-ExecCmds=Automation RunTests TypicalShooter.+HarhalHexagonalGrid.;Quit" -unattended -nopause -NullRHI -abslog=<file>`
   and grep the log for `Test Completed. Result=`.
@@ -154,13 +154,14 @@ feature's doc and updated as they change; finished features are merged into `mai
   19 cells; `IsLocationInBounds`, `FindFreeLocation` in spiral order). Mutations
   (`AddItem/RemoveItem/MoveItem/TransferItem/TransferItemToFreeLocation`) are **server-only**.
   `TransferItem` moves within or between inventories; an occupied target cell swaps the two items;
-  between inventories the item is re-created from its manifest (items have no other state yet).
+  between inventories the item is re-created via `UInventoryItem::CloneFor` (manifest + instance state:
+  `Rotation`, power grid).
   `FInventoryArray`'s copy operations deliberately skip its `Owner` (BP actors copy component
   properties from the CDO; regression test `Core.OwnerSurvivesArchetypeCopy`).
 - **Layout events** (`InventoryLayout.h`): besides the per-item delegates (used by the UI presenter, may see
   intermediate states), `UInventoryComponent::GetLayoutChangedDelegate()` / BP `OnLayoutChanged` fire **once
   per atomic operation**, when the inventory is consistent, with an `FInventoryLayoutChange` = placement
-  changes + per-item neighbour changes (hex distance 1, `GainedNeighbors` / `LostNeighbors`, reported from both
+  changes + rotation changes (`RotateItem`, server-only) + per-item neighbour changes (hex distance 1, `GainedNeighbors` / `LostNeighbors`, reported from both
   sides). Computed by diffing against the last reported layout (`InventoryLayout::Diff`). Server: every
   mutation opens a `FScopedLayoutBatch` (transfer/swap = one event per inventory); wrap multi-step operations
   explicitly (`ServerTakeItems` does). Clients: flushed in `FInventoryArray::PostReplicatedReceive`.
@@ -191,7 +192,8 @@ feature's doc and updated as they change; finished features are merged into `mai
     assets): `GamepadIMC` (always, prio 0: View = toggle inventory, X = interact) and `InventoryIMC` (added
     while the inventory is open, `InventoryIMCPriority` = 1, consumes keys): D-pad / left stick / arrows =
     cursor, A / Enter = confirm, B = deselect or close, LB/RB = switch grid, X / R = take focused item,
-    Y / F = take all. Keyboard Tab / E stay in the `IMC_Default` asset.
+    Y / F = take all, RT / Q = rotate the focused item (`RotateFocusedItem` → `ServerRotateItem`). Keyboard Tab / E stay
+    in the `IMC_Default` asset.
   - The cursor lives in `UInventoryUISubsystem` (`SetNavigableContainers` — the controller passes pawn
     inventory, then opened container; `MoveCursor` picks the hex neighbour best matching the direction and
     zig-zags vertically keeping a column; `SwitchCursorContainer`; `ConfirmAtCursor` selects / moves the
@@ -212,21 +214,43 @@ feature's doc and updated as they change; finished features are merged into `mai
     displayed item = hovered, else selected; items leaving a grid are forgotten. Clicking the selected
     item or an empty cell deselects.
   - `UInventoryItemInfoWidget` (UMG wrapper of `SInventoryItemInfo`, an `IInventoryItem_View`) shows
-    the displayed item's icon / name / description; it lives in `BP_ItemInfo`.
+    the displayed item's icon / name / description plus its power grid info (type, power, effect steps); it lives in
+    `BP_ItemInfo`.
+  - Power grid on screen (`UI/PowerGrid/PowerGridDisplay.h`, `UI/Slate/PowerGridOverlay.h`): the container presenter
+    pushes `PowerGridDisplay::Build(grid)` into `SInventoryGrid::SetPowerGrid` on every grid change; the grid paints
+    faces, links, power / clip labels and slot marks over the items (`InventoryGridPowerPaint.cpp`).
 - Custom content lives in `Content/Inventory` (note the folder typo `Bllueprints`).
 - **Shooting** (`Public|Private/Shooting/`, doc `Docs/Features/Shooting.md`): primary / alternate attacks are
-  server-only GAS abilities (`UAttackGameplayAbility`, `UReloadGameplayAbility`, slot = `EAttackSlot`) driven by
-  attributes: `UAttackAttributeSet` (`Primary_*` / `Alternate_*`, read via `GetAttribute(Slot, EAttackAttribute)` /
-  `ReadStats`) and `UAmmoAttributeSet` (reserve per `Ammo.*` kind). A shot spends one clip round and spawns one
+  server-only GAS abilities (`UAttackGameplayAbility`, slot = `EAttackSlot`) driven by
+  attributes: `UAttackAttributeSet` (`Primary_*` / `Alternate_*` / `Air_*`, incl. `Recoil`, read via `GetAttribute(Slot, EAttackAttribute)` /
+  `ReadStats`) and `UAmmoAttributeSet` (reserve per `Ammo.*` kind). Attacks have no clip / reload (moved to power
+  grid sources, `Docs/Features/ItemPowerGrid.md`). A shot spawns one
   `AShotProjectile` per `FShotPattern` point from the `Muzzle`-tagged component towards the camera aim point;
   projectiles pierce (`UShotProjectileMovementComponent::HandleBlockingHit`) losing damage per hit. Damage goes
   through `IShotDamageReceiver` components (`UGasDamageReceiverComponent` → `UShotDamageEffect` SetByCaller per
   `Damage.Type.*` → `UHealthAttributeSet`; `USimpleDamageReceiverComponent` for plain durability). The character
-  grants `AttackAbilities` + `UDefaultAttackStatsEffect` at BeginPlay; input is generated in
-  `UAttackInputComponent` (LMB / RT, RMB / LT, R / B → ability InputIDs, ignored while the inventory is open).
-  Items change attacks via `FAttackModifier_ItemFragment` (GE while held, pattern replacement, ammo-gated
-  per-shot bonuses), applied by `UAttackModifiersComponent`. `ATargetDummy` is a refilling GAS target;
-  `UAmmoCounterWidget` (in `BP_HUD`) shows clip / reserve.
+  gets its attacks only from power grid receivers (`UReceiverAbilitiesComponent`; the receiver's `BaseStats` become
+  the slot attributes' base values) and places `StartingItems` (`DefaultLoadout`: source + rifle / shotgun / double jump receivers)
+  plus `UDefaultAttackStatsEffect` (reserve ammo only) at BeginPlay; input is generated in
+  `UAttackInputComponent` (LMB / RT, RMB / LT → ability InputIDs, ignored while the inventory is open).
+  Items change attacks only through the power grid (threshold effects, receiver ability pattern, source clips). `ATargetDummy` is a refilling GAS target;
+  `UAmmoCounterWidget` (in `BP_HUD`) shows the reserve per ammo kind.
+- **Movement** (`Public|Private/Movement/`): the ground jump is `UJumpGameplayAbility` (LocalPredicted, only when
+  `CanJump()`), granted as `EAttackInputID::Jump`; `JumpAction` goes through the ASC. `UMovementAttributeSet`
+  (`JumpVelocity`, `AirControl`) is mirrored into `CharacterMovement` by `UMovementAttributesComponent` (server seeds
+  it from the movement component's configured values).
+- **Power grid** (`Public|Private/PowerGrid/`, doc `Docs/Features/ItemPowerGrid.md`, in progress): items with
+  `FPowerGrid_ItemFragment` (source / receiver / connector, open hex faces, rotated by `UInventoryItem::Rotation`)
+  form a grid solved by `PowerGridSolver::Solve`; `UPowerGridComponent` (character and containers) re-solves on
+  every layout event. Receiver slots: `ReceiverSlots` (cells (0,-1) / (-1,1) / (1,0)).
+  Item threshold effects: `FPowerEffects_ItemFragment` (steps: `Threshold`, `CharacterEffect` GE, slot-agnostic
+  `AttackBonuses`) applied by `UPowerEffectsComponent` (server) — character GEs for reached steps, attack bonuses of
+  items connected to each active receiver summed into one `UAttackBonusEffect` (SetByCaller per slot attribute).
+  Source clips: `UInventoryItem::Clip` (replicated, not carried by `CloneFor`; changes fire
+  `UInventoryComponent::GetItemStateChangedDelegate()`, the grid re-solves); `USourceAmmoComponent` (server) reserves
+  up to `Capacity` from the ammo reserve when a source enters the character's inventory and returns it on leaving;
+  each attack shot calls `ReportUse(receiver)`: every ammo source feeding the receiver pays `CostPerUse`; after
+  `RechargeDelay` without uses a looping timer refills the clip from the reserve until full.
 
 ## Current state (as of 2026-11-25)
 
@@ -244,7 +268,10 @@ UI widgets: `BP_HUD` → `SetContainer(Container)` → `BP_ContainerGrid.SetCont
 (`UInventoryItemInfoWidget`).
 
 The two level containers hold test items (`Test Medkit/Ammo/Grenade`, `Test Armor/Scope`) with
-`FInfo_ItemFragment` (placeholder icon `T_UE_Logo_M`).
+`FInfo_ItemFragment` (placeholder icon `T_UE_Logo_M`); the second one also holds power grid test items (`Particle Core`
+source on `Ammo.Particle`, `Straight` / `Bent Conduit`, `Damage Amplifier` with threshold steps), set on the level
+instance via Unreal MCP. `TypicalShooter.PowerGrid.Flow` saves `Saved/Screenshots/WindowsEditor/PowerGridFlow.png` when
+run in a rendering editor (visual check of the power grid overlay and info panel).
 
 Inventory screen (Tab) and container opening (E) are wired and covered by the automation test
 `TypicalShooter.Inventory.UIFlow` (`Source/TypicalShooter/Private/Tests/InventoryUIFlowTest.cpp`): it
@@ -252,7 +279,7 @@ starts PIE itself, feeds keys through `UGameViewportClient::InputKey` (Enhanced 
 exercised; OS → Slate focus is not) and checks Tab open/close, E at a container (grid shows every
 item), transfer container → player (player grid updates), Take / Take All, server rejection for a far
 container, the gamepad flow (X opens the container, D-pad cursor drawn in the grid, A select + move into the
-container without jumping, RB, Y take all, B close, View toggle), W movement and jump. Gamepad keys go
+container without jumping, Q / RT rotation, RB, Y take all, B close, View toggle), W movement and jump. Gamepad keys go
 through the same `InputKey` path. Real mouse drag & drop is covered only below the Slate event layer
 (`UI.DragDrop*` call `MakeDragPayload` / `DropPayload` directly). Run via MCP: `AutomationTestToolset.DiscoverTests` →
 `RunTests ["TypicalShooter.Inventory.UIFlow"]` → `GetTestResults` (the automation worker ends any
@@ -268,11 +295,11 @@ Open work:
 - Move the generated inventory input into IMC/IA assets (rebinding, on-screen button prompts).
 - Multiplayer check of transfers and of the client-side layout event (dedicated server / client PIE).
 - Leftover debug output outside the inventory: `BP_ItemsContainer` prints "Open / That's All" on interact.
-- Shooting: hitscan / collider attacks, on-hit effects, resistances, items with attack modifiers in the level,
+- Shooting: hitscan / collider attacks, on-hit effects, resistances, power grid items in the level containers,
   projectile visuals, multiplayer check (see `Docs/Features/Shooting.md`).
 
 Shooting works in PIE: the player fires at three `ATargetDummy` on `Lvl_FirstPerson` (LMB rifle-like, RMB
-7-pellet spread, R reload from reserve), `BP_HUD.AmmoCounter` shows clip / reserve; covered by
+7-pellet spread), `BP_HUD.AmmoCounter` shows the ammo reserve; covered by
 `TypicalShooter.Shooting.Flow`.
 
 Verify blueprints headlessly with:

@@ -1,5 +1,5 @@
-// Shared fixture for attack / reload ability tests: a shooter actor with an ASC, attack attributes and the
-// attack + reload abilities of one slot, plus a sturdy target dummy in front of it.
+// Shared fixture for attack ability tests: a shooter actor with an ASC, attack attributes and the attack ability of
+// one slot, plus a sturdy target dummy in front of it.
 
 #pragma once
 
@@ -10,18 +10,19 @@
 #include "Shooting/AttackAttributeSet.h"
 #include "Shooting/AttackGameplayAbility.h"
 #include "Shooting/HealthAttributeSet.h"
-#include "Shooting/ReloadGameplayAbility.h"
+#include "Shooting/ShotProjectile.h"
 #include "Shooting/TargetDummy.h"
 #include "Tests/ShootingTestFixture.h"
 
 namespace ShootingAbilityTest
 {
-	/** Actor at the origin looking along +X, with attack attributes, an attack and a reload ability of Slot. */
+	/** Actor at the origin looking along +X, with attack attributes and an attack ability of Slot. */
 	struct FShooter
 	{
 		UAbilitySystemComponent* Asc = nullptr;
 		FGameplayAbilitySpecHandle Handle;
-		FGameplayAbilitySpecHandle ReloadHandle;
+		/** Projectiles spawned in the world since the shooter was created. */
+		TSharedRef<int32> NumProjectiles = MakeShared<int32>(0);
 
 		FShooter(const ShootingTest::FWorldFixture& F, const EAttackSlot Slot, const FShotPattern& Pattern = FShotPattern())
 		{
@@ -36,23 +37,17 @@ namespace ShootingAbilityTest
 			Ability->Slot = Slot;
 			Ability->Pattern = Pattern;
 
-			ReloadHandle = Asc->GiveAbility(FGameplayAbilitySpec(UReloadGameplayAbility::StaticClass()));
-			Cast<UReloadGameplayAbility>(ReloadSpec()->GetPrimaryInstance())->Slot = Slot;
+			F.World->AddOnActorSpawnedHandler(FOnActorSpawned::FDelegate::CreateLambda([Counter = NumProjectiles](AActor* Spawned)
+			{
+				*Counter += Spawned && Spawned->IsA<AShotProjectile>() ? 1 : 0;
+			}));
 		}
 
 		FGameplayAbilitySpec* Spec() const { return Asc->FindAbilitySpecFromHandle(Handle); }
-		FGameplayAbilitySpec* ReloadSpec() const { return Asc->FindAbilitySpecFromHandle(ReloadHandle); }
 		bool Activate() const { return Asc->TryActivateAbility(Handle); }
-		bool Reload() const { return Asc->TryActivateAbility(ReloadHandle); }
 		bool IsActive() const { return Spec()->IsActive(); }
-		bool IsReloading() const { return ReloadSpec()->IsActive(); }
 		void SetHeld(const bool bHeld) const { Spec()->InputPressed = bHeld; }
-
-		/** Reloads take this ammo kind from the reserve (default: none = unlimited). */
-		void SetAmmoType(const FGameplayTag& AmmoType) const
-		{
-			Cast<UReloadGameplayAbility>(ReloadSpec()->GetPrimaryInstance())->AmmoType = AmmoType;
-		}
+		int32 Projectiles() const { return *NumProjectiles; }
 
 		void SetReserve(const FGameplayTag& AmmoType, const float Value) const
 		{
@@ -74,12 +69,9 @@ namespace ShootingAbilityTest
 			return Asc->GetNumericAttribute(UAttackAttributeSet::GetAttribute(Slot, Attribute));
 		}
 
-		/** Clip of 30 holding Ammo rounds, Shots per burst, physical damage per hit. */
-		void Setup(const EAttackSlot Slot, const float Ammo, const float Shots, const float ShotInterval, const float BurstInterval,
-			const float Damage) const
+		/** Shots per burst, intervals, physical damage per hit. */
+		void Setup(const EAttackSlot Slot, const float Shots, const float ShotInterval, const float BurstInterval, const float Damage) const
 		{
-			Set(Slot, EAttackAttribute::ClipSize, 30.f);
-			Set(Slot, EAttackAttribute::Ammo, Ammo);
 			Set(Slot, EAttackAttribute::ShotsPerBurst, Shots);
 			Set(Slot, EAttackAttribute::ShotInterval, ShotInterval);
 			Set(Slot, EAttackAttribute::BurstInterval, BurstInterval);

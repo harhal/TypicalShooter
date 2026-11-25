@@ -2,28 +2,26 @@
 
 #include "AbilitySystemComponent.h"
 #include "Shooting/AmmoAttributeSet.h"
-#include "Shooting/AttackAttributeSet.h"
-#include "Shooting/ReloadGameplayAbility.h"
 #include "Shooting/ShootingTags.h"
 
 #define LOCTEXT_NAMESPACE "AmmoDisplay"
 
-FText AmmoDisplay::GetSlotText(const UAbilitySystemComponent& Asc, const EAttackSlot Slot)
+FText AmmoDisplay::GetReserveText(const UAbilitySystemComponent& Asc)
 {
-	const int32 Clip = FMath::FloorToInt32(Asc.GetNumericAttribute(UAttackAttributeSet::GetAttribute(Slot, EAttackAttribute::Ammo)));
-
-	const UReloadGameplayAbility* Reload = UReloadGameplayAbility::FindForSlot(Asc, Slot);
-	const FGameplayAttribute Reserve = Reload ? UAmmoAttributeSet::GetReserveAttribute(Reload->AmmoType) : FGameplayAttribute();
-	const FText ReserveText = Reserve.IsValid() && Asc.HasAttributeSetForAttribute(Reserve)
-		? FText::AsNumber(FMath::FloorToInt32(Asc.GetNumericAttribute(Reserve)))
-		: FText::FromString(TEXT("∞"));
-
-	const FText Counter = FText::Format(LOCTEXT("Counter", "{0} / {1}"), FText::AsNumber(Clip), ReserveText);
-	if (Asc.HasMatchingGameplayTag(ShootingTags::GetReloadingTag(static_cast<uint8>(Slot))))
+	TArray<FText> Lines;
+	for (const FGameplayTag& AmmoType : ShootingTags::GetAmmoTypes())
 	{
-		return FText::Format(LOCTEXT("Reloading", "{0}  Reloading..."), Counter);
+		const FGameplayAttribute Reserve = UAmmoAttributeSet::GetReserveAttribute(AmmoType);
+		const int32 Amount = Reserve.IsValid() && Asc.HasAttributeSetForAttribute(Reserve)
+			? FMath::FloorToInt32(Asc.GetNumericAttribute(Reserve)) : 0;
+		if (Amount > 0)
+		{
+			FString Kind = AmmoType.ToString();
+			Kind.Split(TEXT("."), nullptr, &Kind, ESearchCase::CaseSensitive, ESearchDir::FromEnd);
+			Lines.Add(FText::Format(LOCTEXT("Line", "{0}: {1}"), FText::FromString(Kind), FText::AsNumber(Amount)));
+		}
 	}
-	return Counter;
+	return FText::Join(FText::FromString(TEXT("\n")), Lines);
 }
 
 #undef LOCTEXT_NAMESPACE

@@ -13,6 +13,7 @@ class UInventoryComponent;
 
 DECLARE_MULTICAST_DELEGATE_TwoParams(FInventoryLayoutChangedDelegate, UInventoryComponent* /*Inventory*/, const FInventoryLayoutChange& /*Change*/);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FOnInventoryLayoutChanged, UInventoryComponent*, Inventory, const FInventoryLayoutChange&, Change);
+DECLARE_MULTICAST_DELEGATE_TwoParams(FInventoryItemStateChangedDelegate, UInventoryComponent* /*Inventory*/, UInventoryItem* /*Item*/);
 
 UCLASS(ClassGroup=(Custom), meta=(BlueprintSpawnableComponent))
 class TYPICALSHOOTER_API UInventoryComponent : public UActorComponent, public IItemsContainer_Model
@@ -37,9 +38,12 @@ public:
 	/**
 	 * Server only. Puts Item (placed in this inventory) at Location of Target, which may be this inventory.
 	 * If the target cell is occupied the two items swap places. Between inventories the item is re-created
-	 * from its manifest in the target (items carry no state besides the manifest yet).
+	 * in the target with UInventoryItem::CloneFor (manifest + instance state).
 	 */
 	bool TransferItem(UInventoryItem* Item, UInventoryComponent* Target, const FHhAxialCoord& Location);
+
+	/** Server only. Rotates Item (placed in this inventory) clockwise by Steps * 60 degrees (power grid R3). */
+	bool RotateItem(UInventoryItem* Item, int32 Steps = 1);
 
 	/** Server only. TransferItem to Target's first free cell; false if Target is full. */
 	bool TransferItemToFreeLocation(UInventoryItem* Item, UInventoryComponent* Target);
@@ -89,6 +93,10 @@ public:
 	/** Reports layout changes since the last report, unless a batch is open (also called after replication updates). */
 	void FlushLayoutChange();
 
+	/** Instance state of a placed item changed (e.g. a source clip): server on change, clients on replication. */
+	void NotifyItemStateChanged(UInventoryItem* Item);
+	FInventoryItemStateChangedDelegate& GetItemStateChangedDelegate() { return ItemStateChangedDelegate; }
+
 	void ProcessItemAdded(const UInventoryItem* Item, const FHhAxialCoord& Location);
 	void ProcessItemRemoved(const UInventoryItem* Item, const FHhAxialCoord& Location);
 	void ProcessItemMoved(const UInventoryItem* Item, const FHhAxialCoord& Location, const FHhAxialCoord& PrevLocation);
@@ -116,10 +124,17 @@ private:
 	FItemRemovedDelegate OnItemRemovedDelegate;
 	FItemMovedDelegate OnItemMovedDelegate;
 	FInventoryLayoutChangedDelegate LayoutChangedDelegate;
+	FInventoryItemStateChangedDelegate ItemStateChangedDelegate;
 
 	/** Open FScopedLayoutBatch count. */
 	int32 LayoutBatchDepth = 0;
 
+	struct FReportedPlacement
+	{
+		FHhAxialCoord Location;
+		int32 Rotation = 0;
+	};
+
 	/** Layout as last reported to layout listeners. */
-	TMap<TWeakObjectPtr<UInventoryItem>, FHhAxialCoord> ReportedLayout;
+	TMap<TWeakObjectPtr<UInventoryItem>, FReportedPlacement> ReportedLayout;
 };

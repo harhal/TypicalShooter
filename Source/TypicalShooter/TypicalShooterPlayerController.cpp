@@ -106,6 +106,7 @@ void ATypicalShooterPlayerController::CreateInventoryInput()
 	InventorySwitchGridAction = MakeAction(this, TEXT("IA_InventorySwitchGrid_Generated"), EInputActionValueType::Axis1D);
 	InventoryTakeAction = MakeAction(this, TEXT("IA_InventoryTake_Generated"));
 	InventoryTakeAllAction = MakeAction(this, TEXT("IA_InventoryTakeAll_Generated"));
+	InventoryRotateAction = MakeAction(this, TEXT("IA_InventoryRotate_Generated"));
 
 	// Inventory screen (higher priority while open; actions consume their keys).
 	InventoryIMC = NewObject<UInputMappingContext>(this, TEXT("IMC_Inventory_Generated"), RF_Transient);
@@ -128,6 +129,8 @@ void ATypicalShooterPlayerController::CreateInventoryInput()
 	MapKey(InventoryIMC, InventoryTakeAction, EKeys::R);
 	MapKey(InventoryIMC, InventoryTakeAllAction, EKeys::Gamepad_FaceButton_Top);
 	MapKey(InventoryIMC, InventoryTakeAllAction, EKeys::F);
+	MapKey(InventoryIMC, InventoryRotateAction, EKeys::Gamepad_RightTrigger);
+	MapKey(InventoryIMC, InventoryRotateAction, EKeys::Q);
 }
 
 UInventoryUISubsystem* ATypicalShooterPlayerController::GetInventoryUI() const
@@ -244,6 +247,7 @@ void ATypicalShooterPlayerController::SetupInputComponent()
 	EnhancedInputComponent->BindAction(InventorySwitchGridAction, ETriggerEvent::Started, this, &ATypicalShooterPlayerController::HandleInventorySwitchGrid);
 	EnhancedInputComponent->BindAction(InventoryTakeAction, ETriggerEvent::Started, this, &ATypicalShooterPlayerController::TakeFocusedItem);
 	EnhancedInputComponent->BindAction(InventoryTakeAllAction, ETriggerEvent::Started, this, &ATypicalShooterPlayerController::TakeAllFromOpenedContainer);
+	EnhancedInputComponent->BindAction(InventoryRotateAction, ETriggerEvent::Started, this, &ATypicalShooterPlayerController::RotateFocusedItem);
 }
 
 void ATypicalShooterPlayerController::ApplyInputMode(bool bUIVisible)
@@ -522,4 +526,32 @@ bool ATypicalShooterPlayerController::CanAccessInventory(const UInventoryCompone
 
 	const AItemsContainer* Container = Cast<AItemsContainer>(InventoryOwner);
 	return Container && Container->CanBeAccessedBy(ControlledPawn);
+}
+
+void ATypicalShooterPlayerController::RequestRotateItem(UInventoryComponent* Inventory, UInventoryItem* Item, const int32 Steps)
+{
+	// On the server (standalone / listen host) this runs immediately.
+	ServerRotateItem(Inventory, Item, Steps);
+}
+
+void ATypicalShooterPlayerController::ServerRotateItem_Implementation(UInventoryComponent* Inventory, UInventoryItem* Item, const int32 Steps)
+{
+	if (!CanAccessInventory(Inventory))
+	{
+		UE_LOG(LogTypicalShooter, Warning, TEXT("%s: rejected item rotation in %s (inventory not accessible)"),
+			*GetName(), *GetNameSafe(Inventory ? Inventory->GetOwner() : nullptr));
+		return;
+	}
+	Inventory->RotateItem(Item, Steps);
+}
+
+void ATypicalShooterPlayerController::RotateFocusedItem()
+{
+	const UInventoryUISubsystem* UI = GetInventoryUI();
+	UInventoryItem* Item = UI ? UI->GetFocusedItem() : nullptr;
+	Item = Item ? Item : (UI ? UI->GetHoveredItem() : nullptr);
+	if (UInventoryComponent* Inventory = Item ? Item->GetTypedOuter<UInventoryComponent>() : nullptr)
+	{
+		RequestRotateItem(Inventory, Item);
+	}
 }

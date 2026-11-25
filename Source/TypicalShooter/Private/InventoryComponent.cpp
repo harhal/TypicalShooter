@@ -67,6 +67,11 @@ bool UInventoryComponent::MoveItem(const UInventoryItem* Item, const FHhAxialCoo
 	return InventoryArray.MoveItem(Item, Location);
 }
 
+void UInventoryComponent::NotifyItemStateChanged(UInventoryItem* Item)
+{
+	ItemStateChangedDelegate.Broadcast(this, Item);
+}
+
 void UInventoryComponent::ProcessItemAdded(const UInventoryItem* Item, const FHhAxialCoord& Location)
 {
 	OnItemAddedDelegate.Broadcast(Item, Location);
@@ -124,16 +129,10 @@ bool UInventoryComponent::TransferItem(UInventoryItem* Item, UInventoryComponent
 		return Occupant == Item || InventoryArray.SwapItems(Item, Occupant);
 	}
 
-	// Between inventories items are re-created from their manifests: an item object is a replicated subobject
-	// of exactly one component.
-	const FInventoryItemManifest* ItemManifest = Item->GetItemManifest();
-	const FInventoryItemManifest MovedManifest = ItemManifest ? *ItemManifest : FInventoryItemManifest();
-	TOptional<FInventoryItemManifest> OccupantManifest;
-	if (Occupant)
-	{
-		const FInventoryItemManifest* Manifest = Occupant->GetItemManifest();
-		OccupantManifest = Manifest ? *Manifest : FInventoryItemManifest();
-	}
+	// Between inventories items are re-created (manifest + instance state): an item object is a replicated
+	// subobject of exactly one component.
+	UInventoryItem* MovedItem = Item->CloneFor(Target);
+	UInventoryItem* ReturnedOccupant = Occupant ? Occupant->CloneFor(this) : nullptr;
 
 	RemoveItem(Item);
 	if (Occupant)
@@ -141,12 +140,25 @@ bool UInventoryComponent::TransferItem(UInventoryItem* Item, UInventoryComponent
 		Target->RemoveItem(Occupant);
 	}
 
-	const bool bMoved = Target->AddItem(MovedManifest, Location) != nullptr;
-	if (OccupantManifest.IsSet())
+	const bool bMoved = Target->AddItem(MovedItem, Location);
+	if (ReturnedOccupant)
 	{
-		AddItem(OccupantManifest.GetValue(), SourceLocation.GetValue());
+		AddItem(ReturnedOccupant, SourceLocation.GetValue());
 	}
 	return ensure(bMoved);
+}
+
+bool UInventoryComponent::RotateItem(UInventoryItem* Item, const int32 Steps)
+{
+	const AActor* Owner = GetOwner();
+	if (!Item || !Owner || !Owner->HasAuthority() || !GetItemLocation(Item).IsSet())
+	{
+		return false;
+	}
+
+	FScopedLayoutBatch Batch(this);
+	Item->SetRotation(Item->GetRotation() + Steps);
+	return true;
 }
 
 bool UInventoryComponent::TransferItemToFreeLocation(UInventoryItem* Item, UInventoryComponent* Target)
@@ -256,22 +268,26 @@ void UInventoryComponent::FlushLayoutChange()
 	}
 
 	InventoryLayout::FLayout Before;
-	Before.Reserve(ReportedLayout.Num());
-	for (const TPair<TWeakObjectPtr<UInventoryItem>, FHhAxialCoord>& Reported : ReportedLayout)
+	InventoryLayout::FRotations RotationsBefore;
+	for (const TPair<TWeakObjectPtr<UInventoryItem>, FReportedPlacement>& Reported : ReportedLayout)
 	{
 		if (UInventoryItem* Item = Reported.Key.Get())
 		{
-			Before.Add(Item, Reported.Value);
+			Before.Add(Item, Reported.Value.Location);
+			RotationsBefore.Add(Item, Reported.Value.Rotation);
 		}
 	}
 
 	InventoryLayout::FLayout After;
+	InventoryLayout::FRotations RotationsAfter;
 	for (const TPair<UInventoryItem*, FHhAxialCoord>& Placed : GetPlacedItems())
 	{
 		After.Add(Placed.Key, Placed.Value);
+		RotationsAfter.Add(Placed.Key, Placed.Key->GetRotation());
 	}
 
 	FInventoryLayoutChange Change = InventoryLayout::Diff(Before, After);
+	Change.Rotations = InventoryLayout::DiffRotations(RotationsBefore, RotationsAfter);
 	if (Change.IsEmpty())
 	{
 		return;
@@ -280,7 +296,7 @@ void UInventoryComponent::FlushLayoutChange()
 	ReportedLayout.Reset();
 	for (const TPair<UInventoryItem*, FHhAxialCoord>& Placed : After)
 	{
-		ReportedLayout.Add(Placed.Key, Placed.Value);
+		ReportedLayout.Add(Placed.Key, { Placed.Value, RotationsAfter[Placed.Key] });
 	}
 
 	LayoutChangedDelegate.Broadcast(this, Change);

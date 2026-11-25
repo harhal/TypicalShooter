@@ -1,4 +1,4 @@
-// Reserve ammo of the character, one attribute per ammo kind (R15). Reloads move rounds from here into clips.
+// Reserve ammo of the character, one attribute per ammo kind (R15). Spent by items (ammo-gated modifiers; power grid sources later).
 
 #pragma once
 

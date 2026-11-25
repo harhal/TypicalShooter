@@ -28,6 +28,7 @@ public:
 	virtual void SetName(const FText& InName) override;
 	virtual void SetDescription(const FText& InDescription) override;
 	virtual void SetCount(int32 InCount) override;
+	virtual void SetPowerInfo(const FItemPowerInfo& Info) override {}
 
 	const FSlateBrush& GetIconBrush() const { return IconBrush; }
 

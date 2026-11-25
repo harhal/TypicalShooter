@@ -2,12 +2,11 @@
 
 #include "AbilitySystemComponent.h"
 #include "Engine/World.h"
-#include "GameFramework/Pawn.h"
-#include "Shooting/AmmoAttributeSet.h"
+#include "GameFramework/Character.h"
+#include "GameFramework/CharacterMovementComponent.h"
+#include "InventoryItem.h"
+#include "PowerGrid/SourceAmmoComponent.h"
 #include "Shooting/AttackAttributeSet.h"
-#include "Shooting/AttackModifiersComponent.h"
-#include "Shooting/ReloadGameplayAbility.h"
-#include "Shooting/ShootingTags.h"
 #include "Shooting/ShotAim.h"
 #include "Shooting/ShotProjectile.h"
 #include "TimerManager.h"
@@ -23,10 +22,14 @@ UAttackGameplayAbility::UAttackGameplayAbility()
 bool UAttackGameplayAbility::CanActivateAbility(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo,
 	const FGameplayTagContainer* SourceTags, const FGameplayTagContainer* TargetTags, FGameplayTagContainer* OptionalRelevantTags) const
 {
-	const UAbilitySystemComponent* Asc = ActorInfo ? ActorInfo->AbilitySystemComponent.Get() : nullptr;
-	if (Asc && Asc->HasMatchingGameplayTag(ShootingTags::GetReloadingTag(static_cast<uint8>(Slot))))
+	if (Slot == EAttackSlot::Air)
 	{
-		return false;
+		const ACharacter* Character = ActorInfo ? Cast<ACharacter>(ActorInfo->AvatarActor.Get()) : nullptr;
+		const UCharacterMovementComponent* Movement = Character ? Character->GetCharacterMovement() : nullptr;
+		if (!Movement || !Movement->IsFalling())
+		{
+			return false;
+		}
 	}
 	return Super::CanActivateAbility(Handle, ActorInfo, SourceTags, TargetTags, OptionalRelevantTags);
 }
@@ -66,13 +69,10 @@ void UAttackGameplayAbility::FireNextShot()
 	// Shots with no interval go out in the same frame.
 	while (ShotsLeftInBurst > 0)
 	{
-		if (!FireShot())
+		FireShot();
+		if (!IsActive())
 		{
-			// An empty clip cuts the burst and starts this slot's reload.
-			UAbilitySystemComponent* Asc = GetAbilitySystemComponentFromActorInfo();
-			Finish();
-			UReloadGameplayAbility::TryReload(*Asc, Slot);
-			return;
+			return; // the shot emptied the sources: the receiver lost power and its ability was taken away
 		}
 		--ShotsLeftInBurst;
 		if (ShotsLeftInBurst > 0 && Stats.ShotInterval > 0.f)
@@ -97,49 +97,43 @@ void UAttackGameplayAbility::OnBurstIntervalElapsed()
 	}
 }
 
-bool UAttackGameplayAbility::FireShot()
+void UAttackGameplayAbility::FireShot()
 {
 	UAbilitySystemComponent* Asc = GetAbilitySystemComponentFromActorInfo();
-	const FAttackStats Stats = UAttackAttributeSet::ReadStats(*Asc, Slot);
-	if (Stats.Ammo <= 0)
-	{
-		return false;
-	}
-	Asc->SetNumericAttributeBase(UAttackAttributeSet::GetAttribute(Slot, EAttackAttribute::Ammo), Stats.Ammo - 1);
-	FAttackStats ShotStats = Stats;
-	ApplyShotModifiers(*Asc, ShotStats);
-	SpawnProjectiles(ShotStats);
-	return true;
+	const FAttackStats ShotStats = UAttackAttributeSet::ReadStats(*Asc, Slot);
+	const FVector Direction = SpawnProjectiles(ShotStats);
+	ApplyRecoil(Direction, ShotStats.Recoil);
+	ReportUse();
 }
 
-void UAttackGameplayAbility::ApplyShotModifiers(UAbilitySystemComponent& Asc, FAttackStats& Stats) const
+void UAttackGameplayAbility::ReportUse() const
 {
-	const UAttackModifiersComponent* Modifiers = GetAvatarActorFromActorInfo()->FindComponentByClass<UAttackModifiersComponent>();
-	if (!Modifiers)
+	// The receiver item granting this ability is the spec's source object; its sources pay for the shot (R9b).
+	const AActor* Avatar = GetAvatarActorFromActorInfo();
+	USourceAmmoComponent* SourceAmmo = Avatar ? Avatar->FindComponentByClass<USourceAmmoComponent>() : nullptr;
+	if (const UInventoryItem* Receiver = Cast<UInventoryItem>(GetCurrentSourceObject()); SourceAmmo && Receiver)
 	{
-		return;
-	}
-	for (const FAmmoGatedShotModifier& Modifier : Modifiers->GetShotModifiers(Slot))
-	{
-		const FGameplayAttribute Reserve = UAmmoAttributeSet::GetReserveAttribute(Modifier.AmmoType);
-		const float Cost = FMath::Max(Modifier.CostPerShot, 1);
-		if (!Reserve.IsValid() || !Asc.HasAttributeSetForAttribute(Reserve) || Asc.GetNumericAttribute(Reserve) < Cost)
-		{
-			continue; // unpaid: this modifier sits out the shot
-		}
-		Asc.SetNumericAttributeBase(Reserve, Asc.GetNumericAttribute(Reserve) - Cost);
-		for (const FAttackStatBonus& Bonus : Modifier.Bonuses)
-		{
-			UAttackAttributeSet::AddToStats(Stats, Bonus.Attribute, Bonus.Value);
-		}
+		SourceAmmo->ReportUse(Receiver);
 	}
 }
 
-void UAttackGameplayAbility::SpawnProjectiles(const FAttackStats& Stats) const
+void UAttackGameplayAbility::ApplyRecoil(const FVector& ShotDirection, const float Recoil) const
+{
+	ACharacter* Character = Cast<ACharacter>(GetAvatarActorFromActorInfo());
+	if (Character && Recoil > 0.f)
+	{
+		// Added to the current velocity, once per shot whatever the projectile count (power grid R5c).
+		Character->LaunchCharacter(-ShotDirection * Recoil, false, false);
+	}
+}
+
+FVector UAttackGameplayAbility::SpawnProjectiles(const FAttackStats& Stats) const
 {
 	AActor* Avatar = GetAvatarActorFromActorInfo();
 	const FShotAim Aim = FShotAim::Compute(*Avatar, Stats.FireEndDistance);
-	const FVector AimDirection = ShotMath::AimDirection(Aim.Muzzle, Aim.AimPoint, Aim.ViewDirection);
+	// The air attack fires straight down whatever the view (power grid R5).
+	const FVector AimDirection = Slot == EAttackSlot::Air
+		? FVector::DownVector : ShotMath::AimDirection(Aim.Muzzle, Aim.AimPoint, Aim.ViewDirection);
 
 	FProjectileShotParams Params;
 	Params.Damage = Stats.Damage;
@@ -149,15 +143,17 @@ void UAttackGameplayAbility::SpawnProjectiles(const FAttackStats& Stats) const
 	Params.MaxTravelDistance = Stats.FireEndDistance - Stats.FireStartDistance;
 	Params.DamageLossPerHit = Stats.DamageLoss;
 
+	if (!bSpawnsProjectiles)
+	{
+		return AimDirection;
+	}
 	APawn* Instigator = Cast<APawn>(Avatar);
-	const UAttackModifiersComponent* Modifiers = Avatar->FindComponentByClass<UAttackModifiersComponent>();
-	const FShotPattern* Override = Modifiers ? Modifiers->FindPatternOverride(Slot) : nullptr;
-	const FShotPattern& ActivePattern = Override ? *Override : Pattern;
-	for (const FVector& Direction : ShotMath::ProjectileDirections(AimDirection, ActivePattern, Stats.PatternScale))
+	for (const FVector& Direction : ShotMath::ProjectileDirections(AimDirection, Pattern, Stats.PatternScale))
 	{
 		AShotProjectile::SpawnShot(Avatar->GetWorld(), ProjectileClass,
 			ShotMath::SpawnTransform(Aim.Muzzle, Direction, Stats.FireStartDistance), Params, Avatar, Instigator);
 	}
+	return AimDirection;
 }
 
 void UAttackGameplayAbility::Finish()
@@ -170,7 +166,7 @@ void UAttackGameplayAbility::SetTimer(const float Delay, void (UAttackGameplayAb
 	FTimerManager& Timers = GetWorld()->GetTimerManager();
 	if (Delay <= 0.f)
 	{
-		// Never loop within a frame (zero burst interval + held input would empty the clip at once).
+		// Never loop within a frame (zero burst interval + held input would fire endlessly in one frame).
 		Timer = Timers.SetTimerForNextTick(FTimerDelegate::CreateUObject(this, Callback));
 		return;
 	}
