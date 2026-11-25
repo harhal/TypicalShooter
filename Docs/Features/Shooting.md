@@ -101,7 +101,7 @@ R17 подтверждено; дистанции от дула, дуло — `Mu
   тест: `TypicalShooter.Shooting.Projectile.*` (игровой мир без PIE, снаряды по манекенам)
 - [x] 5. Наборы атрибутов основной/альтернативной атаки + клампы (R1–R3) —
   тест: `TypicalShooter.Shooting.Attributes.*`
-- [ ] 5a. Математика выстрела: направления снарядов по паттерну и масштабу, направление от дула к точке
+- [x] 5a. Математика выстрела: направления снарядов по паттерну и масштабу, направление от дула к точке
   прицела, точка появления (R5, R6) —
   тест: `TypicalShooter.Shooting.Pattern.*`
 - [ ] 6. Абилка атаки (слот основная/альтернативная): трата патрона, спавн снарядов, очередь и интервалы (R10, R11) —
@@ -160,6 +160,10 @@ R17 подтверждено; дистанции от дула, дуло — `Mu
   `ReadStats(Asc, Slot)` → `FAttackStats` (всё, с чем работает абилка; конец огня ≥ начала, урон по тегам).
   Значения по умолчанию: обойма 1, очередь 1, масштаб паттерна 1, скорость 5000, конец огня 10000, потеря 1.
   Реплицируются все атрибуты; события изменения на клиентах — только у патронов и размера обоймы (HUD).
+- Математика выстрела — [ShotPattern.h](../../Source/TypicalShooter/Public/Shooting/ShotPattern.h): `FShotPattern` —
+  угловые смещения (X = рыскание вправо, Y = тангаж вверх, градусы), по снаряду на точку (пусто = один по центру).
+  `ShotMath::AimDirection` (дуло → точка прицела, запасное направление при совпадении), `ProjectileDirections`
+  (смещение × масштаб паттерна в локальной системе прицела), `SpawnTransform` (точка на дистанции начала огня от дула).
 
 ## Настройка контента
 Простреливаемая стена / ящик: добавить актору компонент `Simple Damage Receiver`, задать `Max Durability`
@@ -181,6 +185,8 @@ R17 подтверждено; дистанции от дула, дуло — `Mu
 `.GravityScale`.
 [ShootingAttributesTest.cpp](../../Source/TypicalShooter/Private/Tests/ShootingAttributesTest.cpp):
 `TypicalShooter.Shooting.Attributes.SlotsIndependent`, `.Clamp`, `.AmmoFollowsClipSize`, `.ReadStats`.
+[ShootingPatternTest.cpp](../../Source/TypicalShooter/Private/Tests/ShootingPatternTest.cpp):
+`TypicalShooter.Shooting.Pattern.SinglePointFollowsAim`, `.OffsetsScaled`, `.AimFromMuzzle`.
 
 ## Ограничения и грабли
 - В тестовом мире `World->Tick` несколько раз за один кадр движка тикает акторов только в первый раз
