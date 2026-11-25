@@ -15,6 +15,7 @@
 #include "PowerGrid/PowerEffectsComponent.h"
 #include "PowerGrid/PowerGridComponent.h"
 #include "PowerGrid/ReceiverAbilitiesComponent.h"
+#include "PowerGrid/SourceAmmoComponent.h"
 #include "TS_GAS.h"
 #include "Shooting/AmmoAttributeSet.h"
 #include "Shooting/AttackAttributeSet.h"
@@ -82,6 +83,7 @@ ATypicalShooterCharacter::ATypicalShooterCharacter()
 	PowerGrid = CreateDefaultSubobject<UPowerGridComponent>(TEXT("Power Grid"));
 	ReceiverAbilities = CreateDefaultSubobject<UReceiverAbilitiesComponent>(TEXT("Receiver Abilities"));
 	PowerEffects = CreateDefaultSubobject<UPowerEffectsComponent>(TEXT("Power Effects"));
+	SourceAmmo = CreateDefaultSubobject<USourceAmmoComponent>(TEXT("Source Ammo"));
 	StartingItems = DefaultLoadout::MakeStartingItems();
 }
 

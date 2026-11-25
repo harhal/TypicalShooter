@@ -242,6 +242,9 @@ feature's doc and updated as they change; finished features are merged into `mai
   Item threshold effects: `FPowerEffects_ItemFragment` (steps: `Threshold`, `CharacterEffect` GE, slot-agnostic
   `AttackBonuses`) applied by `UPowerEffectsComponent` (server) — character GEs for reached steps, attack bonuses of
   items connected to each active receiver summed into one `UAttackBonusEffect` (SetByCaller per slot attribute).
+  Source clips: `UInventoryItem::Clip` (replicated, not carried by `CloneFor`; changes fire
+  `UInventoryComponent::GetItemStateChangedDelegate()`, the grid re-solves); `USourceAmmoComponent` (server) reserves
+  up to `Capacity` from the ammo reserve when a source enters the character's inventory and returns it on leaving.
 
 ## Current state (as of 2026-11-25)
 

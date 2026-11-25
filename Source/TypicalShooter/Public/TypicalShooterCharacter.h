@@ -23,6 +23,7 @@ class UInventoryComponent;
 class UPowerGridComponent;
 class UPowerEffectsComponent;
 class UReceiverAbilitiesComponent;
+class USourceAmmoComponent;
 class UInputComponent;
 class USkeletalMeshComponent;
 class UCameraComponent;
@@ -115,6 +116,10 @@ protected:
 	/** Applies the threshold effects of the inventory items (power grid R13-R14a). */
 	UPROPERTY(VisibleAnywhere, Category ="Attack")
 	TObjectPtr<UPowerEffectsComponent> PowerEffects;
+
+	/** Clips of the ammo-fed power sources in the inventory (power grid R9, R9d). */
+	UPROPERTY(VisibleAnywhere, Category ="Attack")
+	TObjectPtr<USourceAmmoComponent> SourceAmmo;
 
 	/** Applied once on the server at BeginPlay: starting reserve ammo (attack attributes stay neutral). */
 	UPROPERTY(EditDefaultsOnly, Category ="Attack")

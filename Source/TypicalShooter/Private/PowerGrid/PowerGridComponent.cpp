@@ -19,8 +19,8 @@ namespace PowerGridComponentPrivate
 		Node.Type = Fragment.ItemType;
 		Node.OpenFaces = Fragment.GetOpenFaces(Item.GetRotation());
 		Node.SourcePower = Fragment.Source.Power;
-		// Clips are not implemented yet: a source needing ammo has an empty clip and does not work (R9d).
-		Node.bSourceWorking = !Fragment.Source.NeedsAmmo();
+		// A source needing ammo works while its clip pays for one use (R9).
+		Node.bSourceWorking = !Fragment.Source.NeedsAmmo() || Item.GetClip() >= FMath::Max(1, Fragment.Source.CostPerUse);
 		return Node;
 	}
 }
@@ -45,12 +45,15 @@ void UPowerGridComponent::SetInventory(UInventoryComponent* InInventory)
 	if (UInventoryComponent* Old = Inventory.Get())
 	{
 		Old->GetLayoutChangedDelegate().Remove(LayoutChangedHandle);
+		Old->GetItemStateChangedDelegate().Remove(ItemStateChangedHandle);
 	}
 	LayoutChangedHandle.Reset();
+	ItemStateChangedHandle.Reset();
 	Inventory = InInventory;
 	if (InInventory)
 	{
 		LayoutChangedHandle = InInventory->GetLayoutChangedDelegate().AddUObject(this, &ThisClass::HandleLayoutChanged);
+		ItemStateChangedHandle = InInventory->GetItemStateChangedDelegate().AddUObject(this, &ThisClass::HandleItemStateChanged);
 	}
 	Recalculate();
 }
@@ -76,6 +79,11 @@ void UPowerGridComponent::Recalculate()
 }
 
 void UPowerGridComponent::HandleLayoutChanged(UInventoryComponent* ChangedInventory, const FInventoryLayoutChange& Change)
+{
+	Recalculate();
+}
+
+void UPowerGridComponent::HandleItemStateChanged(UInventoryComponent* ChangedInventory, UInventoryItem* Item)
 {
 	Recalculate();
 }

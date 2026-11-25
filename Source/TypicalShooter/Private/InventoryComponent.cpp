@@ -67,6 +67,11 @@ bool UInventoryComponent::MoveItem(const UInventoryItem* Item, const FHhAxialCoo
 	return InventoryArray.MoveItem(Item, Location);
 }
 
+void UInventoryComponent::NotifyItemStateChanged(UInventoryItem* Item)
+{
+	ItemStateChangedDelegate.Broadcast(this, Item);
+}
+
 void UInventoryComponent::ProcessItemAdded(const UInventoryItem* Item, const FHhAxialCoord& Location)
 {
 	OnItemAddedDelegate.Broadcast(Item, Location);

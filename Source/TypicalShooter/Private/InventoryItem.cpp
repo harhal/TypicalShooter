@@ -12,6 +12,7 @@ void UInventoryItem::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLi
 
 	DOREPLIFETIME(ThisClass, ItemManifest);
 	DOREPLIFETIME(ThisClass, Rotation);
+	DOREPLIFETIME(ThisClass, Clip);
 }
 
 void UInventoryItem::SetItemManifest(const FInventoryItemManifest& NewItemManifest)
@@ -30,6 +31,25 @@ void UInventoryItem::OnRep_Rotation()
 	if (UInventoryComponent* Inventory = GetTypedOuter<UInventoryComponent>())
 	{
 		Inventory->FlushLayoutChange();
+	}
+}
+
+void UInventoryItem::SetClip(const int32 NewClip)
+{
+	Clip = FMath::Max(0, NewClip);
+	NotifyStateChanged();
+}
+
+void UInventoryItem::OnRep_Clip()
+{
+	NotifyStateChanged();
+}
+
+void UInventoryItem::NotifyStateChanged()
+{
+	if (UInventoryComponent* Inventory = GetTypedOuter<UInventoryComponent>())
+	{
+		Inventory->NotifyItemStateChanged(this);
 	}
 }
 

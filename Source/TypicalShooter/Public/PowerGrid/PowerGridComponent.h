@@ -1,5 +1,5 @@
 // The power grid of an actor's inventory: solved from the placed items whenever the inventory layout changes
-// (power grid R6b, R13a). Computed locally on the server and on clients from the replicated layout.
+// or an item state (source clip) changes (power grid R6b, R9, R13a). Computed locally on the server and on clients from the replicated layout.
 
 #pragma once
 
@@ -57,9 +57,12 @@ protected:
 private:
 	int32 FindNode(const UInventoryItem* Item) const;
 	void HandleLayoutChanged(UInventoryComponent* ChangedInventory, const FInventoryLayoutChange& Change);
+	/** A clip change switches a source on / off (R9). */
+	void HandleItemStateChanged(UInventoryComponent* ChangedInventory, UInventoryItem* Item);
 
 	TWeakObjectPtr<UInventoryComponent> Inventory;
 	FDelegateHandle LayoutChangedHandle;
+	FDelegateHandle ItemStateChangedHandle;
 
 	TArray<TWeakObjectPtr<UInventoryItem>> NodeItems;
 	/** Solver input, parallel to NodeItems. */

@@ -13,6 +13,7 @@ class UInventoryComponent;
 
 DECLARE_MULTICAST_DELEGATE_TwoParams(FInventoryLayoutChangedDelegate, UInventoryComponent* /*Inventory*/, const FInventoryLayoutChange& /*Change*/);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FOnInventoryLayoutChanged, UInventoryComponent*, Inventory, const FInventoryLayoutChange&, Change);
+DECLARE_MULTICAST_DELEGATE_TwoParams(FInventoryItemStateChangedDelegate, UInventoryComponent* /*Inventory*/, UInventoryItem* /*Item*/);
 
 UCLASS(ClassGroup=(Custom), meta=(BlueprintSpawnableComponent))
 class TYPICALSHOOTER_API UInventoryComponent : public UActorComponent, public IItemsContainer_Model
@@ -92,6 +93,10 @@ public:
 	/** Reports layout changes since the last report, unless a batch is open (also called after replication updates). */
 	void FlushLayoutChange();
 
+	/** Instance state of a placed item changed (e.g. a source clip): server on change, clients on replication. */
+	void NotifyItemStateChanged(UInventoryItem* Item);
+	FInventoryItemStateChangedDelegate& GetItemStateChangedDelegate() { return ItemStateChangedDelegate; }
+
 	void ProcessItemAdded(const UInventoryItem* Item, const FHhAxialCoord& Location);
 	void ProcessItemRemoved(const UInventoryItem* Item, const FHhAxialCoord& Location);
 	void ProcessItemMoved(const UInventoryItem* Item, const FHhAxialCoord& Location, const FHhAxialCoord& PrevLocation);
@@ -119,6 +124,7 @@ private:
 	FItemRemovedDelegate OnItemRemovedDelegate;
 	FItemMovedDelegate OnItemMovedDelegate;
 	FInventoryLayoutChangedDelegate LayoutChangedDelegate;
+	FInventoryItemStateChangedDelegate ItemStateChangedDelegate;
 
 	/** Open FScopedLayoutBatch count. */
 	int32 LayoutBatchDepth = 0;

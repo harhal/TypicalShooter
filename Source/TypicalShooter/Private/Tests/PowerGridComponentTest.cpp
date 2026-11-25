@@ -95,7 +95,7 @@ bool FPowerGridComponentAmmoSourceTest::RunTest(const FString& Parameters)
 	Manifest.Fragments[0].GetMutable<FPowerGrid_ItemFragment>().Source.AmmoType = FGameplayTag::RequestGameplayTag(TEXT("Ammo.Bullet"));
 	UInventoryItem* Source = F.Inventory->AddItem(Manifest, FHhAxialCoord(0, 0));
 	UInventoryItem* Connector = F.Inventory->AddItem(PowerManifest(EPowerItemType::Connector), FHhAxialCoord(1, 0));
-	TestFalse(TEXT("A source needing ammo has an empty clip for now and does not work (R9d)"), Grid->IsItemPowered(Source));
+	TestFalse(TEXT("Outside a character inventory a source needing ammo has an empty clip and does not work (R9d)"), Grid->IsItemPowered(Source));
 	TestEqual(TEXT("... so it gives nothing"), Grid->GetItemPower(Connector), 0);
 	return true;
 }

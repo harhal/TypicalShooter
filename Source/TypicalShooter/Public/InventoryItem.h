@@ -33,7 +33,15 @@ public:
 	int32 GetRotation() const { return Rotation; }
 	void SetRotation(int32 NewRotation);
 
-	/** New item with the same manifest and instance state, owned by Outer (for moving between inventories, R3a). */
+	/** Ammo held by a power source (power grid R9). Server-side state, replicated; never negative. */
+	int32 GetClip() const { return Clip; }
+	/** Sets the clip and reports the change through the owning inventory's item state event. */
+	void SetClip(int32 NewClip);
+
+	/**
+	 * New item with the same manifest and instance state, owned by Outer (for moving between inventories, R3a).
+	 * The clip is not carried: a source returns it to the reserve on leaving and reserves anew on entering (R9d).
+	 */
 	UInventoryItem* CloneFor(UObject* Outer) const;
 
 protected:
@@ -46,6 +54,15 @@ protected:
 	/** Clients: report the rotation through the owning inventory's layout event. */
 	UFUNCTION()
 	void OnRep_Rotation();
+
+	UPROPERTY(VisibleAnywhere, ReplicatedUsing = OnRep_Clip)
+	int32 Clip = 0;
+
+	/** Clients: report the clip through the owning inventory's item state event. */
+	UFUNCTION()
+	void OnRep_Clip();
+
+	void NotifyStateChanged();
 
 private:
 	const FInfo_ItemFragment* GetInfoFragment() const;
