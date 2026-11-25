@@ -1,6 +1,6 @@
 # Стрельба: абилки основной и альтернативной атаки
 
-**Статус:** 🟡 В работе (ветка `feature/shooting-abilities`): игрок стреляет (ЛКМ / ПКМ / RT / LT), перезаряжается из запаса патронов (R / B), снаряды бьют манекены; предметы на атаки пока не влияют.
+**Статус:** 🟡 В работе (ветка `feature/shooting-abilities`): игрок стреляет (ЛКМ / ПКМ / RT / LT), перезаряжается из запаса патронов (R / B), снаряды бьют манекены; предметы в инвентаре меняют атаки (GE, замена паттерна).
 
 ## Что это
 Шутерная составляющая. Основная и альтернативная атаки — это GAS-абилки, которые запускаются
@@ -112,7 +112,7 @@ R17 подтверждено; дистанции от дула, дуло — `Mu
   открытом инвентаре (R4, R17) — тест: `TypicalShooter.Shooting.Flow` (PIE, стрельба по мишени)
 - [x] 9. Запас боеприпасов: набор атрибутов по видам, вид у атаки, перезарядка тратит запас (R15) —
   тест: `TypicalShooter.Shooting.Ability.ReloadFromReserve`
-- [ ] 10. Модификаторы атак от предметов в инвентаре: GE на атрибуты + замена паттерна (R5, R16) — тест: `TypicalShooter.Shooting.ItemModifiers`
+- [x] 10. Модификаторы атак от предметов в инвентаре: GE на атрибуты + замена паттерна (R5, R16) — тест: `TypicalShooter.Shooting.ItemModifiers`
 - [ ] 11. Модификаторы выстрела с требованием боеприпаса: списание за выстрел, отключение при нехватке (R15a) —
   тест: `TypicalShooter.Shooting.Ability.AmmoGatedModifier`
 - [ ] 12. Контент: мишень на уровне, меш снаряда, счётчик патронов в HUD, тестовые предметы — ручная проверка
@@ -182,6 +182,14 @@ R17 подтверждено; дистанции от дула, дуло — `Mu
 - Запас — [`UAmmoAttributeSet`](../../Source/TypicalShooter/Public/Shooting/AmmoAttributeSet.h): `Reserve_Bullet / Battery /
   Grenade / Radiator / Particle` (целые, ≥ 0, реплицируются с уведомлением для HUD); `GetReserveAttribute(Ammo.*)`.
   Теги видов — `Ammo.*` в ShootingTags.h.
+- Предметы → атаки — фрагмент [`FAttackModifier_ItemFragment`](../../Source/TypicalShooter/Public/Shooting/AttackModifierFragment.h)
+  (`Effect` — GE, обычно бесконечный, на атрибуты `Primary_*` / `Alternate_*` или запасы; `bReplacePattern` +
+  `PatternSlot` + `Pattern`) и [`UAttackModifiersComponent`](../../Source/TypicalShooter/Public/Shooting/AttackModifiersComponent.h)
+  на персонаже. Компонент (сервер) слушает добавление / удаление предметов своего `UInventoryComponent`: применяет
+  GE предмета к ASC владельца (источник — предмет) и снимает его вместе с предметом; модификаторы складываются.
+  Замены паттерна хранятся в порядке прихода, действует последняя для слота (`FindPatternOverride`); атака берёт её
+  вместо своего `Pattern`. Перемещение внутри инвентаря ничего не меняет (расположение — будущая фича соседства).
+  Персонаж вызывает `InitAbilityActorInfo` до `Super::BeginPlay`, чтобы компонент мог применить эффекты сразу.
 - Персонаж — [`ATypicalShooterCharacter`](../../Source/TypicalShooter/Public/TypicalShooterCharacter.h): `UTS_GAS`
   (реплицируется, Mixed) + `UAttackAttributeSet`, компонент `Muzzle` (тег `Muzzle`, у камеры: 40 вперёд, 15 вправо,
   12 вниз). На сервере в `BeginPlay` выдаёт `AttackAbilities` (класс + `EAttackInputID` как InputID спека) и
@@ -202,6 +210,10 @@ R17 подтверждено; дистанции от дула, дуло — `Mu
 и при необходимости `Destroy Owner On Depleted`.
 
 Мишень: перетащить `Target Dummy` (C++-класс) на уровень, при желании поменять `Max Health`.
+
+Предмет, меняющий атаку: в манифест предмета добавить фрагмент `Attack Modifier_Item Fragment`, в `Effect`
+указать GE-ассет (Duration = Infinite, модификаторы атрибутов `AttackAttributeSet.Primary_*` / `Alternate_*`), при
+желании включить `Replace Pattern` и задать слот и точки паттерна.
 
 Атаки персонажа: в `BP_FirstPersonCharacter` → `Attack Abilities` (какие абилки и на какие кнопки) и
 `Attack Defaults Effect` (базовые значения; можно заменить своим GE-ассетом с Override-модификаторами атрибутов
@@ -230,11 +242,16 @@ R17 подтверждено; дистанции от дула, дуло — `Mu
 [ShootingAbilityFixture.h](../../Source/TypicalShooter/Private/Tests/ShootingAbilityFixture.h)):
 `TypicalShooter.Shooting.Ability.Reload`, `.ReloadSkipsFullClip`, `.AutoReloadWhenEmpty`, `.EmptyPressReloads`,
 `.ReloadFromReserve`, `.NoReloadWithoutReserve`.
+[ShootingItemModifiersTest.cpp](../../Source/TypicalShooter/Private/Tests/ShootingItemModifiersTest.cpp) (тестовый GE —
+[ShootingTestEffects.h](../../Source/TypicalShooter/Private/Tests/ShootingTestEffects.h)):
+`TypicalShooter.Shooting.ItemModifiers.EffectWhileHeld`, `.PatternReplacement`, `.AttackUsesModifiers`.
 [ShootingFlowTest.cpp](../../Source/TypicalShooter/Private/Tests/ShootingFlowTest.cpp) — PIE `TypicalShooter.Shooting.Flow`:
 стартовые обоймы 30 / 6, ЛКМ и ПКМ попадают по манекену перед игроком, R перезаряжает обе атаки (и списывает запас), с открытым
 инвентарём ЛКМ не стреляет, RT стреляет.
 
 ## Ограничения и грабли
+- Тестовые GE (`UTestPrimaryDamageBonusEffect`) — UCLASS, поэтому есть во всех сборках (скрыты из выпадающих списков).
+- Модификаторы предметов применяются только на сервере; замена паттерна не реплицируется (атака тоже серверная).
 - В тестовом мире `World->Tick` несколько раз за один кадр движка тикает акторов только в первый раз
   (защита по `GFrameCounter`) — `FWorldFixture::Tick` увеличивает `GFrameCounter` на каждом шаге.
 - `TMap` не реплицируется: урон снаряда (`FShotDamage`) живёт только на сервере, клиентам уходят лишь скорость

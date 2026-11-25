@@ -12,6 +12,7 @@
 class UAmmoAttributeSet;
 class UAttackAttributeSet;
 class UAttackInputComponent;
+class UAttackModifiersComponent;
 class UGameplayEffect;
 class UInteractionComponent;
 class UInventoryComponent;
@@ -73,6 +74,10 @@ protected:
 
 	UPROPERTY(VisibleAnywhere, Category ="Attack")
 	TObjectPtr<UAttackInputComponent> AttackInput;
+
+	/** Applies attack modifiers of the items in InventoryComponent. */
+	UPROPERTY(VisibleAnywhere, Category ="Attack")
+	TObjectPtr<UAttackModifiersComponent> AttackModifiers;
 
 	UPROPERTY()
 	TObjectPtr<UAttackAttributeSet> AttackAttributes;

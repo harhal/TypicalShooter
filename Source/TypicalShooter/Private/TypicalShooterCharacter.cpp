@@ -13,6 +13,7 @@
 #include "Shooting/AmmoAttributeSet.h"
 #include "Shooting/AttackAttributeSet.h"
 #include "Shooting/AttackInputComponent.h"
+#include "Shooting/AttackModifiersComponent.h"
 #include "Shooting/DefaultAttackSetup.h"
 #include "Shooting/ShotAim.h"
 #include "GameFramework/CharacterMovementComponent.h"
@@ -63,6 +64,7 @@ ATypicalShooterCharacter::ATypicalShooterCharacter()
 	Muzzle->ComponentTags.Add(FShotAim::MuzzleTag);
 
 	AttackInput = CreateDefaultSubobject<UAttackInputComponent>(TEXT("Attack Input"));
+	AttackModifiers = CreateDefaultSubobject<UAttackModifiersComponent>(TEXT("Attack Modifiers"));
 	AttackAbilities = {
 		{ UPrimaryAttackAbility::StaticClass(), EAttackInputID::PrimaryAttack },
 		{ UAlternateAttackAbility::StaticClass(), EAttackInputID::AlternateAttack },
@@ -109,8 +111,9 @@ UAbilitySystemComponent* ATypicalShooterCharacter::GetAbilitySystemComponent() c
 
 void ATypicalShooterCharacter::BeginPlay()
 {
-	Super::BeginPlay();
+	// Before the components' BeginPlay: UAttackModifiersComponent applies item effects to the ASC there.
 	Gas->InitAbilityActorInfo(this, this);
+	Super::BeginPlay();
 	if (HasAuthority())
 	{
 		GrantAttacks();

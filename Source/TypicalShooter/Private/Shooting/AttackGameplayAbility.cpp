@@ -4,6 +4,7 @@
 #include "Engine/World.h"
 #include "GameFramework/Pawn.h"
 #include "Shooting/AttackAttributeSet.h"
+#include "Shooting/AttackModifiersComponent.h"
 #include "Shooting/ReloadGameplayAbility.h"
 #include "Shooting/ShootingTags.h"
 #include "Shooting/ShotAim.h"
@@ -123,7 +124,10 @@ void UAttackGameplayAbility::SpawnProjectiles(const FAttackStats& Stats) const
 	Params.DamageLossPerHit = Stats.DamageLoss;
 
 	APawn* Instigator = Cast<APawn>(Avatar);
-	for (const FVector& Direction : ShotMath::ProjectileDirections(AimDirection, Pattern, Stats.PatternScale))
+	const UAttackModifiersComponent* Modifiers = Avatar->FindComponentByClass<UAttackModifiersComponent>();
+	const FShotPattern* Override = Modifiers ? Modifiers->FindPatternOverride(Slot) : nullptr;
+	const FShotPattern& ActivePattern = Override ? *Override : Pattern;
+	for (const FVector& Direction : ShotMath::ProjectileDirections(AimDirection, ActivePattern, Stats.PatternScale))
 	{
 		AShotProjectile::SpawnShot(Avatar->GetWorld(), ProjectileClass,
 			ShotMath::SpawnTransform(Aim.Muzzle, Direction, Stats.FireStartDistance), Params, Avatar, Instigator);
