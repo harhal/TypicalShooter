@@ -228,8 +228,7 @@ feature's doc and updated as they change; finished features are merged into `mai
   the slot attributes' base values) and places `StartingItems` (`DefaultLoadout`: source + rifle / shotgun receivers)
   plus `UDefaultAttackStatsEffect` (reserve ammo only) at BeginPlay; input is generated in
   `UAttackInputComponent` (LMB / RT, RMB / LT → ability InputIDs, ignored while the inventory is open).
-  Items change attacks via `FAttackModifier_ItemFragment` (GE while held, pattern replacement, ammo-gated
-  per-shot bonuses), applied by `UAttackModifiersComponent`. `ATargetDummy` is a refilling GAS target;
+  Items change attacks only through the power grid (threshold effects, receiver ability pattern, source clips). `ATargetDummy` is a refilling GAS target;
   `UAmmoCounterWidget` (in `BP_HUD`) shows the reserve per ammo kind.
 - **Movement** (`Public|Private/Movement/`): the ground jump is `UJumpGameplayAbility` (LocalPredicted, only when
   `CanJump()`), granted as `EAttackInputID::Jump`; `JumpAction` goes through the ASC. `UMovementAttributeSet`
@@ -288,7 +287,7 @@ Open work:
 - Move the generated inventory input into IMC/IA assets (rebinding, on-screen button prompts).
 - Multiplayer check of transfers and of the client-side layout event (dedicated server / client PIE).
 - Leftover debug output outside the inventory: `BP_ItemsContainer` prints "Open / That's All" on interact.
-- Shooting: hitscan / collider attacks, on-hit effects, resistances, items with attack modifiers in the level,
+- Shooting: hitscan / collider attacks, on-hit effects, resistances, power grid items in the level containers,
   projectile visuals, multiplayer check (see `Docs/Features/Shooting.md`).
 
 Shooting works in PIE: the player fires at three `ATargetDummy` on `Lvl_FirstPerson` (LMB rifle-like, RMB

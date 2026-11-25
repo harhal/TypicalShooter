@@ -1,13 +1,13 @@
-// Per-shot modifiers that cost reserve ammo (R15a): paid -> the shot gets the bonuses, unpaid -> skipped.
+// A value for one attack parameter, independent of the slot: receiver base stats (power grid R5a) and item attack
+// bonuses (R14a) are lists of these.
 
 #pragma once
 
 #include "CoreMinimal.h"
-#include "GameplayTagContainer.h"
 #include "Shooting/AttackTypes.h"
 #include "ShotModifier.generated.h"
 
-/** Adds Value to one parameter of a single shot. */
+/** Value for one attack parameter. */
 USTRUCT(BlueprintType)
 struct TYPICALSHOOTER_API FAttackStatBonus
 {
@@ -18,24 +18,4 @@ struct TYPICALSHOOTER_API FAttackStatBonus
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Shot")
 	float Value = 0.f;
-};
-
-USTRUCT(BlueprintType)
-struct TYPICALSHOOTER_API FAmmoGatedShotModifier
-{
-	GENERATED_BODY()
-
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Shot")
-	EAttackSlot Slot = EAttackSlot::Primary;
-
-	/** Reserve ammo kind paid per shot (Ammo.*). */
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Shot", meta = (Categories = "Ammo"))
-	FGameplayTag AmmoType;
-
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Shot", meta = (ClampMin = 1))
-	int32 CostPerShot = 1;
-
-	/** Shot parameters changed while paid (damage, gravity, damage loss, speed, distances, pattern scale). */
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Shot")
-	TArray<FAttackStatBonus> Bonuses;
 };

@@ -6,9 +6,7 @@
 #include "GameFramework/CharacterMovementComponent.h"
 #include "InventoryItem.h"
 #include "PowerGrid/SourceAmmoComponent.h"
-#include "Shooting/AmmoAttributeSet.h"
 #include "Shooting/AttackAttributeSet.h"
-#include "Shooting/AttackModifiersComponent.h"
 #include "Shooting/ShotAim.h"
 #include "Shooting/ShotProjectile.h"
 #include "TimerManager.h"
@@ -102,8 +100,7 @@ void UAttackGameplayAbility::OnBurstIntervalElapsed()
 void UAttackGameplayAbility::FireShot()
 {
 	UAbilitySystemComponent* Asc = GetAbilitySystemComponentFromActorInfo();
-	FAttackStats ShotStats = UAttackAttributeSet::ReadStats(*Asc, Slot);
-	ApplyShotModifiers(*Asc, ShotStats);
+	const FAttackStats ShotStats = UAttackAttributeSet::ReadStats(*Asc, Slot);
 	const FVector Direction = SpawnProjectiles(ShotStats);
 	ApplyRecoil(Direction, ShotStats.Recoil);
 	ReportUse();
@@ -130,29 +127,6 @@ void UAttackGameplayAbility::ApplyRecoil(const FVector& ShotDirection, const flo
 	}
 }
 
-void UAttackGameplayAbility::ApplyShotModifiers(UAbilitySystemComponent& Asc, FAttackStats& Stats) const
-{
-	const UAttackModifiersComponent* Modifiers = GetAvatarActorFromActorInfo()->FindComponentByClass<UAttackModifiersComponent>();
-	if (!Modifiers)
-	{
-		return;
-	}
-	for (const FAmmoGatedShotModifier& Modifier : Modifiers->GetShotModifiers(Slot))
-	{
-		const FGameplayAttribute Reserve = UAmmoAttributeSet::GetReserveAttribute(Modifier.AmmoType);
-		const float Cost = FMath::Max(Modifier.CostPerShot, 1);
-		if (!Reserve.IsValid() || !Asc.HasAttributeSetForAttribute(Reserve) || Asc.GetNumericAttribute(Reserve) < Cost)
-		{
-			continue; // unpaid: this modifier sits out the shot
-		}
-		Asc.SetNumericAttributeBase(Reserve, Asc.GetNumericAttribute(Reserve) - Cost);
-		for (const FAttackStatBonus& Bonus : Modifier.Bonuses)
-		{
-			UAttackAttributeSet::AddToStats(Stats, Bonus.Attribute, Bonus.Value);
-		}
-	}
-}
-
 FVector UAttackGameplayAbility::SpawnProjectiles(const FAttackStats& Stats) const
 {
 	AActor* Avatar = GetAvatarActorFromActorInfo();
@@ -170,10 +144,7 @@ FVector UAttackGameplayAbility::SpawnProjectiles(const FAttackStats& Stats) cons
 	Params.DamageLossPerHit = Stats.DamageLoss;
 
 	APawn* Instigator = Cast<APawn>(Avatar);
-	const UAttackModifiersComponent* Modifiers = Avatar->FindComponentByClass<UAttackModifiersComponent>();
-	const FShotPattern* Override = Modifiers ? Modifiers->FindPatternOverride(Slot) : nullptr;
-	const FShotPattern& ActivePattern = Override ? *Override : Pattern;
-	for (const FVector& Direction : ShotMath::ProjectileDirections(AimDirection, ActivePattern, Stats.PatternScale))
+	for (const FVector& Direction : ShotMath::ProjectileDirections(AimDirection, Pattern, Stats.PatternScale))
 	{
 		AShotProjectile::SpawnShot(Avatar->GetWorld(), ProjectileClass,
 			ShotMath::SpawnTransform(Aim.Muzzle, Direction, Stats.FireStartDistance), Params, Avatar, Instigator);

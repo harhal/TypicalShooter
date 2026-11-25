@@ -23,7 +23,7 @@ public:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Attack")
 	EAttackSlot Slot = EAttackSlot::Primary;
 
-	/** One projectile per point; items may replace it later. */
+	/** One projectile per point: the receiver's ability defines its pattern (power grid R14b). */
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Attack")
 	FShotPattern Pattern;
 
@@ -54,8 +54,6 @@ private:
 	/** Tells the power sources feeding this ability's receiver that it was used once (power grid R9b). */
 	void ReportUse() const;
 
-	/** Pays the held items' ammo-gated modifiers for this shot and adds their bonuses to Stats (R15a). */
-	void ApplyShotModifiers(UAbilitySystemComponent& Asc, FAttackStats& Stats) const;
 	void Finish();
 	void SetTimer(float Delay, void (UAttackGameplayAbility::*Callback)());
 
