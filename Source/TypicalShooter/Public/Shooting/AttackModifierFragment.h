@@ -5,6 +5,7 @@
 #include "CoreMinimal.h"
 #include "ItemFragment.h"
 #include "Shooting/AttackTypes.h"
+#include "Shooting/ShotModifier.h"
 #include "Shooting/ShotPattern.h"
 #include "AttackModifierFragment.generated.h"
 
@@ -29,4 +30,8 @@ struct TYPICALSHOOTER_API FAttackModifier_ItemFragment : public FItemFragment
 
 	UPROPERTY(EditAnywhere, Category = "Item Fragment", meta = (EditCondition = "bReplacePattern"))
 	FShotPattern Pattern;
+
+	/** Per-shot bonuses paid with reserve ammo (R15a). */
+	UPROPERTY(EditAnywhere, Category = "Item Fragment")
+	TArray<FAmmoGatedShotModifier> ShotModifiers;
 };

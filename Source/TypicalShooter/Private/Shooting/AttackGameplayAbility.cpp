@@ -3,6 +3,7 @@
 #include "AbilitySystemComponent.h"
 #include "Engine/World.h"
 #include "GameFramework/Pawn.h"
+#include "Shooting/AmmoAttributeSet.h"
 #include "Shooting/AttackAttributeSet.h"
 #include "Shooting/AttackModifiersComponent.h"
 #include "Shooting/ReloadGameplayAbility.h"
@@ -105,8 +106,33 @@ bool UAttackGameplayAbility::FireShot()
 		return false;
 	}
 	Asc->SetNumericAttributeBase(UAttackAttributeSet::GetAttribute(Slot, EAttackAttribute::Ammo), Stats.Ammo - 1);
-	SpawnProjectiles(Stats);
+	FAttackStats ShotStats = Stats;
+	ApplyShotModifiers(*Asc, ShotStats);
+	SpawnProjectiles(ShotStats);
 	return true;
+}
+
+void UAttackGameplayAbility::ApplyShotModifiers(UAbilitySystemComponent& Asc, FAttackStats& Stats) const
+{
+	const UAttackModifiersComponent* Modifiers = GetAvatarActorFromActorInfo()->FindComponentByClass<UAttackModifiersComponent>();
+	if (!Modifiers)
+	{
+		return;
+	}
+	for (const FAmmoGatedShotModifier& Modifier : Modifiers->GetShotModifiers(Slot))
+	{
+		const FGameplayAttribute Reserve = UAmmoAttributeSet::GetReserveAttribute(Modifier.AmmoType);
+		const float Cost = FMath::Max(Modifier.CostPerShot, 1);
+		if (!Reserve.IsValid() || !Asc.HasAttributeSetForAttribute(Reserve) || Asc.GetNumericAttribute(Reserve) < Cost)
+		{
+			continue; // unpaid: this modifier sits out the shot
+		}
+		Asc.SetNumericAttributeBase(Reserve, Asc.GetNumericAttribute(Reserve) - Cost);
+		for (const FAttackStatBonus& Bonus : Modifier.Bonuses)
+		{
+			UAttackAttributeSet::AddToStats(Stats, Bonus.Attribute, Bonus.Value);
+		}
+	}
 }
 
 void UAttackGameplayAbility::SpawnProjectiles(const FAttackStats& Stats) const

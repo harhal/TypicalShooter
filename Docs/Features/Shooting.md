@@ -113,7 +113,7 @@ R17 подтверждено; дистанции от дула, дуло — `Mu
 - [x] 9. Запас боеприпасов: набор атрибутов по видам, вид у атаки, перезарядка тратит запас (R15) —
   тест: `TypicalShooter.Shooting.Ability.ReloadFromReserve`
 - [x] 10. Модификаторы атак от предметов в инвентаре: GE на атрибуты + замена паттерна (R5, R16) — тест: `TypicalShooter.Shooting.ItemModifiers`
-- [ ] 11. Модификаторы выстрела с требованием боеприпаса: списание за выстрел, отключение при нехватке (R15a) —
+- [x] 11. Модификаторы выстрела с требованием боеприпаса: списание за выстрел, отключение при нехватке (R15a) —
   тест: `TypicalShooter.Shooting.Ability.AmmoGatedModifier`
 - [ ] 12. Контент: мишень на уровне, меш снаряда, счётчик патронов в HUD, тестовые предметы — ручная проверка
 
@@ -190,6 +190,12 @@ R17 подтверждено; дистанции от дула, дуло — `Mu
   Замены паттерна хранятся в порядке прихода, действует последняя для слота (`FindPatternOverride`); атака берёт её
   вместо своего `Pattern`. Перемещение внутри инвентаря ничего не меняет (расположение — будущая фича соседства).
   Персонаж вызывает `InitAbilityActorInfo` до `Super::BeginPlay`, чтобы компонент мог применить эффекты сразу.
+- Модификаторы выстрела с требованием боеприпаса — [`FAmmoGatedShotModifier`](../../Source/TypicalShooter/Public/Shooting/ShotModifier.h)
+  в `ShotModifiers` того же фрагмента: слот, вид боеприпаса (`Ammo.*`), расход на выстрел, прибавки
+  `FAttackStatBonus` (параметр + величина). Атака на каждом выстреле (после траты патрона обоймы) проходит по
+  модификаторам слота в порядке прихода предметов: хватает запаса — списывает расход и прибавляет бонусы к копии
+  `FAttackStats` этого выстрела (`UAttackAttributeSet::AddToStats`, с клампами; обойма, очередь и патроны не
+  меняются), не хватает — модификатор пропускается, выстрел происходит как обычно.
 - Персонаж — [`ATypicalShooterCharacter`](../../Source/TypicalShooter/Public/TypicalShooterCharacter.h): `UTS_GAS`
   (реплицируется, Mixed) + `UAttackAttributeSet`, компонент `Muzzle` (тег `Muzzle`, у камеры: 40 вперёд, 15 вправо,
   12 вниз). На сервере в `BeginPlay` выдаёт `AttackAbilities` (класс + `EAttackInputID` как InputID спека) и
@@ -214,6 +220,7 @@ R17 подтверждено; дистанции от дула, дуло — `Mu
 Предмет, меняющий атаку: в манифест предмета добавить фрагмент `Attack Modifier_Item Fragment`, в `Effect`
 указать GE-ассет (Duration = Infinite, модификаторы атрибутов `AttackAttributeSet.Primary_*` / `Alternate_*`), при
 желании включить `Replace Pattern` и задать слот и точки паттерна.
+Платный бонус к выстрелу: в том же фрагменте `Shot Modifiers` → слот, `Ammo Type`, `Cost Per Shot`, `Bonuses`.
 
 Атаки персонажа: в `BP_FirstPersonCharacter` → `Attack Abilities` (какие абилки и на какие кнопки) и
 `Attack Defaults Effect` (базовые значения; можно заменить своим GE-ассетом с Override-модификаторами атрибутов
@@ -245,6 +252,7 @@ R17 подтверждено; дистанции от дула, дуло — `Mu
 [ShootingItemModifiersTest.cpp](../../Source/TypicalShooter/Private/Tests/ShootingItemModifiersTest.cpp) (тестовый GE —
 [ShootingTestEffects.h](../../Source/TypicalShooter/Private/Tests/ShootingTestEffects.h)):
 `TypicalShooter.Shooting.ItemModifiers.EffectWhileHeld`, `.PatternReplacement`, `.AttackUsesModifiers`.
+`TypicalShooter.Shooting.Ability.AmmoGatedModifier` — там же.
 [ShootingFlowTest.cpp](../../Source/TypicalShooter/Private/Tests/ShootingFlowTest.cpp) — PIE `TypicalShooter.Shooting.Flow`:
 стартовые обоймы 30 / 6, ЛКМ и ПКМ попадают по манекену перед игроком, R перезаряжает обе атаки (и списывает запас), с открытым
 инвентарём ЛКМ не стреляет, RT стреляет.

@@ -7,6 +7,7 @@
 #include "ActiveGameplayEffectHandle.h"
 #include "Components/ActorComponent.h"
 #include "Shooting/AttackTypes.h"
+#include "Shooting/ShotModifier.h"
 #include "Shooting/ShotPattern.h"
 #include "UObject/ObjectKey.h"
 #include "AttackModifiersComponent.generated.h"
@@ -26,6 +27,9 @@ public:
 
 	/** Pattern replacing Slot's own pattern (from the last held item that replaces it), or nullptr. */
 	const FShotPattern* FindPatternOverride(EAttackSlot Slot) const;
+
+	/** Ammo-gated per-shot modifiers of the held items for Slot, in the order the items arrived. */
+	TArray<FAmmoGatedShotModifier> GetShotModifiers(EAttackSlot Slot) const;
 
 protected:
 	virtual void BeginPlay() override;
@@ -48,6 +52,8 @@ private:
 
 	/** In order of arrival: the last one of a slot is active. */
 	TArray<FPatternOverride> PatternOverrides;
+
+	TArray<TPair<TObjectKey<UInventoryItem>, FAmmoGatedShotModifier>> ShotModifiers;
 
 	FDelegateHandle AddedHandle;
 	FDelegateHandle RemovedHandle;

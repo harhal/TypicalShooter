@@ -24,6 +24,19 @@ const FShotPattern* UAttackModifiersComponent::FindPatternOverride(const EAttack
 	return nullptr;
 }
 
+TArray<FAmmoGatedShotModifier> UAttackModifiersComponent::GetShotModifiers(const EAttackSlot Slot) const
+{
+	TArray<FAmmoGatedShotModifier> Result;
+	for (const TPair<TObjectKey<UInventoryItem>, FAmmoGatedShotModifier>& Entry : ShotModifiers)
+	{
+		if (Entry.Value.Slot == Slot)
+		{
+			Result.Add(Entry.Value);
+		}
+	}
+	return Result;
+}
+
 void UAttackModifiersComponent::BeginPlay()
 {
 	Super::BeginPlay();
@@ -73,6 +86,10 @@ void UAttackModifiersComponent::HandleItemAdded(const UInventoryItem* Item, cons
 	{
 		PatternOverrides.Add({ Item, Fragment->PatternSlot, Fragment->Pattern });
 	}
+	for (const FAmmoGatedShotModifier& Modifier : Fragment->ShotModifiers)
+	{
+		ShotModifiers.Emplace(Item, Modifier);
+	}
 }
 
 void UAttackModifiersComponent::HandleItemRemoved(const UInventoryItem* Item)
@@ -89,6 +106,7 @@ void UAttackModifiersComponent::HandleItemRemoved(const UInventoryItem* Item)
 	}
 	const TObjectKey<UInventoryItem> Key(Item);
 	PatternOverrides.RemoveAll([&Key](const FPatternOverride& Override) { return Override.Item == Key; });
+	ShotModifiers.RemoveAll([&Key](const TPair<TObjectKey<UInventoryItem>, FAmmoGatedShotModifier>& Entry) { return Entry.Key == Key; });
 }
 
 UInventoryComponent* UAttackModifiersComponent::GetInventory() const

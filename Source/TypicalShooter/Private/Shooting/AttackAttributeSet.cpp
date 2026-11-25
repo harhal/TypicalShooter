@@ -127,6 +127,37 @@ FAttackStats UAttackAttributeSet::ReadStats(const UAbilitySystemComponent& Asc, 
 	return Stats;
 }
 
+void UAttackAttributeSet::AddToStats(FAttackStats& Stats, const EAttackAttribute Attribute, const float Value)
+{
+	auto Add = [Attribute, Value, &Stats](float& Field) { Field = ClampValue(Attribute, Field + Value, Stats.ClipSize); };
+	switch (Attribute)
+	{
+	case EAttackAttribute::FireStartDistance: Add(Stats.FireStartDistance); break;
+	case EAttackAttribute::FireEndDistance: Add(Stats.FireEndDistance); break;
+	case EAttackAttribute::PatternScale: Add(Stats.PatternScale); break;
+	case EAttackAttribute::ShotInterval: Add(Stats.ShotInterval); break;
+	case EAttackAttribute::BurstInterval: Add(Stats.BurstInterval); break;
+	case EAttackAttribute::ReloadTime: Add(Stats.ReloadTime); break;
+	case EAttackAttribute::ProjectileSpeed: Add(Stats.ProjectileSpeed); break;
+	case EAttackAttribute::GravityScale: Add(Stats.GravityScale); break;
+	case EAttackAttribute::DamageLoss: Add(Stats.DamageLoss); break;
+	case EAttackAttribute::Ammo:
+	case EAttackAttribute::ClipSize:
+	case EAttackAttribute::ShotsPerBurst:
+	case EAttackAttribute::Count:
+		break; // not per-shot parameters
+	default:
+	{
+		const int32 TypeIndex = static_cast<int32>(Attribute) - static_cast<int32>(EAttackAttribute::DamagePhysical);
+		const FGameplayTag Type = ShootingTags::GetDamageTypes()[TypeIndex];
+		float& Amount = Stats.Damage.Amounts.FindOrAdd(Type);
+		Amount = FMath::Max(Amount + Value, 0.f);
+		break;
+	}
+	}
+	Stats.FireEndDistance = FMath::Max(Stats.FireEndDistance, Stats.FireStartDistance);
+}
+
 float UAttackAttributeSet::ClampValue(const EAttackAttribute Attribute, const float Value, const float ClipSize)
 {
 	switch (Attribute)

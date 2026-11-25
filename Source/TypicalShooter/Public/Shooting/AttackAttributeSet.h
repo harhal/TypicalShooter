@@ -24,6 +24,9 @@ public:
 	/** Reads all parameters of Slot from Asc, clamped (R3). */
 	static FAttackStats ReadStats(const UAbilitySystemComponent& Asc, EAttackSlot Slot);
 
+	/** Adds Value to one parameter of resolved stats (damage parameters go to Stats.Damage), re-clamped. */
+	static void AddToStats(FAttackStats& Stats, EAttackAttribute Attribute, float Value);
+
 	/** Clamps a parameter value; ClipSize bounds Ammo. */
 	static float ClampValue(EAttackAttribute Attribute, float Value, float ClipSize);
 

@@ -8,6 +8,7 @@
 #include "InventoryItemManifest.h"
 #include "Shooting/AttackModifierFragment.h"
 #include "Shooting/AttackModifiersComponent.h"
+#include "Shooting/ShootingTags.h"
 #include "Tests/ShootingAbilityFixture.h"
 #include "Tests/ShootingTestEffects.h"
 
@@ -52,6 +53,50 @@ namespace ShootingItemModifiersTest
 		Manifest.Fragments.Add(TInstancedStruct<FItemFragment>::Make<FAttackModifier_ItemFragment>(Fragment));
 		return Manifest;
 	}
+}
+
+namespace ShootingItemModifiersTest
+{
+	/** Item adding Bonus acid damage to Slot's shots, each shot costing Cost batteries. */
+	FInventoryItemManifest AmmoGatedManifest(const EAttackSlot Slot, const int32 Cost, const float Bonus)
+	{
+		FAmmoGatedShotModifier Modifier;
+		Modifier.Slot = Slot;
+		Modifier.AmmoType = ShootingTags::Ammo_Battery;
+		Modifier.CostPerShot = Cost;
+		Modifier.Bonuses.Add({ EAttackAttribute::DamageAcid, Bonus });
+
+		FAttackModifier_ItemFragment Fragment;
+		Fragment.ShotModifiers.Add(Modifier);
+		FInventoryItemManifest Manifest;
+		Manifest.Fragments.Add(TInstancedStruct<FItemFragment>::Make<FAttackModifier_ItemFragment>(Fragment));
+		return Manifest;
+	}
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FAmmoGatedModifierTest, "TypicalShooter.Shooting.Ability.AmmoGatedModifier", ShootingTest::Flags)
+bool FAmmoGatedModifierTest::RunTest(const FString& Parameters)
+{
+	using namespace ShootingItemModifiersTest;
+	const ShootingTest::FWorldFixture F(true);
+	const ATargetDummy* Dummy = ShootingAbilityTest::SpawnDummy(F);
+	const FArmedShooter Shooter(F, EAttackSlot::Primary);
+	Shooter.Setup(EAttackSlot::Primary, 10.f, 1.f, 0.f, 0.f, 10.f);
+	Shooter.SetReserve(ShootingTags::Ammo_Battery, 3.f);
+	Shooter.Inventory->AddItem(AmmoGatedManifest(EAttackSlot::Primary, 2, 7.f), FHhAxialCoord(0, 0));
+	Shooter.Inventory->AddItem(AmmoGatedManifest(EAttackSlot::Alternate, 1, 100.f), FHhAxialCoord(1, 0));
+
+	Shooter.Activate();
+	F.Tick(0.2f);
+	TestEqual(TEXT("Paid modifier adds its bonus to the shot"), ShootingAbilityTest::Lost(Dummy), 17.f);
+	TestEqual(TEXT("The cost is taken from the reserve"), Shooter.Reserve(ShootingTags::Ammo_Battery), 1.f);
+
+	Shooter.Activate();
+	F.Tick(0.2f);
+	TestEqual(TEXT("Without enough reserve the modifier is skipped, the shot still fires"), ShootingAbilityTest::Lost(Dummy), 27.f);
+	TestEqual(TEXT("Nothing is taken when the cost can't be paid"), Shooter.Reserve(ShootingTags::Ammo_Battery), 1.f);
+	TestEqual(TEXT("Clip rounds spent as usual"), Shooter.Get(EAttackSlot::Primary, EAttackAttribute::Ammo), 8.f);
+	return true;
 }
 
 IMPLEMENT_SIMPLE_AUTOMATION_TEST(FItemModifierEffectTest, "TypicalShooter.Shooting.ItemModifiers.EffectWhileHeld", ShootingTest::Flags)

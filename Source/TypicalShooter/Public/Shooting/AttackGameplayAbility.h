@@ -48,6 +48,9 @@ private:
 	/** Spends one round and spawns the pattern's projectiles. False if the clip is empty. */
 	bool FireShot();
 	void SpawnProjectiles(const FAttackStats& Stats) const;
+
+	/** Pays the held items' ammo-gated modifiers for this shot and adds their bonuses to Stats (R15a). */
+	void ApplyShotModifiers(UAbilitySystemComponent& Asc, FAttackStats& Stats) const;
 	void Finish();
 	void SetTimer(float Delay, void (UAttackGameplayAbility::*Callback)());
 
