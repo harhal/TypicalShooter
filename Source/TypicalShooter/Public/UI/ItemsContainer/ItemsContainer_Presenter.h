@@ -12,6 +12,7 @@
 class IItemsContainer_View;
 class UInventoryItem;
 class UInventoryItem_Presenter;
+class UPowerGridComponent;
 
 /** An item of the container the presenter shows (nullptr = none, e.g. the cursor left every item). */
 DECLARE_MULTICAST_DELEGATE_OneParam(FContainerItemEvent, UInventoryItem*);
@@ -56,6 +57,10 @@ public:
 
 private:
 	void UnbindModel();
+	/** Follows the power grid of the model's inventory, if its actor has one (power grid R16). */
+	void BindPowerGrid();
+	void UnbindPowerGrid();
+	void UpdatePowerGridView() const;
 	void RebuildView();
 	void AddItemToView(const UInventoryItem* Item, const FHhAxialCoord& Location);
 
@@ -67,6 +72,9 @@ private:
 	TScriptInterface<IItemsContainer_Model> Model;
 
 	TWeakPtr<IItemsContainer_View> View;
+
+	TWeakObjectPtr<UPowerGridComponent> PowerGrid;
+	FDelegateHandle PowerGridChangedHandle;
 
 	/** Item presenters by view slot; UPROPERTY keeps them alive. */
 	UPROPERTY()

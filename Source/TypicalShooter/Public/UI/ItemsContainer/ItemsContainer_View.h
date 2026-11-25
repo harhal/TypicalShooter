@@ -5,6 +5,7 @@
 #include "CoreMinimal.h"
 
 struct FHhAxialCoord;
+struct FPowerGridDisplay;
 class UInventoryItem_Presenter;
 class UItemsContainer_Presenter;
 
@@ -24,4 +25,7 @@ public:
 	virtual void MoveInventoryItem(const FGuid& SlotGuid, const FHhAxialCoord& Location) = 0;
 	virtual void RemoveInventoryItem(const FGuid& SlotGuid) = 0;
 	virtual void ClearInventoryItems() = 0;
+
+	/** Power grid of the container to draw over the items (empty = none). */
+	virtual void SetPowerGrid(const FPowerGridDisplay& Display) = 0;
 };
