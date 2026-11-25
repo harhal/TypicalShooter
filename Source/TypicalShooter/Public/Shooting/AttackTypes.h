@@ -53,19 +53,6 @@ enum class EAttackInputID : uint8
 	Jump = 3,
 };
 
-/** An ability granted to the character on spawn, bound to an input. */
-USTRUCT(BlueprintType)
-struct TYPICALSHOOTER_API FAttackAbilityGrant
-{
-	GENERATED_BODY()
-
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Attack")
-	TSubclassOf<UGameplayAbility> Ability;
-
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Attack")
-	EAttackInputID Input = EAttackInputID::None;
-};
-
 /** All parameters of one attack slot, resolved and clamped (R3) — what the attack ability works with. */
 USTRUCT(BlueprintType)
 struct TYPICALSHOOTER_API FAttackStats

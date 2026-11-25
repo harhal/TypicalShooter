@@ -25,7 +25,8 @@ GameplayEffect'ы на цель / на себя при попадании.
   (Патроны в обойме, размер обоймы и время перезарядки убраны — [энергосеть](ItemPowerGrid.md) R9a.)
 - R3. Значения атрибутов клампятся: выстрелы в очереди ≥ 1 и целые; интервалы, дистанции, урон, масштаб паттерна ≥ 0;
   потеря урона ∈ [0, 1]; скорость снаряда ≥ 1; конец огня ≥ начала огня; гравитация не ограничена.
-- R4. Базовые значения задаются стартовым GameplayEffect'ом персонажа; предметы меняют их своими GE (R16).
+- R4. Базовые значения слота задаёт работающий в нём приёмник [энергосети](ItemPowerGrid.md) (R5a); без него —
+  нейтральные значения набора. Предметы меняют их своими GE (R16).
 
 **Выстрел и снаряды**
 - R5. **Паттерн выстрела** — данные атаки (не атрибут): список угловых смещений снарядов относительно
@@ -200,12 +201,14 @@ R17 подтверждено; дистанции от дула, дуло — `Mu
   [`AmmoDisplay::GetReserveText`](../../Source/TypicalShooter/Public/Shooting/AmmoDisplay.h) каждый кадр по ASC пешки владельца.
 - Персонаж — [`ATypicalShooterCharacter`](../../Source/TypicalShooter/Public/TypicalShooterCharacter.h): `UTS_GAS`
   (реплицируется, Mixed) + `UAttackAttributeSet`, компонент `Muzzle` (тег `Muzzle`, у камеры: 40 вперёд, 15 вправо,
-  12 вниз). На сервере в `BeginPlay` выдаёт `AttackAbilities` (класс + `EAttackInputID` как InputID спека) и
-  применяет `AttackDefaultsEffect`. По умолчанию — [DefaultAttackSetup.h](../../Source/TypicalShooter/Public/Shooting/DefaultAttackSetup.h):
-  `UPrimaryAttackAbility` («автомат»: очередь 1, интервал 0.12 с при удержании, 10 физ., 8000 см/с),
-  `UAlternateAttackAbility` («дробовик»: 7 снарядов — центр + кольцо 3°, интервал 0.8 с, 6 физ. за
-  снаряд, 3000 см, гравитация 0.2) и
-  `UDefaultAttackStatsEffect` (мгновенный GE с Override; запас: 120 пуль, 24 частицы).
+  12 вниз). Атаки персонаж больше не выдаёт сам: их дают приёмники энергосети в слотах
+  (`UReceiverAbilitiesComponent`, [энергосеть](ItemPowerGrid.md) R5, R6a), а базовые параметры атаки — база
+  атрибутов слота от приёмника (R5a). На сервере в `BeginPlay` персонаж применяет `AttackDefaultsEffect`
+  (`UDefaultAttackStatsEffect`: только запас — 120 пуль, 24 частицы) и кладёт в инвентарь `StartingItems`
+  ([DefaultLoadout.h](../../Source/TypicalShooter/Public/PowerGrid/DefaultLoadout.h)): источник в центре, приёмник
+  «винтовка» (`UPrimaryAttackAbility`: интервал 0.12 с при удержании, 10 физ., 8000 см/с, 8000 см) в основном слоте,
+  «дробовик» (`UAlternateAttackAbility`: 7 снарядов — центр + кольцо 3°, интервал 0.8 с, 6 физ. за снаряд, 6000 см/с,
+  3000 см, гравитация 0.2) в альтернативном. Классы абилок — в [DefaultAttackSetup.h](../../Source/TypicalShooter/Public/Shooting/DefaultAttackSetup.h).
 - Ввод — [`UAttackInputComponent`](../../Source/TypicalShooter/Public/Shooting/AttackInputComponent.h) на персонаже,
   действия и контекст генерируются в коде (как у инвентаря): ЛКМ / RT → `PrimaryAttack`, ПКМ / LT →
   `AlternateAttack`. Нажатие → `AbilityLocalInputPressed(InputID)` (активирует
@@ -227,9 +230,9 @@ R17 подтверждено; дистанции от дула, дуло — `Mu
 желании включить `Replace Pattern` и задать слот и точки паттерна.
 Платный бонус к выстрелу: в том же фрагменте `Shot Modifiers` → слот, `Ammo Type`, `Cost Per Shot`, `Bonuses`.
 
-Атаки персонажа: в `BP_FirstPersonCharacter` → `Attack Abilities` (какие абилки и на какие кнопки) и
-`Attack Defaults Effect` (базовые значения; можно заменить своим GE-ассетом с Override-модификаторами атрибутов
-`AttackAttributeSet.Primary_*` / `Alternate_*`). Паттерн альтернативной атаки — в её классе (`Pattern`).
+Атаки персонажа: в `BP_FirstPersonCharacter` → `Starting Items` (предметы и клетки; атаки дают приёмники с фрагментом
+`Power Grid_Item Fragment` в слотах — см. [энергосеть](ItemPowerGrid.md)) и `Attack Defaults Effect` (стартовый запас).
+Паттерн атаки — в классе абилки приёмника (`Pattern`).
 
 ## Тесты
 [ShootingDamageTest.cpp](../../Source/TypicalShooter/Private/Tests/ShootingDamageTest.cpp) (игровой мир без PIE,

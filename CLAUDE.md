@@ -224,7 +224,9 @@ feature's doc and updated as they change; finished features are merged into `mai
   projectiles pierce (`UShotProjectileMovementComponent::HandleBlockingHit`) losing damage per hit. Damage goes
   through `IShotDamageReceiver` components (`UGasDamageReceiverComponent` → `UShotDamageEffect` SetByCaller per
   `Damage.Type.*` → `UHealthAttributeSet`; `USimpleDamageReceiverComponent` for plain durability). The character
-  grants `AttackAbilities` + `UDefaultAttackStatsEffect` at BeginPlay; input is generated in
+  gets its attacks only from power grid receivers (`UReceiverAbilitiesComponent`; the receiver's `BaseStats` become
+  the slot attributes' base values) and places `StartingItems` (`DefaultLoadout`: source + rifle / shotgun receivers)
+  plus `UDefaultAttackStatsEffect` (reserve ammo only) at BeginPlay; input is generated in
   `UAttackInputComponent` (LMB / RT, RMB / LT → ability InputIDs, ignored while the inventory is open).
   Items change attacks via `FAttackModifier_ItemFragment` (GE while held, pattern replacement, ammo-gated
   per-shot bonuses), applied by `UAttackModifiersComponent`. `ATargetDummy` is a refilling GAS target;

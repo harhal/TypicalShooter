@@ -7,6 +7,7 @@
 #include "ItemFragment.h"
 #include "PowerGrid/HexFaces.h"
 #include "Abilities/GameplayAbility.h"
+#include "Shooting/ShotModifier.h"
 #include "PowerGridFragment.generated.h"
 
 /** Role of an item in the power grid (R1). */
@@ -63,6 +64,11 @@ struct TYPICALSHOOTER_API FPowerReceiverParams
 	/** Minimal incoming power for the ability to work. */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Power Receiver", meta = (ClampMin = 0))
 	int32 RequiredPower = 1;
+
+	/** Base parameters of the ability ("the barrel"): while the receiver works in a slot they are the base values of
+	 *  that slot's attack attributes; unset parameters keep the neutral defaults (R5a). */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Power Receiver")
+	TArray<FAttackStatBonus> BaseStats;
 };
 
 USTRUCT(BlueprintType)

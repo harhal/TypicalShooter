@@ -6,6 +6,7 @@
 #include "AbilitySystemInterface.h"
 #include "GameFramework/Character.h"
 #include "Logging/LogMacros.h"
+#include "PowerGrid/DefaultLoadout.h"
 #include "Shooting/AttackTypes.h"
 #include "TypicalShooterCharacter.generated.h"
 
@@ -20,6 +21,7 @@ class UMovementAttributesComponent;
 class UInteractionComponent;
 class UInventoryComponent;
 class UPowerGridComponent;
+class UReceiverAbilitiesComponent;
 class UInputComponent;
 class USkeletalMeshComponent;
 class UCameraComponent;
@@ -105,13 +107,17 @@ protected:
 	UPROPERTY(EditDefaultsOnly, Category ="Movement")
 	TSubclassOf<UGameplayAbility> JumpAbility;
 
-	/** Attack abilities granted on the server at BeginPlay. */
-	UPROPERTY(EditDefaultsOnly, Category ="Attack")
-	TArray<FAttackAbilityGrant> AttackAbilities;
+	/** Grants the abilities of the receivers working in the power grid's slots (attacks come only from them). */
+	UPROPERTY(VisibleAnywhere, Category ="Attack")
+	TObjectPtr<UReceiverAbilitiesComponent> ReceiverAbilities;
 
-	/** Applied once on the server at BeginPlay: base values of the attack attributes. */
+	/** Applied once on the server at BeginPlay: starting reserve ammo (attack attributes stay neutral). */
 	UPROPERTY(EditDefaultsOnly, Category ="Attack")
 	TSubclassOf<UGameplayEffect> AttackDefaultsEffect;
+
+	/** Placed into the inventory on the server at BeginPlay (power grid R6a: the base attacks come from them). */
+	UPROPERTY(EditDefaultsOnly, Category ="Inventory")
+	TArray<FStartingInventoryItem> StartingItems;
 
 public:
 	ATypicalShooterCharacter();
@@ -119,8 +125,8 @@ public:
 protected:
 	virtual void BeginPlay() override;
 
-	/** Server: grants AttackAbilities and JumpAbility, applies AttackDefaultsEffect. */
-	void GrantAttacks();
+	/** Server: grants JumpAbility, applies AttackDefaultsEffect and places StartingItems. */
+	void GrantStartingLoadout();
 
 	/** Called from Input Actions for movement input */
 	void MoveInput(const FInputActionValue& Value);

@@ -13,6 +13,7 @@
 #include "Movement/MovementAttributeSet.h"
 #include "Movement/MovementAttributesComponent.h"
 #include "PowerGrid/PowerGridComponent.h"
+#include "PowerGrid/ReceiverAbilitiesComponent.h"
 #include "TS_GAS.h"
 #include "Shooting/AmmoAttributeSet.h"
 #include "Shooting/AttackAttributeSet.h"
@@ -72,15 +73,14 @@ ATypicalShooterCharacter::ATypicalShooterCharacter()
 
 	AttackInput = CreateDefaultSubobject<UAttackInputComponent>(TEXT("Attack Input"));
 	AttackModifiers = CreateDefaultSubobject<UAttackModifiersComponent>(TEXT("Attack Modifiers"));
-	AttackAbilities = {
-		{ UPrimaryAttackAbility::StaticClass(), EAttackInputID::PrimaryAttack },
-		{ UAlternateAttackAbility::StaticClass(), EAttackInputID::AlternateAttack } };
 	AttackDefaultsEffect = UDefaultAttackStatsEffect::StaticClass();
 
 	InteractionComponent = CreateDefaultSubobject<UInteractionComponent>(TEXT("Interaction Component"));
 
 	InventoryComponent = CreateDefaultSubobject<UInventoryComponent>(TEXT("Inventory Component"));
 	PowerGrid = CreateDefaultSubobject<UPowerGridComponent>(TEXT("Power Grid"));
+	ReceiverAbilities = CreateDefaultSubobject<UReceiverAbilitiesComponent>(TEXT("Receiver Abilities"));
+	StartingItems = DefaultLoadout::MakeStartingItems();
 }
 
 void ATypicalShooterCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputComponent)
@@ -122,19 +122,12 @@ void ATypicalShooterCharacter::BeginPlay()
 	Super::BeginPlay();
 	if (HasAuthority())
 	{
-		GrantAttacks();
+		GrantStartingLoadout();
 	}
 }
 
-void ATypicalShooterCharacter::GrantAttacks()
+void ATypicalShooterCharacter::GrantStartingLoadout()
 {
-	for (const FAttackAbilityGrant& Grant : AttackAbilities)
-	{
-		if (Grant.Ability)
-		{
-			Gas->GiveAbility(FGameplayAbilitySpec(Grant.Ability, 1, static_cast<int32>(Grant.Input), this));
-		}
-	}
 	if (JumpAbility)
 	{
 		Gas->GiveAbility(FGameplayAbilitySpec(JumpAbility, 1, static_cast<int32>(EAttackInputID::Jump), this));
@@ -143,7 +136,16 @@ void ATypicalShooterCharacter::GrantAttacks()
 	{
 		Gas->ApplyGameplayEffectToSelf(AttackDefaultsEffect.GetDefaultObject(), 1.f, Gas->MakeEffectContext());
 	}
-	UE_LOG(LogTypicalShooter, Verbose, TEXT("%s: granted %d attack abilities"), *GetName(), AttackAbilities.Num());
+	// Receivers among the starting items grant the attacks through ReceiverAbilities (power grid R6a).
+	for (const FStartingInventoryItem& Item : StartingItems)
+	{
+		if (!InventoryComponent->AddItem(Item.Manifest, Item.Location))
+		{
+			UE_LOG(LogTypicalShooter, Warning, TEXT("%s: starting item does not fit at (%d,%d)"),
+				*GetName(), Item.Location.CellCoord.X, Item.Location.CellCoord.Y);
+		}
+	}
+	UE_LOG(LogTypicalShooter, Verbose, TEXT("%s: starting loadout of %d items"), *GetName(), StartingItems.Num());
 }
 
 

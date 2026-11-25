@@ -24,6 +24,7 @@
 #include "Engine/LocalPlayer.h"
 #include "InventoryItem.h"
 #include "TypicalShooterPlayerController.h"
+#include "PowerGrid/DefaultLoadout.h"
 #include "UI/InventoryUISubsystem.h"
 #include "UI/Slate/InventoryGrid.h"
 #include "UI/Widget/InventoryGridWidget.h"
@@ -83,6 +84,8 @@ namespace InventoryUIFlowTest
 		TWeakObjectPtr<AItemsContainer> Container;
 		FVector SavedLocation = FVector::ZeroVector;
 		int32 NumContainerItems = 0;
+		/** Items of the character's starting loadout (power grid), already in the player inventory. */
+		int32 NumStartingItems = 0;
 
 		UObject* GetHUD() const { return GetObjectProperty(Controller.Get(), TEXT("HUD")); }
 
@@ -236,14 +239,17 @@ bool FInventoryUIFlowTest::RunTest(const FString& Parameters)
 			return;
 		}
 		State->NumContainerItems = ContainerInventory->GetNumItems();
-		TestEqual(TEXT("Player inventory starts empty"), PlayerInventory->GetNumItems(), 0);
-		TestEqual(TEXT("Player grid starts empty"), PlayerGrid->GetNumDisplayedItems(), 0);
+		State->NumStartingItems = PlayerInventory->GetNumItems();
+		TestEqual(TEXT("Player inventory starts with the starting loadout"), State->NumStartingItems, DefaultLoadout::MakeStartingItems().Num());
+		TestEqual(TEXT("Player grid shows the starting loadout"), PlayerGrid->GetNumDisplayedItems(), State->NumStartingItems);
 
 		UInventoryItem* First = ContainerInventory->GetPlacedItems()[0].Key;
-		PC->RequestTransferItem(ContainerInventory, First, PlayerInventory, FHhAxialCoord(0, 0));
+		const FHhAxialCoord FreeCell = PlayerInventory->FindFreeLocation().Get(FHhAxialCoord(0, 0));
+		TestNull(TEXT("Transfer target is a free player cell"), PlayerInventory->GetItemAt(FreeCell));
+		PC->RequestTransferItem(ContainerInventory, First, PlayerInventory, FreeCell);
 		TestEqual(TEXT("Transfer: item left the container"), ContainerInventory->GetNumItems(), State->NumContainerItems - 1);
-		TestNotNull(TEXT("Transfer: item is in the player's centre cell"), PlayerInventory->GetItemAt(FHhAxialCoord(0, 0)));
-		TestEqual(TEXT("Player grid shows the item"), PlayerGrid->GetNumDisplayedItems(), 1);
+		TestNotNull(TEXT("Transfer: item is in the free player cell"), PlayerInventory->GetItemAt(FreeCell));
+		TestEqual(TEXT("Player grid shows the item"), PlayerGrid->GetNumDisplayedItems(), State->NumStartingItems + 1);
 	});
 	Step([this, State]()
 	{
@@ -260,12 +266,12 @@ bool FInventoryUIFlowTest::RunTest(const FString& Parameters)
 		UISubsystem->SelectItem(Selected);
 		TestTrue(TEXT("Selected item is displayed by the info panel"), UISubsystem->GetDisplayedItem() == Selected);
 		PC->TakeSelectedItem();
-		TestEqual(TEXT("Take: player got the selected item"), PlayerInventory->GetNumItems(), 2);
+		TestEqual(TEXT("Take: player got the selected item"), PlayerInventory->GetNumItems(), State->NumStartingItems + 2);
 		TestNull(TEXT("Take: the taken item is no longer selected"), UISubsystem->GetSelectedItem());
 
 		PC->TakeAllFromOpenedContainer();
 		TestEqual(TEXT("Take All: container is empty"), ContainerInventory->GetNumItems(), 0);
-		TestEqual(TEXT("Take All: player has every item"), PlayerInventory->GetNumItems(), State->NumContainerItems);
+		TestEqual(TEXT("Take All: player has every item"), PlayerInventory->GetNumItems(), State->NumStartingItems + State->NumContainerItems);
 	});
 
 	Tap(EKeys::E);
@@ -346,7 +352,7 @@ bool FInventoryUIFlowTest::RunTest(const FString& Parameters)
 		TestTrue(TEXT("RB moves the cursor to the container"), UInventoryComponent::FindInventory(UI->GetCursorContainer()) == State->Container->InventoryComponent);
 		TestEqual(TEXT("Gamepad A puts the selected item into the container"), State->Container->InventoryComponent->GetNumItems(), 1);
 		TestNotNull(TEXT("...at the cursor cell"), State->Container->InventoryComponent->GetItemAt(FHhAxialCoord(0, 0)));
-		TestEqual(TEXT("Player gave one item away"), PlayerInventory->GetNumItems(), State->NumContainerItems - 1);
+		TestEqual(TEXT("Player gave one item away"), PlayerInventory->GetNumItems(), State->NumStartingItems + State->NumContainerItems - 1);
 		TestNull(TEXT("Nothing selected after the move"), UI->GetSelectedItem());
 		TestFalse(TEXT("Gamepad A did not jump (inventory input has priority)"), PC->GetPawn()->GetMovementComponent()->IsFalling());
 	});
@@ -355,7 +361,7 @@ bool FInventoryUIFlowTest::RunTest(const FString& Parameters)
 	{
 		ATypicalShooterPlayerController* PC = State->Controller.Get();
 		TestEqual(TEXT("Gamepad Y takes all"), State->Container->InventoryComponent->GetNumItems(), 0);
-		TestEqual(TEXT("Player has every item again"), PC->GetPawn()->FindComponentByClass<UInventoryComponent>()->GetNumItems(), State->NumContainerItems);
+		TestEqual(TEXT("Player has every item again"), PC->GetPawn()->FindComponentByClass<UInventoryComponent>()->GetNumItems(), State->NumStartingItems + State->NumContainerItems);
 	});
 	Tap(EKeys::Gamepad_FaceButton_Right);
 	Step([this, State]()

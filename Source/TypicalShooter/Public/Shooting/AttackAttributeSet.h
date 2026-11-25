@@ -30,6 +30,9 @@ public:
 	/** Clamps a parameter value. */
 	static float ClampValue(EAttackAttribute Attribute, float Value);
 
+	/** Neutral value of a parameter: what a slot has without a working receiver (power grid R5a). */
+	static float GetDefaultValue(EAttackAttribute Attribute);
+
 	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
 	virtual void PreAttributeBaseChange(const FGameplayAttribute& Attribute, float& NewValue) const override;
 	virtual void PreAttributeChange(const FGameplayAttribute& Attribute, float& NewValue) override;

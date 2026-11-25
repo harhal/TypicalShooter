@@ -8,6 +8,7 @@
 #include "GameplayAbilitySpecHandle.h"
 #include "PowerGrid/ReceiverSlots.h"
 #include "Shooting/AttackTypes.h"
+#include "Shooting/ShotModifier.h"
 #include "ReceiverAbilitiesComponent.generated.h"
 
 class UAbilitySystemComponent;
@@ -36,13 +37,20 @@ private:
 	{
 		TWeakObjectPtr<UInventoryItem> Receiver;
 		FGameplayAbilitySpecHandle Handle;
+		/** A receiver works in the slot (its base stats are applied), even if it grants no ability. */
+		bool bGranted = false;
 	};
 
 	void Sync();
 	void SyncSlot(EReceiverSlot Slot, UInventoryItem* Active);
-	void Revoke(FSlotGrant& Grant) const;
-	void Grant(EReceiverSlot Slot, UInventoryItem& Receiver, FSlotGrant& OutGrant) const;
+	/** Takes the slot's ability away and resets its attack attributes to neutral. */
+	void Revoke(EReceiverSlot Slot);
+	/** Applies the receiver's base stats to the slot and grants its ability with the slot's input. */
+	void Grant(EReceiverSlot Slot, UInventoryItem& Receiver);
 	void HandleGridChanged(UPowerGridComponent* Grid);
+
+	/** Base values of Slot's attack attributes: neutral defaults overridden by BaseStats (R5a). */
+	static void SetSlotBase(UAbilitySystemComponent& InAsc, EAttackSlot Slot, const TArray<FAttackStatBonus>& BaseStats);
 
 	TWeakObjectPtr<UPowerGridComponent> PowerGrid;
 	TWeakObjectPtr<UAbilitySystemComponent> Asc;

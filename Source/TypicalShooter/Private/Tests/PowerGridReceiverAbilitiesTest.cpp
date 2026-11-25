@@ -5,94 +5,13 @@
 
 #if WITH_DEV_AUTOMATION_TESTS
 
-#include "AbilitySystemComponent.h"
-#include "Components/BoxComponent.h"
-#include "GameFramework/Character.h"
 #include "GameFramework/CharacterMovementComponent.h"
-#include "InventoryComponent.h"
-#include "PowerGrid/PowerGridComponent.h"
-#include "PowerGrid/PowerGridFragment.h"
-#include "PowerGrid/ReceiverAbilitiesComponent.h"
-#include "Shooting/AttackAttributeSet.h"
-#include "Shooting/AttackGameplayAbility.h"
-#include "Shooting/ShotProjectile.h"
-#include "Tests/ShootingTestFixture.h"
-
-namespace PowerGridReceiverAbilitiesTest
-{
-	FInventoryItemManifest Manifest(const EPowerItemType Type)
-	{
-		FPowerGrid_ItemFragment Fragment;
-		Fragment.ItemType = Type;
-		Fragment.Receiver.Ability = UAttackGameplayAbility::StaticClass();
-		FInventoryItemManifest Result;
-		Result.Fragments.Add(TInstancedStruct<FItemFragment>::Make<FPowerGrid_ItemFragment>(Fragment));
-		return Result;
-	}
-
-	/** AI character on a floor with an ASC, attack attributes, inventory, power grid and receiver abilities. */
-	struct FArmed
-	{
-		ACharacter* Character = nullptr;
-		UAbilitySystemComponent* Asc = nullptr;
-		UInventoryComponent* Inventory = nullptr;
-		TArray<TWeakObjectPtr<AShotProjectile>> Projectiles;
-
-		explicit FArmed(const ShootingTest::FWorldFixture& F)
-		{
-			AActor* Floor = F.World->SpawnActor<AActor>();
-			UBoxComponent* Box = NewObject<UBoxComponent>(Floor);
-			Box->SetBoxExtent(FVector(2000.f, 2000.f, 10.f));
-			Box->SetCollisionProfileName(UCollisionProfile::BlockAll_ProfileName);
-			Floor->SetRootComponent(Box);
-			Box->RegisterComponent();
-			Box->SetWorldLocation(FVector(0.f, 0.f, -10.f));
-
-			Character = F.World->SpawnActor<ACharacter>(FVector(0.f, 0.f, 150.f), FRotator::ZeroRotator);
-			Character->SpawnDefaultController();
-			Asc = NewObject<UAbilitySystemComponent>(Character);
-			Asc->RegisterComponent();
-			Asc->InitAbilityActorInfo(Character, Character);
-			Asc->AddSpawnedAttribute(NewObject<UAttackAttributeSet>(Character));
-			Inventory = NewObject<UInventoryComponent>(Character);
-			Inventory->RegisterComponent();
-			NewObject<UPowerGridComponent>(Character)->RegisterComponent();
-			NewObject<UReceiverAbilitiesComponent>(Character)->RegisterComponent();
-
-			F.World->AddOnActorSpawnedHandler(FOnActorSpawned::FDelegate::CreateLambda([this](AActor* Spawned)
-			{
-				if (AShotProjectile* Projectile = Cast<AShotProjectile>(Spawned))
-				{
-					Projectiles.Add(Projectile);
-				}
-			}));
-		}
-
-		/** Specs granted for receivers, by input id. */
-		const FGameplayAbilitySpec* FindSpec(const EAttackInputID Input) const
-		{
-			for (const FGameplayAbilitySpec& Spec : Asc->GetActivatableAbilities())
-			{
-				if (Spec.InputID == static_cast<int32>(Input))
-				{
-					return &Spec;
-				}
-			}
-			return nullptr;
-		}
-
-		TOptional<EAttackSlot> SlotOf(const FGameplayAbilitySpec* Spec) const
-		{
-			const UAttackGameplayAbility* Ability = Spec ? Cast<UAttackGameplayAbility>(Spec->GetPrimaryInstance()) : nullptr;
-			return Ability ? Ability->Slot : TOptional<EAttackSlot>();
-		}
-	};
-}
+#include "Tests/PowerGridTestFixture.h"
 
 IMPLEMENT_SIMPLE_AUTOMATION_TEST(FReceiverGrantsAbilityTest, "TypicalShooter.PowerGrid.Receivers.GrantsSlotAbility", ShootingTest::Flags)
 bool FReceiverGrantsAbilityTest::RunTest(const FString& Parameters)
 {
-	using namespace PowerGridReceiverAbilitiesTest;
+	using namespace PowerGridTest;
 	const ShootingTest::FWorldFixture F(true);
 	const FArmed A(F);
 	TestEqual(TEXT("No receivers: no abilities (R6a)"), A.Asc->GetActivatableAbilities().Num(), 0);
@@ -130,7 +49,7 @@ bool FReceiverGrantsAbilityTest::RunTest(const FString& Parameters)
 IMPLEMENT_SIMPLE_AUTOMATION_TEST(FReceiverAirAttackTest, "TypicalShooter.PowerGrid.Receivers.AirAttackOnlyAirborne", ShootingTest::Flags)
 bool FReceiverAirAttackTest::RunTest(const FString& Parameters)
 {
-	using namespace PowerGridReceiverAbilitiesTest;
+	using namespace PowerGridTest;
 	const ShootingTest::FWorldFixture F(true);
 	FArmed A(F);
 	A.Inventory->AddItem(Manifest(EPowerItemType::Source), FHhAxialCoord(0, 0));

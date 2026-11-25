@@ -1,6 +1,6 @@
 # Энергосеть предметов: источники, приёмники, коннекторы
 
-**Статус:** 🟡 В работе: готовы итерации 1–9b из 19 (ядро сети, компонент, стрельба без обоймы, слот Air, прыжок-абилка).
+**Статус:** 🟡 В работе: готовы итерации 1–9c из 19 (ядро сети, компонент, стрельба без обоймы, слот Air, прыжок-абилка).
 
 ## Что это
 Предметы в инвентаре персонажа образуют энергосеть на гекс-сетке. **Источники** выдают мощность через
@@ -146,7 +146,7 @@
   тест: `TypicalShooter.PowerGrid.Receivers.ActiveInSlot`
 - [x] 9b. Компонент выдаёт / забирает абилку активного приёмника по событию сети, ввод по слоту; воздушная атака
   только в воздухе (кнопка прыжка) и вниз (R5, R5b) — тест: `TypicalShooter.PowerGrid.Receivers.*`
-- [ ] 9c. Базовые параметры приёмника → атрибуты слота, нейтральный стартовый GE, стартовые предметы персонажа,
+- [x] 9c. Базовые параметры приёмника → атрибуты слота, нейтральный стартовый GE, стартовые предметы персонажа,
   чтобы стрельба в PIE работала (R5a) — тест: `TypicalShooter.PowerGrid.Receivers.*`, `TypicalShooter.Shooting.Flow`
 - [ ] 9d. Отдача: выстрел толкает стрелка против направления выстрела (R5c) — тест: `TypicalShooter.Shooting.Ability.Recoil`
 - [ ] 10. Эффекты по порогам мощности: глобальные и на абилки подключённых приёмников по слоту (R13, R14, R14a) —
@@ -158,7 +158,7 @@
 - [ ] 13. Запрос поворота с клиента (`RequestRotateItem` → серверный RPC с `CanAccessInventory`) и ввод
   Q / RT в экране инвентаря (R3) — тест: `TypicalShooter.Inventory.UIFlow` (дополнить)
 - [ ] 14. UI сети: грани, слоты, соединения, мощность, обойма; инфо-панель (R16) — тест: `TypicalShooter.Inventory.UI.PowerGrid*`
-- [ ] 15. Контент: стартовый набор персонажа и тестовые предметы в контейнерах — тест: `TypicalShooter.PowerGrid.Flow` (PIE)
+- [ ] 15. Контент: «воздушный» приёмник (двойной прыжок) в стартовом наборе, тестовые предметы в контейнерах — тест: `TypicalShooter.PowerGrid.Flow` (PIE)
   + ручная проверка
 
 ## Как устроено
@@ -212,8 +212,17 @@
   `PrimaryAttack`, альтернативный → `AlternateAttack`, воздушный → `Jump`). Если абилка — `UAttackGameplayAbility`,
   её инстансу ставится `Slot` (`ToAttackSlot`, тот же порядок): один класс абилки работает в любом слоте (R5b).
   `UAttackGameplayAbility` в слоте `Air` активируется только в падении (`IsFalling`; на земле кнопку прыжка забирает
-  абилка прыжка) и стреляет строго вниз (`FVector::DownVector`). Персонажу компонент добавляется в 9c (вместе с
-  уходом от статически выданных атак).
+  абилка прыжка) и стреляет строго вниз (`FVector::DownVector`).
+- **База приёмника** (R5a): `FPowerReceiverParams::BaseStats` — список «параметр атаки + значение» без привязки к
+  слоту. При выдаче компонент ставит **базовые** значения атрибутов слота (`SetNumericAttributeBase`): сначала
+  нейтральные (`UAttackAttributeSet::GetDefaultValue`), затем значения приёмника; при отзыве — снова нейтральные.
+  Не Override-GE: эффекты предметов (итерация 10) складываются поверх базы.
+- **Персонаж**: `UReceiverAbilitiesComponent` (`ReceiverAbilities`); статическая выдача атак убрана
+  (`FAttackAbilityGrant` удалён), `UDefaultAttackStatsEffect` даёт только запас. На сервере в `BeginPlay` кладёт
+  `StartingItems` — по умолчанию [`DefaultLoadout`](../../Source/TypicalShooter/Public/PowerGrid/DefaultLoadout.h):
+  «Starter Core» (источник 1, все грани, без боеприпасов) в центре, «Rifle Receiver» (`UPrimaryAttackAbility`, база
+  прежней ЛКМ-атаки) в основном слоте, «Shotgun Receiver» (`UAlternateAttackAbility`, база прежней ПКМ) в
+  альтернативном. Стрельба в PIE прежняя (`Shooting.Flow`).
   - Пока обоймы нет (итерация 11), источник с `AmmoType` считается с пустой обоймой и не работает (R9d).
 - **Стрельба без обоймы** (R9a): из `EAttackAttribute` / `UAttackAttributeSet` убраны `Ammo`, `ClipSize`,
   `ReloadTime`; удалены `UReloadGameplayAbility` и её подклассы, `EAttackInputID::Reload`, кнопка R / B, теги
@@ -266,6 +275,9 @@
 - `TypicalShooter.PowerGrid.Receivers.GrantsSlotAbility`, `.AirAttackOnlyAirborne` (`Private/Tests/PowerGridReceiverAbilitiesTest.cpp`,
   AI-персонаж на полу): выдача абилки по слотам и вводам, перенос между слотами, снятие без питания; воздушная
   атака не срабатывает на земле, в воздухе стреляет вниз.
+- `TypicalShooter.PowerGrid.Receivers.BaseStatsToSlot` (`Private/Tests/PowerGridReceiverStatsTest.cpp`; общая фикстура
+  `PowerGridTestFixture.h`): база приёмника в атрибутах слота, нейтральные значения после ухода из слота и без питания.
+  `TypicalShooter.Inventory.UIFlow` теперь учитывает стартовый набор персонажа (переносит в свободную клетку).
 - `TypicalShooter.Movement.*` (`Private/Tests/MovementJumpTest.cpp`, тикающий мир с полом-коробкой, `ACharacter` с
   AI-контроллером): `AttributesDriveMovement` (старт из движения, атрибуты → `JumpZVelocity` / `AirControl`, кламп),
   `JumpAbility` (прыжок с земли с силой атрибута, отпускание завершает, в воздухе не активируется, после

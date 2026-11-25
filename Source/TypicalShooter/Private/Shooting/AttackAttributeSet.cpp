@@ -81,6 +81,11 @@ UAttackAttributeSet::UAttackAttributeSet()
 	}
 }
 
+float UAttackAttributeSet::GetDefaultValue(const EAttackAttribute Attribute)
+{
+	return AttackAttributeSetPrivate::DefaultValue(Attribute);
+}
+
 FGameplayAttribute UAttackAttributeSet::GetAttribute(const EAttackSlot Slot, const EAttackAttribute Attribute)
 {
 	const int32 Index = static_cast<int32>(Attribute);

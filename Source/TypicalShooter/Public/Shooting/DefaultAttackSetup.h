@@ -1,5 +1,5 @@
-// Default attacks of the player character until items define them: a rifle-like primary attack,
-// a shotgun-like alternate attack, and the effect with their base attribute values (R4).
+// Attack abilities of the starting receivers (power grid DefaultLoadout): a single-projectile ability and a
+// 7-pellet one (the slot comes from the receiver slot), plus the character's starting reserve ammo effect.
 
 #pragma once
 
@@ -28,7 +28,7 @@ public:
 	UAlternateAttackAbility();
 };
 
-/** Instant effect overriding the base values of both attack slots (plus the starting reserve ammo). */
+/** Instant effect with the starting reserve ammo. Attack parameters are neutral until receivers work (power grid R5a). */
 UCLASS()
 class TYPICALSHOOTER_API UDefaultAttackStatsEffect : public UGameplayEffect
 {
@@ -38,6 +38,5 @@ public:
 	UDefaultAttackStatsEffect();
 
 private:
-	void AddOverride(EAttackSlot Slot, EAttackAttribute Attribute, float Value);
 	void AddReserve(const FGameplayTag& AmmoType, float Value);
 };

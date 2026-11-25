@@ -146,8 +146,8 @@ bool FShootingFlowTest::RunTest(const FString& Parameters)
 	// 1. Default attack stats are applied, a dummy stands in front of the player.
 	Step([this, State]()
 	{
-		TestEqual(TEXT("Primary damage from the defaults effect"), State->Attribute(EAttackSlot::Primary, EAttackAttribute::DamagePhysical), 10.f);
-		TestEqual(TEXT("Alternate damage from the defaults effect"), State->Attribute(EAttackSlot::Alternate, EAttackAttribute::DamagePhysical), 6.f);
+		TestEqual(TEXT("Primary damage from the starting rifle receiver"), State->Attribute(EAttackSlot::Primary, EAttackAttribute::DamagePhysical), 10.f);
+		TestEqual(TEXT("Alternate damage from the starting shotgun receiver"), State->Attribute(EAttackSlot::Alternate, EAttackAttribute::DamagePhysical), 6.f);
 		State->SpawnDummyInFront();
 	}, 0.5f);
 
