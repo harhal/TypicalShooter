@@ -122,6 +122,23 @@ TArray<UInventoryItem*> UPowerGridComponent::GetConnectedItems(const UInventoryI
 	return Items;
 }
 
+TArray<UInventoryItem*> UPowerGridComponent::GetFeedingSources(const UInventoryItem* Item) const
+{
+	TArray<UInventoryItem*> Items;
+	const int32 Node = FindNode(Item);
+	if (Node != INDEX_NONE)
+	{
+		for (const int32 Source : Solution.Nodes[Node].Sources)
+		{
+			if (UInventoryItem* SourceItem = NodeItems[Source].Get())
+			{
+				Items.Add(SourceItem);
+			}
+		}
+	}
+	return Items;
+}
+
 UInventoryItem* UPowerGridComponent::GetSlotReceiver(const EReceiverSlot Slot) const
 {
 	const FHhAxialCoord Cell = ReceiverSlots::GetLocation(Slot);

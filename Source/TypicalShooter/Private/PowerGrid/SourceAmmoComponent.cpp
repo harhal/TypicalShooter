@@ -4,6 +4,7 @@
 #include "AbilitySystemGlobals.h"
 #include "InventoryComponent.h"
 #include "InventoryItem.h"
+#include "PowerGrid/PowerGridComponent.h"
 #include "PowerGrid/PowerGridFragment.h"
 #include "Shooting/AmmoAttributeSet.h"
 
@@ -87,5 +88,22 @@ void USourceAmmoComponent::Refill(UInventoryItem* Item) const
 	{
 		AscPtr->SetNumericAttributeBase(Reserve, AscPtr->GetNumericAttributeBase(Reserve) - Taken);
 		Item->SetClip(Item->GetClip() + Taken);
+	}
+}
+
+void USourceAmmoComponent::ReportUse(const UInventoryItem* Receiver)
+{
+	const UPowerGridComponent* Grid = GetOwner() ? GetOwner()->FindComponentByClass<UPowerGridComponent>() : nullptr;
+	if (!Grid || !Asc.IsValid())
+	{
+		return;
+	}
+	// Collected first: each clip change re-solves the grid (an emptied source switches off).
+	for (UInventoryItem* Source : Grid->GetFeedingSources(Receiver))
+	{
+		if (const FPowerSourceParams* Params = SourceAmmoPrivate::FindAmmoSource(Source))
+		{
+			Source->SetClip(Source->GetClip() - FMath::Max(1, Params->CostPerUse));
+		}
 	}
 }

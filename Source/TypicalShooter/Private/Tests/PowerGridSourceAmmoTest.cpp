@@ -14,13 +14,15 @@
 
 namespace PowerGridSourceAmmoTest
 {
-	FInventoryItemManifest AmmoSource(const int32 Capacity, const int32 Power = 1)
+	FInventoryItemManifest AmmoSource(const int32 Capacity, const int32 Power = 1, const int32 Cost = 1, const float RechargeDelay = 10.f)
 	{
 		FInventoryItemManifest Result = PowerGridTest::Manifest(EPowerItemType::Source);
 		FPowerSourceParams& Source = Result.Fragments[0].GetMutable<FPowerGrid_ItemFragment>().Source;
 		Source.AmmoType = ShootingTags::Ammo_Bullet;
 		Source.Capacity = Capacity;
 		Source.Power = Power;
+		Source.CostPerUse = Cost;
+		Source.RechargeDelay = RechargeDelay;
 		return Result;
 	}
 
@@ -93,6 +95,39 @@ bool FPowerGridClipReserveTest::RunTest(const FString& Parameters)
 
 	A.Inventory->AddItem(PowerGridTest::Manifest(EPowerItemType::Source), FHhAxialCoord(-1, 0));
 	TestEqual(TEXT("A source without ammo reserves nothing"), A.Reserve(), 2.f);
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FPowerGridClipSpendTest, "TypicalShooter.PowerGrid.SourceAmmo.SpendPerShot", ShootingTest::Flags)
+bool FPowerGridClipSpendTest::RunTest(const FString& Parameters)
+{
+	using namespace PowerGridSourceAmmoTest;
+	const ShootingTest::FWorldFixture F(true);
+	const FAmmoFixture A(F, 100.f);
+	const TArray<FAttackStatBonus> Stats = { { EAttackAttribute::BurstInterval, 0.1f } };
+
+	UInventoryItem* Heavy = A.Inventory->AddItem(AmmoSource(4, 1, 2), FHhAxialCoord(0, 0));
+	UInventoryItem* Light = A.Inventory->AddItem(AmmoSource(2), FHhAxialCoord(1, -1));
+	UInventoryItem* Aside = A.Inventory->AddItem(AmmoSource(5), FHhAxialCoord(-2, 2));
+	A.Inventory->AddItem(PowerGridTest::Manifest(EPowerItemType::Receiver, Stats), ReceiverSlots::GetLocation(EReceiverSlot::Primary));
+	F.Tick(1.f / 60.f);
+
+	const FGameplayAbilitySpec* Spec = A.FindSpec(EAttackInputID::PrimaryAttack);
+	TestTrue(TEXT("First shot"), Spec && A.Asc->TryActivateAbility(Spec->Handle));
+	TestEqual(TEXT("Every feeding source pays its cost per use (R9b)"), Heavy->GetClip(), 2);
+	TestEqual(TEXT("... the light one too"), Light->GetClip(), 1);
+	TestEqual(TEXT("A source not feeding the receiver keeps its clip"), Aside->GetClip(), 5);
+	TestNotNull(TEXT("Still powered: the attack stays"), A.FindSpec(EAttackInputID::PrimaryAttack));
+
+	F.Tick(0.2f);
+	Spec = A.FindSpec(EAttackInputID::PrimaryAttack);
+	TestTrue(TEXT("Second shot"), Spec && A.Asc->TryActivateAbility(Spec->Handle));
+	TestEqual(TEXT("Heavy empty"), Heavy->GetClip(), 0);
+	TestEqual(TEXT("Light empty"), Light->GetClip(), 0);
+	TestFalse(TEXT("Empty sources switch off (R9b)"), A.Grid->IsItemPowered(Heavy) || A.Grid->IsItemPowered(Light));
+	TestNull(TEXT("The unpowered receiver loses its attack"), A.FindSpec(EAttackInputID::PrimaryAttack));
+	TestEqual(TEXT("Two shots fired"), A.Projectiles.Num(), 2);
+	F.Tick(0.2f);
 	return true;
 }
 

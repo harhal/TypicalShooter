@@ -35,6 +35,8 @@ public:
 	bool IsItemPowered(const UInventoryItem* Item) const;
 	/** Receiver + items on powered paths to it (R14); empty for non-receivers. */
 	TArray<UInventoryItem*> GetConnectedItems(const UInventoryItem* Receiver) const;
+	/** Distinct working sources whose power reaches Item (R12a); empty if none or Item is not in the grid. */
+	TArray<UInventoryItem*> GetFeedingSources(const UInventoryItem* Item) const;
 
 	/** Receiver lying in Slot's cell, powered or not; nullptr if the cell is empty or holds another item (R4a). */
 	UInventoryItem* GetSlotReceiver(EReceiverSlot Slot) const;

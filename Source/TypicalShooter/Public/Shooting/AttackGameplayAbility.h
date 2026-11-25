@@ -51,6 +51,8 @@ private:
 	FVector SpawnProjectiles(const FAttackStats& Stats) const;
 	/** Pushes the avatar character opposite to the shot by Recoil cm/s (power grid R5c). */
 	void ApplyRecoil(const FVector& ShotDirection, float Recoil) const;
+	/** Tells the power sources feeding this ability's receiver that it was used once (power grid R9b). */
+	void ReportUse() const;
 
 	/** Pays the held items' ammo-gated modifiers for this shot and adds their bonuses to Stats (R15a). */
 	void ApplyShotModifiers(UAbilitySystemComponent& Asc, FAttackStats& Stats) const;

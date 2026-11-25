@@ -4,6 +4,8 @@
 #include "Engine/World.h"
 #include "GameFramework/Character.h"
 #include "GameFramework/CharacterMovementComponent.h"
+#include "InventoryItem.h"
+#include "PowerGrid/SourceAmmoComponent.h"
 #include "Shooting/AmmoAttributeSet.h"
 #include "Shooting/AttackAttributeSet.h"
 #include "Shooting/AttackModifiersComponent.h"
@@ -70,6 +72,10 @@ void UAttackGameplayAbility::FireNextShot()
 	while (ShotsLeftInBurst > 0)
 	{
 		FireShot();
+		if (!IsActive())
+		{
+			return; // the shot emptied the sources: the receiver lost power and its ability was taken away
+		}
 		--ShotsLeftInBurst;
 		if (ShotsLeftInBurst > 0 && Stats.ShotInterval > 0.f)
 		{
@@ -100,6 +106,18 @@ void UAttackGameplayAbility::FireShot()
 	ApplyShotModifiers(*Asc, ShotStats);
 	const FVector Direction = SpawnProjectiles(ShotStats);
 	ApplyRecoil(Direction, ShotStats.Recoil);
+	ReportUse();
+}
+
+void UAttackGameplayAbility::ReportUse() const
+{
+	// The receiver item granting this ability is the spec's source object; its sources pay for the shot (R9b).
+	const AActor* Avatar = GetAvatarActorFromActorInfo();
+	USourceAmmoComponent* SourceAmmo = Avatar ? Avatar->FindComponentByClass<USourceAmmoComponent>() : nullptr;
+	if (const UInventoryItem* Receiver = Cast<UInventoryItem>(GetCurrentSourceObject()); SourceAmmo && Receiver)
+	{
+		SourceAmmo->ReportUse(Receiver);
+	}
 }
 
 void UAttackGameplayAbility::ApplyRecoil(const FVector& ShotDirection, const float Recoil) const

@@ -244,7 +244,8 @@ feature's doc and updated as they change; finished features are merged into `mai
   items connected to each active receiver summed into one `UAttackBonusEffect` (SetByCaller per slot attribute).
   Source clips: `UInventoryItem::Clip` (replicated, not carried by `CloneFor`; changes fire
   `UInventoryComponent::GetItemStateChangedDelegate()`, the grid re-solves); `USourceAmmoComponent` (server) reserves
-  up to `Capacity` from the ammo reserve when a source enters the character's inventory and returns it on leaving.
+  up to `Capacity` from the ammo reserve when a source enters the character's inventory and returns it on leaving;
+  each attack shot calls `ReportUse(receiver)`: every ammo source feeding the receiver pays `CostPerUse`.
 
 ## Current state (as of 2026-11-25)
 
