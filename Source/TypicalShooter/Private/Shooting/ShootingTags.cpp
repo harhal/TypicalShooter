@@ -17,4 +17,12 @@ namespace ShootingTags
 			Damage_Type_Plasma, Damage_Type_Ice, Damage_Type_Radiation };
 		return Types;
 	}
+
+	UE_DEFINE_GAMEPLAY_TAG_COMMENT(State_Reloading_Primary, "State.Reloading.Primary", "Primary attack is reloading");
+	UE_DEFINE_GAMEPLAY_TAG_COMMENT(State_Reloading_Alternate, "State.Reloading.Alternate", "Alternate attack is reloading");
+
+	FGameplayTag GetReloadingTag(const uint8 SlotIndex)
+	{
+		return SlotIndex == 0 ? State_Reloading_Primary.GetTag() : State_Reloading_Alternate.GetTag();
+	}
 }

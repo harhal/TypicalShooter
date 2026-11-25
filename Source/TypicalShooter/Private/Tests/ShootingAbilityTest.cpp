@@ -4,76 +4,7 @@
 
 #if WITH_DEV_AUTOMATION_TESTS
 
-#include "AbilitySystemComponent.h"
-#include "Shooting/AttackAttributeSet.h"
-#include "Shooting/AttackGameplayAbility.h"
-#include "Shooting/HealthAttributeSet.h"
-#include "Shooting/TargetDummy.h"
-#include "Tests/ShootingTestFixture.h"
-
-namespace ShootingAbilityTest
-{
-	/** Actor at the origin looking along +X, with attack attributes and one attack ability. */
-	struct FShooter
-	{
-		UAbilitySystemComponent* Asc = nullptr;
-		FGameplayAbilitySpecHandle Handle;
-
-		FShooter(const ShootingTest::FWorldFixture& F, const EAttackSlot Slot, const FShotPattern& Pattern = FShotPattern())
-		{
-			Asc = F.SpawnWithComponent<UAbilitySystemComponent>();
-			AActor* Actor = Asc->GetOwner();
-			Asc->InitAbilityActorInfo(Actor, Actor);
-			Asc->AddSpawnedAttribute(NewObject<UAttackAttributeSet>(Actor));
-			Handle = Asc->GiveAbility(FGameplayAbilitySpec(UAttackGameplayAbility::StaticClass()));
-			UAttackGameplayAbility* Ability = Cast<UAttackGameplayAbility>(Spec()->GetPrimaryInstance());
-			Ability->Slot = Slot;
-			Ability->Pattern = Pattern;
-		}
-
-		FGameplayAbilitySpec* Spec() const { return Asc->FindAbilitySpecFromHandle(Handle); }
-		bool Activate() const { return Asc->TryActivateAbility(Handle); }
-		bool IsActive() const { return Spec()->IsActive(); }
-		void SetHeld(const bool bHeld) const { Spec()->InputPressed = bHeld; }
-
-		void Set(const EAttackSlot Slot, const EAttackAttribute Attribute, const float Value) const
-		{
-			Asc->SetNumericAttributeBase(UAttackAttributeSet::GetAttribute(Slot, Attribute), Value);
-		}
-
-		float Get(const EAttackSlot Slot, const EAttackAttribute Attribute) const
-		{
-			return Asc->GetNumericAttribute(UAttackAttributeSet::GetAttribute(Slot, Attribute));
-		}
-
-		/** Clip of Ammo rounds, Shots per burst, physical damage per hit. */
-		void Setup(const EAttackSlot Slot, const float Ammo, const float Shots, const float ShotInterval, const float BurstInterval,
-			const float Damage) const
-		{
-			Set(Slot, EAttackAttribute::ClipSize, 30.f);
-			Set(Slot, EAttackAttribute::Ammo, Ammo);
-			Set(Slot, EAttackAttribute::ShotsPerBurst, Shots);
-			Set(Slot, EAttackAttribute::ShotInterval, ShotInterval);
-			Set(Slot, EAttackAttribute::BurstInterval, BurstInterval);
-			Set(Slot, EAttackAttribute::DamagePhysical, Damage);
-			Set(Slot, EAttackAttribute::ProjectileSpeed, 10000.f);
-		}
-	};
-
-	ATargetDummy* SpawnDummy(const ShootingTest::FWorldFixture& F)
-	{
-		ATargetDummy* Dummy = F.World->SpawnActor<ATargetDummy>(FVector(500.f, 0.f, 0.f), FRotator::ZeroRotator);
-		Dummy->MaxHealth = 1000.f; // effects are applied at BeginPlay already, set health explicitly
-		Dummy->GetAbilitySystemComponent()->SetNumericAttributeBase(UHealthAttributeSet::GetMaxHealthAttribute(), 1000.f);
-		Dummy->GetAbilitySystemComponent()->SetNumericAttributeBase(UHealthAttributeSet::GetHealthAttribute(), 1000.f);
-		return Dummy;
-	}
-
-	float Lost(const ATargetDummy* Dummy)
-	{
-		return Dummy->GetTotalDamageTaken();
-	}
-}
+#include "Tests/ShootingAbilityFixture.h"
 
 IMPLEMENT_SIMPLE_AUTOMATION_TEST(FAttackSingleShotTest, "TypicalShooter.Shooting.Ability.SingleShot", ShootingTest::Flags)
 bool FAttackSingleShotTest::RunTest(const FString& Parameters)
@@ -144,10 +75,12 @@ bool FAttackEmptyClipTest::RunTest(const FString& Parameters)
 	const ATargetDummy* Dummy = SpawnDummy(F);
 	const FShooter Shooter(F, EAttackSlot::Primary);
 	Shooter.Setup(EAttackSlot::Primary, 2.f, 5.f, 0.05f, 0.f, 10.f);
+	Shooter.Set(EAttackSlot::Primary, EAttackAttribute::ReloadTime, 5.f); // keep the clip empty during the test
 
 	Shooter.Activate();
 	F.Tick(0.5f);
 	TestEqual(TEXT("Clip emptied"), Shooter.Get(EAttackSlot::Primary, EAttackAttribute::Ammo), 0.f);
+	TestTrue(TEXT("Empty clip starts a reload"), Shooter.IsReloading());
 	TestEqual(TEXT("Only the loaded rounds were fired"), Lost(Dummy), 20.f);
 	TestFalse(TEXT("Burst stops on an empty clip"), Shooter.IsActive());
 	return true;

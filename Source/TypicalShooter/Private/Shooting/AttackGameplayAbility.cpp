@@ -4,6 +4,8 @@
 #include "Engine/World.h"
 #include "GameFramework/Pawn.h"
 #include "Shooting/AttackAttributeSet.h"
+#include "Shooting/ReloadGameplayAbility.h"
+#include "Shooting/ShootingTags.h"
 #include "Shooting/ShotAim.h"
 #include "Shooting/ShotProjectile.h"
 #include "TimerManager.h"
@@ -14,6 +16,17 @@ UAttackGameplayAbility::UAttackGameplayAbility()
 	NetExecutionPolicy = EGameplayAbilityNetExecutionPolicy::ServerOnly;
 	bReplicateInputDirectly = true; // the server checks the held button to repeat bursts
 	ProjectileClass = AShotProjectile::StaticClass();
+}
+
+bool UAttackGameplayAbility::CanActivateAbility(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo,
+	const FGameplayTagContainer* SourceTags, const FGameplayTagContainer* TargetTags, FGameplayTagContainer* OptionalRelevantTags) const
+{
+	const UAbilitySystemComponent* Asc = ActorInfo ? ActorInfo->AbilitySystemComponent.Get() : nullptr;
+	if (Asc && Asc->HasMatchingGameplayTag(ShootingTags::GetReloadingTag(static_cast<uint8>(Slot))))
+	{
+		return false;
+	}
+	return Super::CanActivateAbility(Handle, ActorInfo, SourceTags, TargetTags, OptionalRelevantTags);
 }
 
 void UAttackGameplayAbility::ActivateAbility(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo,
@@ -53,7 +66,10 @@ void UAttackGameplayAbility::FireNextShot()
 	{
 		if (!FireShot())
 		{
-			Finish(); // empty clip cuts the burst
+			// An empty clip cuts the burst and starts this slot's reload.
+			UAbilitySystemComponent* Asc = GetAbilitySystemComponentFromActorInfo();
+			Finish();
+			UReloadGameplayAbility::TryReload(*Asc, Slot);
 			return;
 		}
 		--ShotsLeftInBurst;

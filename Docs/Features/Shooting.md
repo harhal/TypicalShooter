@@ -106,7 +106,7 @@ R17 подтверждено; дистанции от дула, дуло — `Mu
   тест: `TypicalShooter.Shooting.Pattern.*`
 - [x] 6. Абилка атаки (слот основная/альтернативная): трата патрона, спавн снарядов, очередь и интервалы (R10, R11) —
   тест: `TypicalShooter.Shooting.Ability.Burst`
-- [ ] 7. Абилка перезарядки с бесконечным запасом + автоперезарядка на пустой обойме (R11, R12) —
+- [x] 7. Абилка перезарядки с бесконечным запасом + автоперезарядка на пустой обойме (R11, R12) —
   тест: `TypicalShooter.Shooting.Ability.Reload`
 - [ ] 8. Подключение к персонажу: выдача абилок и стартового GE, ввод ЛКМ/ПКМ/R + геймпад, блокировка при
   открытом инвентаре (R4, R17) — тест: `TypicalShooter.Shooting.Flow` (PIE, стрельба по мишени)
@@ -172,8 +172,12 @@ R17 подтверждено; дистанции от дула, дуло — `Mu
   Активация → очередь: каждый выстрел читает `ReadStats`, тратит 1 патрон и спавнит по снаряду на точку паттерна
   (путь снаряда = конец − начало огня); выстрелы с нулевым интервалом — в том же кадре. После очереди абилка
   ждёт интервал между очередями (не реже раза в тик) и, если кнопка зажата, стреляет снова, иначе завершается —
-  поэтому новое нажатие раньше интервала ничего не делает. Пустая обойма обрывает очередь и завершает абилку.
+  поэтому новое нажатие раньше интервала ничего не делает. Пустая обойма обрывает очередь, завершает абилку и
+  запускает перезарядку слота (`UReloadGameplayAbility::TryReload`); пока слот перезаряжается, атака не активируется.
   Таймеры — `FTimerManager` мира, сбрасываются в `EndAbility`.
+- Перезарядка — [`UReloadGameplayAbility`](../../Source/TypicalShooter/Public/Shooting/ReloadGameplayAbility.h) (`Slot`,
+  `ServerOnly`): полная обойма — сразу завершается; иначе вешает loose-тег `State.Reloading.<Слот>` (блокирует атаку
+  слота в её `CanActivateAbility`), ждёт время перезарядки и заполняет обойму до размера. Запас пока бесконечный.
 
 ## Настройка контента
 Простреливаемая стена / ящик: добавить актору компонент `Simple Damage Receiver`, задать `Max Durability`
@@ -200,6 +204,9 @@ R17 подтверждено; дистанции от дула, дуло — `Mu
 [ShootingAbilityTest.cpp](../../Source/TypicalShooter/Private/Tests/ShootingAbilityTest.cpp) (актор с ASC стреляет
 по манекену): `TypicalShooter.Shooting.Ability.SingleShot`, `.Burst`, `.HoldRepeatsBursts`, `.BurstStopsWhenEmpty`,
 `.PatternProjectiles`, `.AlternateSlot`.
+[ShootingReloadTest.cpp](../../Source/TypicalShooter/Private/Tests/ShootingReloadTest.cpp) (общий стрелок —
+[ShootingAbilityFixture.h](../../Source/TypicalShooter/Private/Tests/ShootingAbilityFixture.h)):
+`TypicalShooter.Shooting.Ability.Reload`, `.ReloadSkipsFullClip`, `.AutoReloadWhenEmpty`, `.EmptyPressReloads`.
 
 ## Ограничения и грабли
 - В тестовом мире `World->Tick` несколько раз за один кадр движка тикает акторов только в первый раз
