@@ -104,7 +104,7 @@ R17 подтверждено; дистанции от дула, дуло — `Mu
 - [x] 5a. Математика выстрела: направления снарядов по паттерну и масштабу, направление от дула к точке
   прицела, точка появления (R5, R6) —
   тест: `TypicalShooter.Shooting.Pattern.*`
-- [ ] 6. Абилка атаки (слот основная/альтернативная): трата патрона, спавн снарядов, очередь и интервалы (R10, R11) —
+- [x] 6. Абилка атаки (слот основная/альтернативная): трата патрона, спавн снарядов, очередь и интервалы (R10, R11) —
   тест: `TypicalShooter.Shooting.Ability.Burst`
 - [ ] 7. Абилка перезарядки с бесконечным запасом + автоперезарядка на пустой обойме (R11, R12) —
   тест: `TypicalShooter.Shooting.Ability.Reload`
@@ -164,6 +164,16 @@ R17 подтверждено; дистанции от дула, дуло — `Mu
   угловые смещения (X = рыскание вправо, Y = тангаж вверх, градусы), по снаряду на точку (пусто = один по центру).
   `ShotMath::AimDirection` (дуло → точка прицела, запасное направление при совпадении), `ProjectileDirections`
   (смещение × масштаб паттерна в локальной системе прицела), `SpawnTransform` (точка на дистанции начала огня от дула).
+- Прицел — [`FShotAim`](../../Source/TypicalShooter/Public/Shooting/ShotAim.h): трасса `Visibility` из глаз аватара
+  (`GetActorEyesViewPoint`; у персонажа на сервере — реплицированный ControlRotation) на дистанцию конца огня;
+  дуло — компонент аватара с тегом `Muzzle`, иначе глаза.
+- Атака — [`UAttackGameplayAbility`](../../Source/TypicalShooter/Public/Shooting/AttackGameplayAbility.h) (`Slot`, `Pattern`,
+  `ProjectileClass`): `InstancedPerActor`, `ServerOnly`, `bReplicateInputDirectly` (сервер видит зажатую кнопку).
+  Активация → очередь: каждый выстрел читает `ReadStats`, тратит 1 патрон и спавнит по снаряду на точку паттерна
+  (путь снаряда = конец − начало огня); выстрелы с нулевым интервалом — в том же кадре. После очереди абилка
+  ждёт интервал между очередями (не реже раза в тик) и, если кнопка зажата, стреляет снова, иначе завершается —
+  поэтому новое нажатие раньше интервала ничего не делает. Пустая обойма обрывает очередь и завершает абилку.
+  Таймеры — `FTimerManager` мира, сбрасываются в `EndAbility`.
 
 ## Настройка контента
 Простреливаемая стена / ящик: добавить актору компонент `Simple Damage Receiver`, задать `Max Durability`
@@ -187,6 +197,9 @@ R17 подтверждено; дистанции от дула, дуло — `Mu
 `TypicalShooter.Shooting.Attributes.SlotsIndependent`, `.Clamp`, `.AmmoFollowsClipSize`, `.ReadStats`.
 [ShootingPatternTest.cpp](../../Source/TypicalShooter/Private/Tests/ShootingPatternTest.cpp):
 `TypicalShooter.Shooting.Pattern.SinglePointFollowsAim`, `.OffsetsScaled`, `.AimFromMuzzle`.
+[ShootingAbilityTest.cpp](../../Source/TypicalShooter/Private/Tests/ShootingAbilityTest.cpp) (актор с ASC стреляет
+по манекену): `TypicalShooter.Shooting.Ability.SingleShot`, `.Burst`, `.HoldRepeatsBursts`, `.BurstStopsWhenEmpty`,
+`.PatternProjectiles`, `.AlternateSlot`.
 
 ## Ограничения и грабли
 - В тестовом мире `World->Tick` несколько раз за один кадр движка тикает акторов только в первый раз
