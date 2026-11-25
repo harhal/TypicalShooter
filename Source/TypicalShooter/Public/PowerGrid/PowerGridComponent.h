@@ -48,6 +48,8 @@ public:
 	/** Items of the grid nodes, parallel to GetSolution().Nodes. */
 	TArray<UInventoryItem*> GetNodeItems() const;
 	const FPowerGridSolution& GetSolution() const { return Solution; }
+	/** Solver input: items with their rotated faces, parallel to GetNodeItems(). */
+	const TArray<FPowerGridNode>& GetNodes() const { return Nodes; }
 
 	/** Fires after every recalculation. */
 	FPowerGridChangedDelegate& GetPowerGridChangedDelegate() { return PowerGridChangedDelegate; }
