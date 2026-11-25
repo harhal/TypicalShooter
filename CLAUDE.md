@@ -245,7 +245,8 @@ feature's doc and updated as they change; finished features are merged into `mai
   Source clips: `UInventoryItem::Clip` (replicated, not carried by `CloneFor`; changes fire
   `UInventoryComponent::GetItemStateChangedDelegate()`, the grid re-solves); `USourceAmmoComponent` (server) reserves
   up to `Capacity` from the ammo reserve when a source enters the character's inventory and returns it on leaving;
-  each attack shot calls `ReportUse(receiver)`: every ammo source feeding the receiver pays `CostPerUse`.
+  each attack shot calls `ReportUse(receiver)`: every ammo source feeding the receiver pays `CostPerUse`; after
+  `RechargeDelay` without uses a looping timer refills the clip from the reserve until full.
 
 ## Current state (as of 2026-11-25)
 

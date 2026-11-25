@@ -1,11 +1,13 @@
-// Clips of the power sources in the owner's inventory (power grid R9, R9b, R9d): a source needing ammo reserves up to its
+// Clips of the power sources in the owner's inventory (power grid R9, R9b-R9d): a source needing ammo reserves up to its
 // capacity from the owner's reserve (UAmmoAttributeSet) when it enters the inventory and returns the rest when it
-// leaves; every use of a receiver costs the ammo sources feeding it (R9b). Server only; needs an ASC with ammo reserves.
+// leaves; every use of a receiver costs the ammo sources feeding it (R9b); after an idle period the clip refills (R9c).
+// Server only; needs an ASC with ammo reserves.
 
 #pragma once
 
 #include "CoreMinimal.h"
 #include "Components/ActorComponent.h"
+#include "Engine/TimerHandle.h"
 #include "SourceAmmoComponent.generated.h"
 
 class UAbilitySystemComponent;
@@ -33,9 +35,15 @@ private:
 	void HandleItemRemoved(const UInventoryItem* Item);
 	/** Tops Item's clip up to its capacity from the reserve (as much as there is); no-op for other items. */
 	void Refill(UInventoryItem* Item) const;
+	/** (Re)starts Item's idle period: after RechargeDelay without uses the clip is topped up, repeatedly until full (R9c). */
+	void RestartRecharge(UInventoryItem* Item);
+	void StopRecharge(const UInventoryItem* Item);
+
+	static constexpr float MinRechargeDelay = 0.01f;
 
 	TWeakObjectPtr<UInventoryComponent> Inventory;
 	TWeakObjectPtr<UAbilitySystemComponent> Asc;
 	FDelegateHandle AddedHandle;
 	FDelegateHandle RemovedHandle;
+	TMap<TObjectKey<UInventoryItem>, FTimerHandle> RechargeTimers;
 };

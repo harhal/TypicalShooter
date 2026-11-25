@@ -131,6 +131,51 @@ bool FPowerGridClipSpendTest::RunTest(const FString& Parameters)
 	return true;
 }
 
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FPowerGridClipRechargeTest, "TypicalShooter.PowerGrid.SourceAmmo.RechargeAfterIdle", ShootingTest::Flags)
+bool FPowerGridClipRechargeTest::RunTest(const FString& Parameters)
+{
+	using namespace PowerGridSourceAmmoTest;
+	const ShootingTest::FWorldFixture F(true);
+	const FAmmoFixture A(F, 10.f);
+	const TArray<FAttackStatBonus> Stats = { { EAttackAttribute::BurstInterval, 0.1f } };
+	UInventoryItem* Source = A.Inventory->AddItem(AmmoSource(3, 1, 1, 1.f), FHhAxialCoord(0, 0));
+	A.Inventory->AddItem(PowerGridTest::Manifest(EPowerItemType::Receiver, Stats), ReceiverSlots::GetLocation(EReceiverSlot::Primary));
+	auto Shoot = [&A, &F]
+	{
+		const FGameplayAbilitySpec* Spec = A.FindSpec(EAttackInputID::PrimaryAttack);
+		const bool bFired = Spec && A.Asc->TryActivateAbility(Spec->Handle);
+		F.Tick(0.2f);
+		return bFired;
+	};
+
+	Shoot();
+	F.Tick(0.3f);
+	TestEqual(TEXT("No refill before the idle period"), Source->GetClip(), 2);
+	Shoot();
+	F.Tick(0.7f);
+	TestEqual(TEXT("A use restarts the idle period (R9c)"), Source->GetClip(), 1);
+	F.Tick(0.2f);
+	TestEqual(TEXT("After the idle period the clip refills at once"), Source->GetClip(), 3);
+	TestEqual(TEXT("... from the reserve"), A.Reserve(), 5.f);
+
+	A.SetReserve(1.f);
+	Shoot();
+	Shoot();
+	TestTrue(TEXT("Third shot"), Shoot());
+	TestEqual(TEXT("Clip spent"), Source->GetClip(), 0);
+	TestNull(TEXT("The empty source leaves the receiver without an attack"), A.FindSpec(EAttackInputID::PrimaryAttack));
+	F.Tick(1.1f);
+	TestEqual(TEXT("An empty clip recharges too, as much as the reserve has"), Source->GetClip(), 1);
+	TestNotNull(TEXT("... and the attack is back"), A.FindSpec(EAttackInputID::PrimaryAttack));
+	TestEqual(TEXT("Reserve used up"), A.Reserve(), 0.f);
+
+	A.SetReserve(10.f);
+	F.Tick(1.1f);
+	TestEqual(TEXT("A short clip keeps recharging once the reserve has ammo"), Source->GetClip(), 3);
+	TestEqual(TEXT("Reserve after the top-up"), A.Reserve(), 8.f);
+	return true;
+}
+
 IMPLEMENT_SIMPLE_AUTOMATION_TEST(FPowerGridSourceAmmoOnCharacterTest, "TypicalShooter.PowerGrid.SourceAmmo.OnCharacter", ShootingTest::Flags)
 bool FPowerGridSourceAmmoOnCharacterTest::RunTest(const FString& Parameters)
 {
