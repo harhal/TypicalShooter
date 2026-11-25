@@ -2,7 +2,8 @@
 
 #include "AbilitySystemComponent.h"
 #include "Engine/World.h"
-#include "GameFramework/Pawn.h"
+#include "GameFramework/Character.h"
+#include "GameFramework/CharacterMovementComponent.h"
 #include "Shooting/AmmoAttributeSet.h"
 #include "Shooting/AttackAttributeSet.h"
 #include "Shooting/AttackModifiersComponent.h"
@@ -16,6 +17,21 @@ UAttackGameplayAbility::UAttackGameplayAbility()
 	NetExecutionPolicy = EGameplayAbilityNetExecutionPolicy::ServerOnly;
 	bReplicateInputDirectly = true; // the server checks the held button to repeat bursts
 	ProjectileClass = AShotProjectile::StaticClass();
+}
+
+bool UAttackGameplayAbility::CanActivateAbility(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo,
+	const FGameplayTagContainer* SourceTags, const FGameplayTagContainer* TargetTags, FGameplayTagContainer* OptionalRelevantTags) const
+{
+	if (Slot == EAttackSlot::Air)
+	{
+		const ACharacter* Character = ActorInfo ? Cast<ACharacter>(ActorInfo->AvatarActor.Get()) : nullptr;
+		const UCharacterMovementComponent* Movement = Character ? Character->GetCharacterMovement() : nullptr;
+		if (!Movement || !Movement->IsFalling())
+		{
+			return false;
+		}
+	}
+	return Super::CanActivateAbility(Handle, ActorInfo, SourceTags, TargetTags, OptionalRelevantTags);
 }
 
 void UAttackGameplayAbility::ActivateAbility(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo,
@@ -112,7 +128,9 @@ void UAttackGameplayAbility::SpawnProjectiles(const FAttackStats& Stats) const
 {
 	AActor* Avatar = GetAvatarActorFromActorInfo();
 	const FShotAim Aim = FShotAim::Compute(*Avatar, Stats.FireEndDistance);
-	const FVector AimDirection = ShotMath::AimDirection(Aim.Muzzle, Aim.AimPoint, Aim.ViewDirection);
+	// The air attack fires straight down whatever the view (power grid R5).
+	const FVector AimDirection = Slot == EAttackSlot::Air
+		? FVector::DownVector : ShotMath::AimDirection(Aim.Muzzle, Aim.AimPoint, Aim.ViewDirection);
 
 	FProjectileShotParams Params;
 	Params.Damage = Stats.Damage;

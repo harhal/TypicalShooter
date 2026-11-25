@@ -1,6 +1,6 @@
 # Энергосеть предметов: источники, приёмники, коннекторы
 
-**Статус:** 🟡 В работе: готовы итерации 1–9a из 19 (ядро сети, компонент, стрельба без обоймы, слот Air, прыжок-абилка).
+**Статус:** 🟡 В работе: готовы итерации 1–9b из 19 (ядро сети, компонент, стрельба без обоймы, слот Air, прыжок-абилка).
 
 ## Что это
 Предметы в инвентаре персонажа образуют энергосеть на гекс-сетке. **Источники** выдают мощность через
@@ -144,7 +144,7 @@
   тест: `TypicalShooter.Movement.*`, `TypicalShooter.Inventory.UIFlow` (пробел прыгает)
 - [x] 9a. Активный приёмник слота: приёмник в клетке слота с мощностью ≥ требуемой (R4a, R6, R6a) —
   тест: `TypicalShooter.PowerGrid.Receivers.ActiveInSlot`
-- [ ] 9b. Компонент выдаёт / забирает абилку активного приёмника по событию сети, ввод по слоту; воздушная атака
+- [x] 9b. Компонент выдаёт / забирает абилку активного приёмника по событию сети, ввод по слоту; воздушная атака
   только в воздухе (кнопка прыжка) и вниз (R5, R5b) — тест: `TypicalShooter.PowerGrid.Receivers.*`
 - [ ] 9c. Базовые параметры приёмника → атрибуты слота, нейтральный стартовый GE, стартовые предметы персонажа,
   чтобы стрельба в PIE работала (R5a) — тест: `TypicalShooter.PowerGrid.Receivers.*`, `TypicalShooter.Shooting.Flow`
@@ -206,6 +206,14 @@
   `IsItemPowered`, `GetConnectedItems(Receiver)`, `GetNodeItems` / `GetSolution`. Слоты: `GetSlotReceiver(Slot)` —
   приёмник в клетке слота (запитан или нет), `GetActiveReceiver(Slot)` — он же, если мощность ≥ его
   `RequiredPower` (иначе / пусто / не приёмник — `nullptr`), `GetItemSlot(Item)` — слот приёмника.
+- **Абилки приёмников** — `UReceiverAbilitiesComponent` (`Public/PowerGrid/ReceiverAbilitiesComponent.h`, только
+  сервер): на каждое изменение сети сверяет активный приёмник каждого слота; сменился — `ClearAbility` старой
+  спеки и `GiveAbility(Receiver.Ability)` с `SourceObject` = предмет и вводом слота (`GetInput`: основной →
+  `PrimaryAttack`, альтернативный → `AlternateAttack`, воздушный → `Jump`). Если абилка — `UAttackGameplayAbility`,
+  её инстансу ставится `Slot` (`ToAttackSlot`, тот же порядок): один класс абилки работает в любом слоте (R5b).
+  `UAttackGameplayAbility` в слоте `Air` активируется только в падении (`IsFalling`; на земле кнопку прыжка забирает
+  абилка прыжка) и стреляет строго вниз (`FVector::DownVector`). Персонажу компонент добавляется в 9c (вместе с
+  уходом от статически выданных атак).
   - Пока обоймы нет (итерация 11), источник с `AmmoType` считается с пустой обоймой и не работает (R9d).
 - **Стрельба без обоймы** (R9a): из `EAttackAttribute` / `UAttackAttributeSet` убраны `Ammo`, `ClipSize`,
   `ReloadTime`; удалены `UReloadGameplayAbility` и её подклассы, `EAttackInputID::Reload`, кнопка R / B, теги
@@ -255,6 +263,9 @@
   `AmmoSourceWithoutClip`, `OnCharacterAndContainer`.
 - `TypicalShooter.PowerGrid.Receivers.ActiveInSlot` (`Private/Tests/PowerGridReceiversTest.cpp`): запитанный приёмник в
   слоте, недопитанный, коннектор в слоте, приёмник вне слотов, перенос из слота.
+- `TypicalShooter.PowerGrid.Receivers.GrantsSlotAbility`, `.AirAttackOnlyAirborne` (`Private/Tests/PowerGridReceiverAbilitiesTest.cpp`,
+  AI-персонаж на полу): выдача абилки по слотам и вводам, перенос между слотами, снятие без питания; воздушная
+  атака не срабатывает на земле, в воздухе стреляет вниз.
 - `TypicalShooter.Movement.*` (`Private/Tests/MovementJumpTest.cpp`, тикающий мир с полом-коробкой, `ACharacter` с
   AI-контроллером): `AttributesDriveMovement` (старт из движения, атрибуты → `JumpZVelocity` / `AirControl`, кламп),
   `JumpAbility` (прыжок с земли с силой атрибута, отпускание завершает, в воздухе не активируется, после
