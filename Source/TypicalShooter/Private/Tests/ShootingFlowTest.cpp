@@ -13,7 +13,9 @@
 #include "GameFramework/Pawn.h"
 #include "GenericPlatform/GenericPlatformInputDeviceMapper.h"
 #include "InputKeyEventArgs.h"
+#include "Shooting/AmmoAttributeSet.h"
 #include "Shooting/AttackAttributeSet.h"
+#include "Shooting/ShootingTags.h"
 #include "Shooting/TargetDummy.h"
 #include "Tests/AutomationEditorCommon.h"
 #include "TypicalShooterPlayerController.h"
@@ -154,6 +156,10 @@ bool FShootingFlowTest::RunTest(const FString& Parameters)
 	{
 		TestEqual(TEXT("R reloads the primary clip"), State->Ammo(EAttackSlot::Primary), 30.f);
 		TestEqual(TEXT("R reloads the alternate clip"), State->Ammo(EAttackSlot::Alternate), 6.f);
+		TestEqual(TEXT("Primary reload takes one bullet from the reserve"),
+			State->Asc->GetNumericAttribute(UAmmoAttributeSet::GetReserveAttribute(ShootingTags::Ammo_Bullet)), 119.f);
+		TestEqual(TEXT("Alternate reload takes one particle from the reserve"),
+			State->Asc->GetNumericAttribute(UAmmoAttributeSet::GetReserveAttribute(ShootingTags::Ammo_Particle)), 23.f);
 	}, 2.5f);
 
 	// 5. No firing with the inventory open.

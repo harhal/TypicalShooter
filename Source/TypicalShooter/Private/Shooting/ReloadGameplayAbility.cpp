@@ -2,6 +2,7 @@
 
 #include "AbilitySystemComponent.h"
 #include "Engine/World.h"
+#include "Shooting/AmmoAttributeSet.h"
 #include "Shooting/AttackAttributeSet.h"
 #include "Shooting/ShootingTags.h"
 #include "TimerManager.h"
@@ -38,7 +39,7 @@ void UReloadGameplayAbility::ActivateAbility(const FGameplayAbilitySpecHandle Ha
 	}
 
 	const FAttackStats Stats = UAttackAttributeSet::ReadStats(*Asc, Slot);
-	if (Stats.Ammo >= Stats.ClipSize)
+	if (Stats.Ammo >= Stats.ClipSize || GetReserve(*Asc) <= 0)
 	{
 		Finish();
 		return;
@@ -76,9 +77,30 @@ void UReloadGameplayAbility::CompleteReload()
 	if (UAbilitySystemComponent* Asc = GetAbilitySystemComponentFromActorInfo())
 	{
 		const FAttackStats Stats = UAttackAttributeSet::ReadStats(*Asc, Slot);
-		Asc->SetNumericAttributeBase(UAttackAttributeSet::GetAttribute(Slot, EAttackAttribute::Ammo), Stats.ClipSize);
+		const int32 Loaded = FMath::Min(Stats.ClipSize - Stats.Ammo, GetReserve(*Asc));
+		if (Loaded > 0)
+		{
+			Asc->SetNumericAttributeBase(UAttackAttributeSet::GetAttribute(Slot, EAttackAttribute::Ammo), Stats.Ammo + Loaded);
+			const FGameplayAttribute Reserve = GetReserveAttribute(*Asc);
+			if (Reserve.IsValid())
+			{
+				Asc->SetNumericAttributeBase(Reserve, Asc->GetNumericAttribute(Reserve) - Loaded);
+			}
+		}
 	}
 	Finish();
+}
+
+FGameplayAttribute UReloadGameplayAbility::GetReserveAttribute(const UAbilitySystemComponent& Asc) const
+{
+	const FGameplayAttribute Attribute = UAmmoAttributeSet::GetReserveAttribute(AmmoType);
+	return Attribute.IsValid() && Asc.HasAttributeSetForAttribute(Attribute) ? Attribute : FGameplayAttribute();
+}
+
+int32 UReloadGameplayAbility::GetReserve(const UAbilitySystemComponent& Asc) const
+{
+	const FGameplayAttribute Attribute = GetReserveAttribute(Asc);
+	return Attribute.IsValid() ? FMath::FloorToInt32(Asc.GetNumericAttribute(Attribute)) : MAX_int32;
 }
 
 void UReloadGameplayAbility::Finish()

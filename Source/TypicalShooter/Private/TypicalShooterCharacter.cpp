@@ -10,6 +10,7 @@
 #include "InteractionComponent.h"
 #include "InventoryComponent.h"
 #include "TS_GAS.h"
+#include "Shooting/AmmoAttributeSet.h"
 #include "Shooting/AttackAttributeSet.h"
 #include "Shooting/AttackInputComponent.h"
 #include "Shooting/DefaultAttackSetup.h"
@@ -54,6 +55,7 @@ ATypicalShooterCharacter::ATypicalShooterCharacter()
 	Gas->SetIsReplicated(true);
 	Gas->SetReplicationMode(EGameplayEffectReplicationMode::Mixed);
 	AttackAttributes = CreateDefaultSubobject<UAttackAttributeSet>(TEXT("Attack Attributes"));
+	AmmoAttributes = CreateDefaultSubobject<UAmmoAttributeSet>(TEXT("Ammo Attributes"));
 
 	Muzzle = CreateDefaultSubobject<USceneComponent>(TEXT("Muzzle"));
 	Muzzle->SetupAttachment(FirstPersonCameraComponent);

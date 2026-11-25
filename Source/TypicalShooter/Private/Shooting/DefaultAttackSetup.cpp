@@ -1,6 +1,8 @@
 #include "Shooting/DefaultAttackSetup.h"
 
+#include "Shooting/AmmoAttributeSet.h"
 #include "Shooting/AttackAttributeSet.h"
+#include "Shooting/ShootingTags.h"
 
 UPrimaryAttackAbility::UPrimaryAttackAbility()
 {
@@ -19,11 +21,13 @@ UAlternateAttackAbility::UAlternateAttackAbility()
 UPrimaryReloadAbility::UPrimaryReloadAbility()
 {
 	Slot = EAttackSlot::Primary;
+	AmmoType = ShootingTags::Ammo_Bullet;
 }
 
 UAlternateReloadAbility::UAlternateReloadAbility()
 {
 	Slot = EAttackSlot::Alternate;
+	AmmoType = ShootingTags::Ammo_Particle;
 }
 
 UDefaultAttackStatsEffect::UDefaultAttackStatsEffect()
@@ -62,6 +66,19 @@ UDefaultAttackStatsEffect::UDefaultAttackStatsEffect()
 	AddOverride(S, A::DamageLoss, 1.f);
 	AddOverride(S, A::PatternScale, 1.f);
 	AddOverride(S, A::DamagePhysical, 6.f);
+
+	// Reserve ammo (R15).
+	AddReserve(ShootingTags::Ammo_Bullet, 120.f);
+	AddReserve(ShootingTags::Ammo_Particle, 24.f);
+}
+
+void UDefaultAttackStatsEffect::AddReserve(const FGameplayTag& AmmoType, const float Value)
+{
+	FGameplayModifierInfo Modifier;
+	Modifier.Attribute = UAmmoAttributeSet::GetReserveAttribute(AmmoType);
+	Modifier.ModifierOp = EGameplayModOp::Override;
+	Modifier.ModifierMagnitude = FGameplayEffectModifierMagnitude(FScalableFloat(Value));
+	Modifiers.Add(Modifier);
 }
 
 void UDefaultAttackStatsEffect::AddOverride(const EAttackSlot Slot, const EAttackAttribute Attribute, const float Value)

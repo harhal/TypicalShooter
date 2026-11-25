@@ -9,6 +9,7 @@
 #include "Shooting/AttackTypes.h"
 #include "TypicalShooterCharacter.generated.h"
 
+class UAmmoAttributeSet;
 class UAttackAttributeSet;
 class UAttackInputComponent;
 class UGameplayEffect;
@@ -75,6 +76,10 @@ protected:
 
 	UPROPERTY()
 	TObjectPtr<UAttackAttributeSet> AttackAttributes;
+
+	/** Reserve ammo per kind, spent by reloads. */
+	UPROPERTY()
+	TObjectPtr<UAmmoAttributeSet> AmmoAttributes;
 
 	/** Attack / reload abilities granted on the server at BeginPlay. */
 	UPROPERTY(EditDefaultsOnly, Category ="Attack")

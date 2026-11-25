@@ -1,5 +1,5 @@
-// Reload of one attack slot: after the slot's reload time fills the clip. The slot's attack can't fire meanwhile.
-// Reserve ammo is unlimited for now.
+// Reload of one attack slot: after the slot's reload time moves rounds of AmmoType from the reserve
+// (UAmmoAttributeSet) into the clip. The slot's attack can't fire meanwhile; no reserve, no reload.
 
 #pragma once
 
@@ -19,6 +19,10 @@ public:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Attack")
 	EAttackSlot Slot = EAttackSlot::Primary;
 
+	/** Ammo kind loaded into this slot's clip (Ammo.*), taken from UAmmoAttributeSet. None = unlimited reserve. */
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Attack", meta = (Categories = "Ammo"))
+	FGameplayTag AmmoType;
+
 	/** Activates the reload ability of Slot granted to Asc, if any. Server. */
 	static bool TryReload(UAbilitySystemComponent& Asc, EAttackSlot Slot);
 
@@ -30,6 +34,12 @@ public:
 private:
 	void CompleteReload();
 	void Finish();
+
+	/** Reserve attribute of AmmoType if Asc has it; invalid = unlimited reserve. */
+	FGameplayAttribute GetReserveAttribute(const UAbilitySystemComponent& Asc) const;
+
+	/** Rounds available for this reload (MAX_int32 when unlimited). */
+	int32 GetReserve(const UAbilitySystemComponent& Asc) const;
 
 	FTimerHandle Timer;
 	bool bReloadingTagAdded = false;

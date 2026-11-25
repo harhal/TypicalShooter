@@ -1,6 +1,6 @@
 # Стрельба: абилки основной и альтернативной атаки
 
-**Статус:** 🟡 В работе (ветка `feature/shooting-abilities`): игрок стреляет (ЛКМ / ПКМ / RT / LT), перезаряжается (R / B), снаряды бьют манекены; запас патронов бесконечный, предметы на атаки пока не влияют.
+**Статус:** 🟡 В работе (ветка `feature/shooting-abilities`): игрок стреляет (ЛКМ / ПКМ / RT / LT), перезаряжается из запаса патронов (R / B), снаряды бьют манекены; предметы на атаки пока не влияют.
 
 ## Что это
 Шутерная составляющая. Основная и альтернативная атаки — это GAS-абилки, которые запускаются
@@ -110,7 +110,7 @@ R17 подтверждено; дистанции от дула, дуло — `Mu
   тест: `TypicalShooter.Shooting.Ability.Reload`
 - [x] 8. Подключение к персонажу: выдача абилок и стартового GE, ввод ЛКМ/ПКМ/R + геймпад, блокировка при
   открытом инвентаре (R4, R17) — тест: `TypicalShooter.Shooting.Flow` (PIE, стрельба по мишени)
-- [ ] 9. Запас боеприпасов: набор атрибутов по видам, вид у атаки, перезарядка тратит запас (R15) —
+- [x] 9. Запас боеприпасов: набор атрибутов по видам, вид у атаки, перезарядка тратит запас (R15) —
   тест: `TypicalShooter.Shooting.Ability.ReloadFromReserve`
 - [ ] 10. Модификаторы атак от предметов в инвентаре: GE на атрибуты + замена паттерна (R5, R16) — тест: `TypicalShooter.Shooting.ItemModifiers`
 - [ ] 11. Модификаторы выстрела с требованием боеприпаса: списание за выстрел, отключение при нехватке (R15a) —
@@ -177,7 +177,11 @@ R17 подтверждено; дистанции от дула, дуло — `Mu
   Таймеры — `FTimerManager` мира, сбрасываются в `EndAbility`.
 - Перезарядка — [`UReloadGameplayAbility`](../../Source/TypicalShooter/Public/Shooting/ReloadGameplayAbility.h) (`Slot`,
   `ServerOnly`): полная обойма — сразу завершается; иначе вешает loose-тег `State.Reloading.<Слот>` (блокирует атаку
-  слота в её `CanActivateAbility`), ждёт время перезарядки и заполняет обойму до размера. Запас пока бесконечный.
+  слота в её `CanActivateAbility`), ждёт время перезарядки и переносит в обойму `min(не хватает, запас)` патронов
+  вида `AmmoType` (пустой тег — бесконечный запас). Нет запаса — перезарядка не начинается.
+- Запас — [`UAmmoAttributeSet`](../../Source/TypicalShooter/Public/Shooting/AmmoAttributeSet.h): `Reserve_Bullet / Battery /
+  Grenade / Radiator / Particle` (целые, ≥ 0, реплицируются с уведомлением для HUD); `GetReserveAttribute(Ammo.*)`.
+  Теги видов — `Ammo.*` в ShootingTags.h.
 - Персонаж — [`ATypicalShooterCharacter`](../../Source/TypicalShooter/Public/TypicalShooterCharacter.h): `UTS_GAS`
   (реплицируется, Mixed) + `UAttackAttributeSet`, компонент `Muzzle` (тег `Muzzle`, у камеры: 40 вперёд, 15 вправо,
   12 вниз). На сервере в `BeginPlay` выдаёт `AttackAbilities` (класс + `EAttackInputID` как InputID спека) и
@@ -185,7 +189,8 @@ R17 подтверждено; дистанции от дула, дуло — `Mu
   `UPrimaryAttackAbility` («автомат»: обойма 30, очередь 1, интервал 0.12 с при удержании, 10 физ., 8000 см/с),
   `UAlternateAttackAbility` («дробовик»: 7 снарядов — центр + кольцо 3°, обойма 6, интервал 0.8 с, 6 физ. за
   снаряд, 3000 см, гравитация 0.2), `UPrimaryReloadAbility` / `UAlternateReloadAbility` (1.5 / 2 с) и
-  `UDefaultAttackStatsEffect` (мгновенный GE с Override; обойма раньше патронов).
+  `UDefaultAttackStatsEffect` (мгновенный GE с Override; обойма раньше патронов; запас: 120 пуль, 24 частицы).
+  Вид боеприпасов: автомат — `Ammo.Bullet`, дробовик — `Ammo.Particle` (в классах перезарядки).
 - Ввод — [`UAttackInputComponent`](../../Source/TypicalShooter/Public/Shooting/AttackInputComponent.h) на персонаже,
   действия и контекст генерируются в коде (как у инвентаря): ЛКМ / RT → `PrimaryAttack`, ПКМ / LT →
   `AlternateAttack`, R / B → `Reload` (обе перезарядки). Нажатие → `AbilityLocalInputPressed(InputID)` (активирует
@@ -223,9 +228,10 @@ R17 подтверждено; дистанции от дула, дуло — `Mu
 `.PatternProjectiles`, `.AlternateSlot`.
 [ShootingReloadTest.cpp](../../Source/TypicalShooter/Private/Tests/ShootingReloadTest.cpp) (общий стрелок —
 [ShootingAbilityFixture.h](../../Source/TypicalShooter/Private/Tests/ShootingAbilityFixture.h)):
-`TypicalShooter.Shooting.Ability.Reload`, `.ReloadSkipsFullClip`, `.AutoReloadWhenEmpty`, `.EmptyPressReloads`.
+`TypicalShooter.Shooting.Ability.Reload`, `.ReloadSkipsFullClip`, `.AutoReloadWhenEmpty`, `.EmptyPressReloads`,
+`.ReloadFromReserve`, `.NoReloadWithoutReserve`.
 [ShootingFlowTest.cpp](../../Source/TypicalShooter/Private/Tests/ShootingFlowTest.cpp) — PIE `TypicalShooter.Shooting.Flow`:
-стартовые обоймы 30 / 6, ЛКМ и ПКМ попадают по манекену перед игроком, R перезаряжает обе атаки, с открытым
+стартовые обоймы 30 / 6, ЛКМ и ПКМ попадают по манекену перед игроком, R перезаряжает обе атаки (и списывает запас), с открытым
 инвентарём ЛКМ не стреляет, RT стреляет.
 
 ## Ограничения и грабли

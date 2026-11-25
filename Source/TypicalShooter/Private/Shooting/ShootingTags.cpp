@@ -18,6 +18,13 @@ namespace ShootingTags
 		return Types;
 	}
 
+	UE_DEFINE_GAMEPLAY_TAG_COMMENT(Ammo, "Ammo", "Parent of all ammo kinds");
+	UE_DEFINE_GAMEPLAY_TAG_COMMENT(Ammo_Bullet, "Ammo.Bullet", "Bullets");
+	UE_DEFINE_GAMEPLAY_TAG_COMMENT(Ammo_Battery, "Ammo.Battery", "Batteries");
+	UE_DEFINE_GAMEPLAY_TAG_COMMENT(Ammo_Grenade, "Ammo.Grenade", "Grenades");
+	UE_DEFINE_GAMEPLAY_TAG_COMMENT(Ammo_Radiator, "Ammo.Radiator", "Radiators");
+	UE_DEFINE_GAMEPLAY_TAG_COMMENT(Ammo_Particle, "Ammo.Particle", "Particles");
+
 	UE_DEFINE_GAMEPLAY_TAG_COMMENT(State_Reloading_Primary, "State.Reloading.Primary", "Primary attack is reloading");
 	UE_DEFINE_GAMEPLAY_TAG_COMMENT(State_Reloading_Alternate, "State.Reloading.Alternate", "Alternate attack is reloading");
 

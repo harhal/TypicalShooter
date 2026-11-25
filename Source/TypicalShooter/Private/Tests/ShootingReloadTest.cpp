@@ -4,6 +4,7 @@
 
 #if WITH_DEV_AUTOMATION_TESTS
 
+#include "Shooting/ShootingTags.h"
 #include "Tests/ShootingAbilityFixture.h"
 
 IMPLEMENT_SIMPLE_AUTOMATION_TEST(FReloadManualTest, "TypicalShooter.Shooting.Ability.Reload", ShootingTest::Flags)
@@ -59,6 +60,49 @@ bool FReloadAutoTest::RunTest(const FString& Parameters)
 	TestTrue(TEXT("Running out of rounds starts a reload"), Shooter.IsReloading());
 	F.Tick(0.3f);
 	TestEqual(TEXT("Clip refilled"), Shooter.Get(EAttackSlot::Alternate, EAttackAttribute::Ammo), 30.f);
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FReloadFromReserveTest, "TypicalShooter.Shooting.Ability.ReloadFromReserve", ShootingTest::Flags)
+bool FReloadFromReserveTest::RunTest(const FString& Parameters)
+{
+	using namespace ShootingAbilityTest;
+	const ShootingTest::FWorldFixture F(true);
+	const FShooter Shooter(F, EAttackSlot::Primary);
+	Shooter.Setup(EAttackSlot::Primary, 3.f, 1.f, 0.f, 0.f, 1.f);
+	Shooter.Set(EAttackSlot::Primary, EAttackAttribute::ClipSize, 10.f);
+	Shooter.SetAmmoType(ShootingTags::Ammo_Battery);
+
+	Shooter.SetReserve(ShootingTags::Ammo_Battery, 100.f);
+	Shooter.SetReserve(ShootingTags::Ammo_Bullet, 50.f);
+	Shooter.Reload();
+	TestEqual(TEXT("Clip filled from the reserve"), Shooter.Get(EAttackSlot::Primary, EAttackAttribute::Ammo), 10.f);
+	TestEqual(TEXT("Only the missing rounds leave the reserve"), Shooter.Reserve(ShootingTags::Ammo_Battery), 93.f);
+	TestEqual(TEXT("Other ammo kinds are untouched"), Shooter.Reserve(ShootingTags::Ammo_Bullet), 50.f);
+
+	Shooter.Set(EAttackSlot::Primary, EAttackAttribute::Ammo, 2.f);
+	Shooter.SetReserve(ShootingTags::Ammo_Battery, 5.f);
+	Shooter.Reload();
+	TestEqual(TEXT("A short reserve loads what it has"), Shooter.Get(EAttackSlot::Primary, EAttackAttribute::Ammo), 7.f);
+	TestEqual(TEXT("Reserve emptied"), Shooter.Reserve(ShootingTags::Ammo_Battery), 0.f);
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FReloadEmptyReserveTest, "TypicalShooter.Shooting.Ability.NoReloadWithoutReserve", ShootingTest::Flags)
+bool FReloadEmptyReserveTest::RunTest(const FString& Parameters)
+{
+	using namespace ShootingAbilityTest;
+	const ShootingTest::FWorldFixture F(true);
+	const FShooter Shooter(F, EAttackSlot::Alternate);
+	Shooter.Setup(EAttackSlot::Alternate, 0.f, 1.f, 0.f, 0.f, 1.f);
+	Shooter.Set(EAttackSlot::Alternate, EAttackAttribute::ReloadTime, 1.f);
+	Shooter.SetAmmoType(ShootingTags::Ammo_Grenade);
+	Shooter.SetReserve(ShootingTags::Ammo_Grenade, 0.f);
+
+	Shooter.Reload();
+	TestFalse(TEXT("No reload without reserve"), Shooter.IsReloading());
+	Shooter.Activate();
+	TestFalse(TEXT("Empty press with no reserve does not start a reload"), Shooter.IsReloading());
 	return true;
 }
 

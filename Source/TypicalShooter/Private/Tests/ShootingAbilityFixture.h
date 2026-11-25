@@ -6,6 +6,7 @@
 #if WITH_DEV_AUTOMATION_TESTS
 
 #include "AbilitySystemComponent.h"
+#include "Shooting/AmmoAttributeSet.h"
 #include "Shooting/AttackAttributeSet.h"
 #include "Shooting/AttackGameplayAbility.h"
 #include "Shooting/HealthAttributeSet.h"
@@ -28,6 +29,7 @@ namespace ShootingAbilityTest
 			AActor* Actor = Asc->GetOwner();
 			Asc->InitAbilityActorInfo(Actor, Actor);
 			Asc->AddSpawnedAttribute(NewObject<UAttackAttributeSet>(Actor));
+			Asc->AddSpawnedAttribute(NewObject<UAmmoAttributeSet>(Actor));
 
 			Handle = Asc->GiveAbility(FGameplayAbilitySpec(UAttackGameplayAbility::StaticClass()));
 			UAttackGameplayAbility* Ability = Cast<UAttackGameplayAbility>(Spec()->GetPrimaryInstance());
@@ -45,6 +47,22 @@ namespace ShootingAbilityTest
 		bool IsActive() const { return Spec()->IsActive(); }
 		bool IsReloading() const { return ReloadSpec()->IsActive(); }
 		void SetHeld(const bool bHeld) const { Spec()->InputPressed = bHeld; }
+
+		/** Reloads take this ammo kind from the reserve (default: none = unlimited). */
+		void SetAmmoType(const FGameplayTag& AmmoType) const
+		{
+			Cast<UReloadGameplayAbility>(ReloadSpec()->GetPrimaryInstance())->AmmoType = AmmoType;
+		}
+
+		void SetReserve(const FGameplayTag& AmmoType, const float Value) const
+		{
+			Asc->SetNumericAttributeBase(UAmmoAttributeSet::GetReserveAttribute(AmmoType), Value);
+		}
+
+		float Reserve(const FGameplayTag& AmmoType) const
+		{
+			return Asc->GetNumericAttribute(UAmmoAttributeSet::GetReserveAttribute(AmmoType));
+		}
 
 		void Set(const EAttackSlot Slot, const EAttackAttribute Attribute, const float Value) const
 		{

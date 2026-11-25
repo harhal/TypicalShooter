@@ -58,4 +58,5 @@ public:
 
 private:
 	void AddOverride(EAttackSlot Slot, EAttackAttribute Attribute, float Value);
+	void AddReserve(const FGameplayTag& AmmoType, float Value);
 };
