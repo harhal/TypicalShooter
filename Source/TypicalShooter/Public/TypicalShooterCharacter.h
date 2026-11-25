@@ -13,7 +13,10 @@ class UAmmoAttributeSet;
 class UAttackAttributeSet;
 class UAttackInputComponent;
 class UAttackModifiersComponent;
+class UGameplayAbility;
 class UGameplayEffect;
+class UMovementAttributeSet;
+class UMovementAttributesComponent;
 class UInteractionComponent;
 class UInventoryComponent;
 class UPowerGridComponent;
@@ -87,9 +90,20 @@ protected:
 	UPROPERTY()
 	TObjectPtr<UAttackAttributeSet> AttackAttributes;
 
-	/** Reserve ammo per kind, spent by reloads. */
+	/** Reserve ammo per kind. */
 	UPROPERTY()
 	TObjectPtr<UAmmoAttributeSet> AmmoAttributes;
+
+	/** Jump power / air control (power grid R6c), mirrored into the movement component by MovementAttributes. */
+	UPROPERTY()
+	TObjectPtr<UMovementAttributeSet> MovementAttributeSet;
+
+	UPROPERTY(VisibleAnywhere, Category ="Movement")
+	TObjectPtr<UMovementAttributesComponent> MovementAttributes;
+
+	/** Ground jump, granted on the server at BeginPlay and bound to the jump button (EAttackInputID::Jump). */
+	UPROPERTY(EditDefaultsOnly, Category ="Movement")
+	TSubclassOf<UGameplayAbility> JumpAbility;
 
 	/** Attack abilities granted on the server at BeginPlay. */
 	UPROPERTY(EditDefaultsOnly, Category ="Attack")
@@ -105,7 +119,7 @@ public:
 protected:
 	virtual void BeginPlay() override;
 
-	/** Server: grants AttackAbilities and applies AttackDefaultsEffect. */
+	/** Server: grants AttackAbilities and JumpAbility, applies AttackDefaultsEffect. */
 	void GrantAttacks();
 
 	/** Called from Input Actions for movement input */

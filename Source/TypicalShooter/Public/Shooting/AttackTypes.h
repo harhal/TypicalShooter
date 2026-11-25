@@ -49,6 +49,8 @@ enum class EAttackInputID : uint8
 	None = 0,
 	PrimaryAttack = 1,
 	AlternateAttack = 2,
+	/** Ground jump (power grid R6c); bound to the character's JumpAction. */
+	Jump = 3,
 };
 
 /** An ability granted to the character on spawn, bound to an input. */

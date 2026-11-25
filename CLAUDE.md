@@ -229,6 +229,14 @@ feature's doc and updated as they change; finished features are merged into `mai
   Items change attacks via `FAttackModifier_ItemFragment` (GE while held, pattern replacement, ammo-gated
   per-shot bonuses), applied by `UAttackModifiersComponent`. `ATargetDummy` is a refilling GAS target;
   `UAmmoCounterWidget` (in `BP_HUD`) shows the reserve per ammo kind.
+- **Movement** (`Public|Private/Movement/`): the ground jump is `UJumpGameplayAbility` (LocalPredicted, only when
+  `CanJump()`), granted as `EAttackInputID::Jump`; `JumpAction` goes through the ASC. `UMovementAttributeSet`
+  (`JumpVelocity`, `AirControl`) is mirrored into `CharacterMovement` by `UMovementAttributesComponent` (server seeds
+  it from the movement component's configured values).
+- **Power grid** (`Public|Private/PowerGrid/`, doc `Docs/Features/ItemPowerGrid.md`, in progress): items with
+  `FPowerGrid_ItemFragment` (source / receiver / connector, open hex faces, rotated by `UInventoryItem::Rotation`)
+  form a grid solved by `PowerGridSolver::Solve`; `UPowerGridComponent` (character and containers) re-solves on
+  every layout event. Receiver slots: `ReceiverSlots` (cells (0,-1) / (-1,1) / (1,0)).
 
 ## Current state (as of 2026-11-25)
 

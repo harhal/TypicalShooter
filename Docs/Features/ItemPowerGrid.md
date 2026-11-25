@@ -1,6 +1,6 @@
 # Энергосеть предметов: источники, приёмники, коннекторы
 
-**Статус:** 🟡 В работе: готовы итерации 1–7a из 16 (фрагмент энергосети).
+**Статус:** 🟡 В работе: готовы итерации 1–8 из 16 (ядро сети, компонент, стрельба без обоймы, слот Air, прыжок-абилка).
 
 ## Что это
 Предметы в инвентаре персонажа образуют энергосеть на гекс-сетке. **Источники** выдают мощность через
@@ -140,8 +140,8 @@
 - [x] 7. Удаление атрибутов обоймы (патроны, размер, время перезарядки), абилок перезарядки и кнопки R / B; HUD
   показывает запас по видам (R9a) — тесты: `TypicalShooter.Shooting.Ability.NoClipLimit`, `.UI.AmmoText`, `.Flow`
 - [x] 7a. Атрибуты атаки: третий набор `Air_*`, атрибут отдачи (R5b, R5c) — тест: `TypicalShooter.Shooting.Attributes.*`
-- [ ] 8. Абилка прыжка с земли + атрибуты силы прыжка и управления в воздухе (R6c) —
-  тест: `TypicalShooter.Movement.JumpAbility`
+- [x] 8. Абилка прыжка с земли + атрибуты силы прыжка и управления в воздухе (R6c) —
+  тест: `TypicalShooter.Movement.*`, `TypicalShooter.Inventory.UIFlow` (пробел прыгает)
 - [ ] 9. Приёмник в слоте выдаёт абилку слота с его базовыми параметрами; без питания / вне слота — нет;
   воздушная атака вниз только в воздухе; отдача (R5, R5a, R6, R6a) — тест: `TypicalShooter.PowerGrid.Receivers.*`
 - [ ] 10. Эффекты по порогам мощности: глобальные и на абилки подключённых приёмников по слоту (R13, R14, R14a) —
@@ -208,6 +208,15 @@
   состав, что у `Primary_*` / `Alternate_*`); новый параметр `EAttackAttribute::Recoil` (≥ 0, по умолчанию 0) →
   `FAttackStats::Recoil` — изменение скорости стрелка против направления выстрела, см/с; применяется в итерации 9.
   Соответствие `EReceiverSlot` → `EAttackSlot` (порядок совпадает) появится там же.
+- **Прыжок** (R6c, `Public/Movement/`): `UMovementAttributeSet` — `JumpVelocity` (сила прыжка, см/с) и `AirControl`
+  (≥ 0, реплицируются с уведомлением). `UMovementAttributesComponent` на персонаже: на сервере в `BeginPlay` берёт
+  стартовые значения из `CharacterMovement` (`JumpZVelocity`, `AirControl` — настройка BP остаётся источником
+  базы), затем каждое изменение атрибута (эффекты, репликация на клиентах) пишет обратно в движение — только
+  изменившийся атрибут. `UJumpGameplayAbility` (`LocalPredicted`, `InstancedPerActor`): активируется, только если
+  `ACharacter::CanJump()` (на земле; в воздухе кнопка прыжка свободна под воздушную атаку), прыгает на
+  управляющей машине (`Jump()` только при `IsLocallyControlled`), отпускание кнопки → `StopJumping` и конец
+  абилки. Персонаж выдаёт её с `EAttackInputID::Jump` (свойство `JumpAbility`), `JumpAction` (`IA_Jump`, пробел)
+  идёт через `DoJumpStart/End` → `AbilityLocalInputPressed/Released`.
 
 ## Настройка контента
 Планируемый набор (итерация 15):
@@ -237,6 +246,12 @@
   `FindsInventoryAndSolves` (предметы до регистрации, предметы без фрагмента), `RecalculatesOnLayoutChange`
   (добавление, поворот закрывает / открывает соединение, удаление источника, рассылка изменений),
   `AmmoSourceWithoutClip`, `OnCharacterAndContainer`.
+- `TypicalShooter.Movement.*` (`Private/Tests/MovementJumpTest.cpp`, тикающий мир с полом-коробкой, `ACharacter` с
+  AI-контроллером): `AttributesDriveMovement` (старт из движения, атрибуты → `JumpZVelocity` / `AirControl`, кламп),
+  `JumpAbility` (прыжок с земли с силой атрибута, отпускание завершает, в воздухе не активируется, после
+  приземления снова можно), `OnCharacter`. Кнопка прыжка в PIE — `TypicalShooter.Inventory.UIFlow`.
+- Стрельба без обоймы и слот `Air` — тесты в [Стрельбе](Shooting.md) (`Ability.NoClipLimit`, `UI.AmmoText`, `Flow`,
+  `Attributes.AirSlot`, `Attributes.Recoil`).
 
 ## Ограничения и грабли
 - Сетка инвентаря — гексы с острой вершиной вверх (pointy-top, `UHhGridFunctions::HexAxialCoordToPoint`):

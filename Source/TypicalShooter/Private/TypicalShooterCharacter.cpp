@@ -9,6 +9,9 @@
 #include "InputActionValue.h"
 #include "InteractionComponent.h"
 #include "InventoryComponent.h"
+#include "Movement/JumpGameplayAbility.h"
+#include "Movement/MovementAttributeSet.h"
+#include "Movement/MovementAttributesComponent.h"
 #include "PowerGrid/PowerGridComponent.h"
 #include "TS_GAS.h"
 #include "Shooting/AmmoAttributeSet.h"
@@ -58,6 +61,9 @@ ATypicalShooterCharacter::ATypicalShooterCharacter()
 	Gas->SetReplicationMode(EGameplayEffectReplicationMode::Mixed);
 	AttackAttributes = CreateDefaultSubobject<UAttackAttributeSet>(TEXT("Attack Attributes"));
 	AmmoAttributes = CreateDefaultSubobject<UAmmoAttributeSet>(TEXT("Ammo Attributes"));
+	MovementAttributeSet = CreateDefaultSubobject<UMovementAttributeSet>(TEXT("Movement Attribute Set"));
+	MovementAttributes = CreateDefaultSubobject<UMovementAttributesComponent>(TEXT("Movement Attributes"));
+	JumpAbility = UJumpGameplayAbility::StaticClass();
 
 	Muzzle = CreateDefaultSubobject<USceneComponent>(TEXT("Muzzle"));
 	Muzzle->SetupAttachment(FirstPersonCameraComponent);
@@ -129,6 +135,10 @@ void ATypicalShooterCharacter::GrantAttacks()
 			Gas->GiveAbility(FGameplayAbilitySpec(Grant.Ability, 1, static_cast<int32>(Grant.Input), this));
 		}
 	}
+	if (JumpAbility)
+	{
+		Gas->GiveAbility(FGameplayAbilitySpec(JumpAbility, 1, static_cast<int32>(EAttackInputID::Jump), this));
+	}
 	if (AttackDefaultsEffect)
 	{
 		Gas->ApplyGameplayEffectToSelf(AttackDefaultsEffect.GetDefaultObject(), 1.f, Gas->MakeEffectContext());
@@ -179,12 +189,11 @@ void ATypicalShooterCharacter::DoMove(float Right, float Forward)
 
 void ATypicalShooterCharacter::DoJumpStart()
 {
-	// pass Jump to the character
-	Jump();
+	// The jump is a GAS ability (power grid R6c): the press activates it, the release ends it.
+	Gas->AbilityLocalInputPressed(static_cast<int32>(EAttackInputID::Jump));
 }
 
 void ATypicalShooterCharacter::DoJumpEnd()
 {
-	// pass StopJumping to the character
-	StopJumping();
+	Gas->AbilityLocalInputReleased(static_cast<int32>(EAttackInputID::Jump));
 }
