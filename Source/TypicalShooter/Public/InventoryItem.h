@@ -40,8 +40,12 @@ protected:
 	UPROPERTY(VisibleAnywhere, meta = (BaseStruct = "/Script/TypicalShooter.InventoryItemManifest"), Replicated)
 	FInstancedStruct ItemManifest;
 
-	UPROPERTY(VisibleAnywhere, Replicated)
+	UPROPERTY(VisibleAnywhere, ReplicatedUsing = OnRep_Rotation)
 	int32 Rotation = 0;
+
+	/** Clients: report the rotation through the owning inventory's layout event. */
+	UFUNCTION()
+	void OnRep_Rotation();
 
 private:
 	const FInfo_ItemFragment* GetInfoFragment() const;

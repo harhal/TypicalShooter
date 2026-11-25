@@ -143,6 +143,19 @@ bool UInventoryComponent::TransferItem(UInventoryItem* Item, UInventoryComponent
 	return ensure(bMoved);
 }
 
+bool UInventoryComponent::RotateItem(UInventoryItem* Item, const int32 Steps)
+{
+	const AActor* Owner = GetOwner();
+	if (!Item || !Owner || !Owner->HasAuthority() || !GetItemLocation(Item).IsSet())
+	{
+		return false;
+	}
+
+	FScopedLayoutBatch Batch(this);
+	Item->SetRotation(Item->GetRotation() + Steps);
+	return true;
+}
+
 bool UInventoryComponent::TransferItemToFreeLocation(UInventoryItem* Item, UInventoryComponent* Target)
 {
 	const TOptional<FHhAxialCoord> FreeLocation = Target ? Target->FindFreeLocation() : TOptional<FHhAxialCoord>();
@@ -250,22 +263,26 @@ void UInventoryComponent::FlushLayoutChange()
 	}
 
 	InventoryLayout::FLayout Before;
-	Before.Reserve(ReportedLayout.Num());
-	for (const TPair<TWeakObjectPtr<UInventoryItem>, FHhAxialCoord>& Reported : ReportedLayout)
+	InventoryLayout::FRotations RotationsBefore;
+	for (const TPair<TWeakObjectPtr<UInventoryItem>, FReportedPlacement>& Reported : ReportedLayout)
 	{
 		if (UInventoryItem* Item = Reported.Key.Get())
 		{
-			Before.Add(Item, Reported.Value);
+			Before.Add(Item, Reported.Value.Location);
+			RotationsBefore.Add(Item, Reported.Value.Rotation);
 		}
 	}
 
 	InventoryLayout::FLayout After;
+	InventoryLayout::FRotations RotationsAfter;
 	for (const TPair<UInventoryItem*, FHhAxialCoord>& Placed : GetPlacedItems())
 	{
 		After.Add(Placed.Key, Placed.Value);
+		RotationsAfter.Add(Placed.Key, Placed.Key->GetRotation());
 	}
 
 	FInventoryLayoutChange Change = InventoryLayout::Diff(Before, After);
+	Change.Rotations = InventoryLayout::DiffRotations(RotationsBefore, RotationsAfter);
 	if (Change.IsEmpty())
 	{
 		return;
@@ -274,7 +291,7 @@ void UInventoryComponent::FlushLayoutChange()
 	ReportedLayout.Reset();
 	for (const TPair<UInventoryItem*, FHhAxialCoord>& Placed : After)
 	{
-		ReportedLayout.Add(Placed.Key, Placed.Value);
+		ReportedLayout.Add(Placed.Key, { Placed.Value, RotationsAfter[Placed.Key] });
 	}
 
 	LayoutChangedDelegate.Broadcast(this, Change);

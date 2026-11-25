@@ -1,6 +1,6 @@
 # Энергосеть предметов: источники, приёмники, коннекторы
 
-**Статус:** 🟡 В работе: готовы итерации 1–2 из 15 (фрагмент энергосети).
+**Статус:** 🟡 В работе: готовы итерации 1–3 из 15 (фрагмент энергосети).
 
 ## Что это
 Предметы в инвентаре персонажа образуют энергосеть на гекс-сетке. **Источники** выдают мощность через
@@ -130,8 +130,8 @@
   тест: `TypicalShooter.PowerGrid.Faces.*`
 - [x] 2. Состояние экземпляра предмета (поворот) + сохранение при переносе между инвентарями (R3a) —
   тест: `TypicalShooter.Inventory.Core.TransferKeepsItemState` (обойма в состоянии предмета — в итерации 11)
-- [ ] 3. Поворот как серверная операция инвентаря + событие раскладки (R3) —
-  тест: `TypicalShooter.Inventory.Core.RotateItem`
+- [x] 3. Поворот как серверная операция инвентаря + событие раскладки (R3) —
+  тест: `TypicalShooter.Inventory.Core.RotateItem` (клиентский запрос / RPC — в итерации 13)
 - [ ] 4. Слоты приёмников: координаты, какой слот у клетки (R4, R4a) — тест: `TypicalShooter.PowerGrid.Slots`
 - [ ] 5. Расчёт сети (чистая функция над раскладкой): соединения, мощность узлов, различные источники,
   циклы, запитанные пути к приёмникам (R2a, R2b, R7, R8, R10–R12a, R14) — тест: `TypicalShooter.PowerGrid.Solver.*`
@@ -149,7 +149,8 @@
   выключение пустого, зарядка после простоя (R9, R9b–R9d) — тест: `TypicalShooter.PowerGrid.SourceAmmo.*`
 - [ ] 12. Удаление `FAttackModifier_ItemFragment` / `UAttackModifiersComponent`, перевод тестов стрельбы на
   приёмники (R14b) — тест: `TypicalShooter.Shooting.*` (обновить)
-- [ ] 13. Ввод поворота Q / RT в экране инвентаря (R3) — тест: `TypicalShooter.Inventory.UIFlow` (дополнить)
+- [ ] 13. Запрос поворота с клиента (`RequestRotateItem` → серверный RPC с `CanAccessInventory`) и ввод
+  Q / RT в экране инвентаря (R3) — тест: `TypicalShooter.Inventory.UIFlow` (дополнить)
 - [ ] 14. UI сети: грани, слоты, соединения, мощность, обойма; инфо-панель (R16) — тест: `TypicalShooter.Inventory.UI.PowerGrid*`
 - [ ] 15. Контент: стартовый набор персонажа и тестовые предметы в контейнерах — тест: `TypicalShooter.PowerGrid.Flow` (PIE)
   + ручная проверка
@@ -170,6 +171,12 @@
   нормализует по модулю 6). Перенос между инвентарями (`UInventoryComponent::TransferItem`, включая свап)
   пересоздаёт объект через `UInventoryItem::CloneFor(Outer)` — манифест + состояние экземпляра, а не только
   манифест. Перемещение внутри инвентаря сохраняет сам объект.
+- **Поворот в инвентаре**: `UInventoryComponent::RotateItem(Item, Steps = 1)` — только сервер, предмет должен
+  лежать в этом инвентаре. Событие раскладки (`FInventoryLayoutChange`) получило `Rotations`
+  (`FInventoryItemRotationChange`: `Item`, `PrevRotation`, `Rotation`; `FindRotation`) — предметы, которые были и
+  остались в инвентаре, но повернулись (`InventoryLayout::DiffRotations`); снимок раскладки компонента хранит
+  поворот. Полный оборот события не даёт. На клиентах `UInventoryItem::OnRep_Rotation` вызывает
+  `FlushLayoutChange` инвентаря-владельца (outer) — не проверено по сети.
 
 ## Настройка контента
 Планируемый набор (итерация 15):
@@ -185,6 +192,10 @@
   значения фрагмента по умолчанию, грани фрагмента с поворотом, поиск фрагмента в манифесте.
 - `TypicalShooter.Inventory.Core.ItemRotation`, `.TransferKeepsItemState` (`Private/Tests/InventoryItemStateTest.cpp`):
   нормализация поворота; поворот сохраняется при перемещении, переносе в другой инвентарь и свапе между инвентарями.
+- `TypicalShooter.Inventory.Layout.DiffRotations`, `Inventory.Core.RotateItem`, `.RotateNeedsAuthority`
+  (`Private/Tests/InventoryRotateTest.cpp`): дифф поворотов; поворот на шаг / несколько шагов, одно событие с
+  `Rotations` без перемещений и соседей, полный оборот без события, отказ для чужого предмета, `nullptr` и без
+  authority.
 
 ## Ограничения и грабли
 - Сетка инвентаря — гексы с острой вершиной вверх (pointy-top, `UHhGridFunctions::HexAxialCoordToPoint`):

@@ -37,9 +37,12 @@ public:
 	/**
 	 * Server only. Puts Item (placed in this inventory) at Location of Target, which may be this inventory.
 	 * If the target cell is occupied the two items swap places. Between inventories the item is re-created
-	 * from its manifest in the target (items carry no state besides the manifest yet).
+	 * in the target with UInventoryItem::CloneFor (manifest + instance state).
 	 */
 	bool TransferItem(UInventoryItem* Item, UInventoryComponent* Target, const FHhAxialCoord& Location);
+
+	/** Server only. Rotates Item (placed in this inventory) clockwise by Steps * 60 degrees (power grid R3). */
+	bool RotateItem(UInventoryItem* Item, int32 Steps = 1);
 
 	/** Server only. TransferItem to Target's first free cell; false if Target is full. */
 	bool TransferItemToFreeLocation(UInventoryItem* Item, UInventoryComponent* Target);
@@ -120,6 +123,12 @@ private:
 	/** Open FScopedLayoutBatch count. */
 	int32 LayoutBatchDepth = 0;
 
+	struct FReportedPlacement
+	{
+		FHhAxialCoord Location;
+		int32 Rotation = 0;
+	};
+
 	/** Layout as last reported to layout listeners. */
-	TMap<TWeakObjectPtr<UInventoryItem>, FHhAxialCoord> ReportedLayout;
+	TMap<TWeakObjectPtr<UInventoryItem>, FReportedPlacement> ReportedLayout;
 };

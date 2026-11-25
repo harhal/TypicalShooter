@@ -161,7 +161,7 @@ feature's doc and updated as they change; finished features are merged into `mai
 - **Layout events** (`InventoryLayout.h`): besides the per-item delegates (used by the UI presenter, may see
   intermediate states), `UInventoryComponent::GetLayoutChangedDelegate()` / BP `OnLayoutChanged` fire **once
   per atomic operation**, when the inventory is consistent, with an `FInventoryLayoutChange` = placement
-  changes + per-item neighbour changes (hex distance 1, `GainedNeighbors` / `LostNeighbors`, reported from both
+  changes + rotation changes (`RotateItem`, server-only) + per-item neighbour changes (hex distance 1, `GainedNeighbors` / `LostNeighbors`, reported from both
   sides). Computed by diffing against the last reported layout (`InventoryLayout::Diff`). Server: every
   mutation opens a `FScopedLayoutBatch` (transfer/swap = one event per inventory); wrap multi-step operations
   explicitly (`ServerTakeItems` does). Clients: flushed in `FInventoryArray::PostReplicatedReceive`.

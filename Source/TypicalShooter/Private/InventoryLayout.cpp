@@ -14,8 +14,30 @@ const FInventoryItemNeighborsChange* FInventoryLayoutChange::FindNeighbors(const
 	return Neighbors.FindByPredicate([Item](const FInventoryItemNeighborsChange& Change) { return Change.Item == Item; });
 }
 
+const FInventoryItemRotationChange* FInventoryLayoutChange::FindRotation(const UInventoryItem* Item) const
+{
+	return Rotations.FindByPredicate([Item](const FInventoryItemRotationChange& Change) { return Change.Item == Item; });
+}
+
 namespace InventoryLayout
 {
+	TArray<FInventoryItemRotationChange> DiffRotations(const FRotations& Before, const FRotations& After)
+	{
+		TArray<FInventoryItemRotationChange> Changes;
+		for (const TPair<UInventoryItem*, int32>& New : After)
+		{
+			const int32* Old = Before.Find(New.Key);
+			if (Old && *Old != New.Value)
+			{
+				FInventoryItemRotationChange& Change = Changes.AddDefaulted_GetRef();
+				Change.Item = New.Key;
+				Change.PrevRotation = *Old;
+				Change.Rotation = New.Value;
+			}
+		}
+		return Changes;
+	}
+
 	static const FHhAxialCoord NeighborOffsets[6] = {
 		FHhAxialCoord(1, 0), FHhAxialCoord(1, -1), FHhAxialCoord(0, -1),
 		FHhAxialCoord(-1, 0), FHhAxialCoord(-1, 1), FHhAxialCoord(0, 1)

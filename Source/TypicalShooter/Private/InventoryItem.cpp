@@ -3,6 +3,7 @@
 
 #include "InventoryItem.h"
 #include "Engine/Texture2D.h"
+#include "InventoryComponent.h"
 #include "Net/UnrealNetwork.h"
 
 void UInventoryItem::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
@@ -22,6 +23,14 @@ void UInventoryItem::SetRotation(const int32 NewRotation)
 {
 	constexpr int32 NumSteps = 6;
 	Rotation = ((NewRotation % NumSteps) + NumSteps) % NumSteps;
+}
+
+void UInventoryItem::OnRep_Rotation()
+{
+	if (UInventoryComponent* Inventory = GetTypedOuter<UInventoryComponent>())
+	{
+		Inventory->FlushLayoutChange();
+	}
 }
 
 UInventoryItem* UInventoryItem::CloneFor(UObject* Outer) const
