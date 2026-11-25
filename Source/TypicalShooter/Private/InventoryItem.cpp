@@ -10,11 +10,26 @@ void UInventoryItem::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLi
 	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
 
 	DOREPLIFETIME(ThisClass, ItemManifest);
+	DOREPLIFETIME(ThisClass, Rotation);
 }
 
 void UInventoryItem::SetItemManifest(const FInventoryItemManifest& NewItemManifest)
 {
 	ItemManifest = FInstancedStruct::Make(NewItemManifest);
+}
+
+void UInventoryItem::SetRotation(const int32 NewRotation)
+{
+	constexpr int32 NumSteps = 6;
+	Rotation = ((NewRotation % NumSteps) + NumSteps) % NumSteps;
+}
+
+UInventoryItem* UInventoryItem::CloneFor(UObject* Outer) const
+{
+	UInventoryItem* Clone = NewObject<UInventoryItem>(Outer);
+	Clone->ItemManifest = ItemManifest;
+	Clone->Rotation = Rotation;
+	return Clone;
 }
 
 const FInfo_ItemFragment* UInventoryItem::GetInfoFragment() const

@@ -154,7 +154,8 @@ feature's doc and updated as they change; finished features are merged into `mai
   19 cells; `IsLocationInBounds`, `FindFreeLocation` in spiral order). Mutations
   (`AddItem/RemoveItem/MoveItem/TransferItem/TransferItemToFreeLocation`) are **server-only**.
   `TransferItem` moves within or between inventories; an occupied target cell swaps the two items;
-  between inventories the item is re-created from its manifest (items have no other state yet).
+  between inventories the item is re-created via `UInventoryItem::CloneFor` (manifest + instance state:
+  `Rotation`, power grid).
   `FInventoryArray`'s copy operations deliberately skip its `Owner` (BP actors copy component
   properties from the CDO; regression test `Core.OwnerSurvivesArchetypeCopy`).
 - **Layout events** (`InventoryLayout.h`): besides the per-item delegates (used by the UI presenter, may see

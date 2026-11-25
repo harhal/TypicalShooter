@@ -29,9 +29,19 @@ public:
 	virtual FText GetItemDescription() const override;
 	virtual int32 GetItemCount() const override;
 
+	/** Clockwise 60-degree steps, 0..5 (power grid R3). Server-side state, replicated. */
+	int32 GetRotation() const { return Rotation; }
+	void SetRotation(int32 NewRotation);
+
+	/** New item with the same manifest and instance state, owned by Outer (for moving between inventories, R3a). */
+	UInventoryItem* CloneFor(UObject* Outer) const;
+
 protected:
 	UPROPERTY(VisibleAnywhere, meta = (BaseStruct = "/Script/TypicalShooter.InventoryItemManifest"), Replicated)
 	FInstancedStruct ItemManifest;
+
+	UPROPERTY(VisibleAnywhere, Replicated)
+	int32 Rotation = 0;
 
 private:
 	const FInfo_ItemFragment* GetInfoFragment() const;

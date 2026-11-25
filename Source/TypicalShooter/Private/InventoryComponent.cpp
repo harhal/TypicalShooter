@@ -124,16 +124,10 @@ bool UInventoryComponent::TransferItem(UInventoryItem* Item, UInventoryComponent
 		return Occupant == Item || InventoryArray.SwapItems(Item, Occupant);
 	}
 
-	// Between inventories items are re-created from their manifests: an item object is a replicated subobject
-	// of exactly one component.
-	const FInventoryItemManifest* ItemManifest = Item->GetItemManifest();
-	const FInventoryItemManifest MovedManifest = ItemManifest ? *ItemManifest : FInventoryItemManifest();
-	TOptional<FInventoryItemManifest> OccupantManifest;
-	if (Occupant)
-	{
-		const FInventoryItemManifest* Manifest = Occupant->GetItemManifest();
-		OccupantManifest = Manifest ? *Manifest : FInventoryItemManifest();
-	}
+	// Between inventories items are re-created (manifest + instance state): an item object is a replicated
+	// subobject of exactly one component.
+	UInventoryItem* MovedItem = Item->CloneFor(Target);
+	UInventoryItem* ReturnedOccupant = Occupant ? Occupant->CloneFor(this) : nullptr;
 
 	RemoveItem(Item);
 	if (Occupant)
@@ -141,10 +135,10 @@ bool UInventoryComponent::TransferItem(UInventoryItem* Item, UInventoryComponent
 		Target->RemoveItem(Occupant);
 	}
 
-	const bool bMoved = Target->AddItem(MovedManifest, Location) != nullptr;
-	if (OccupantManifest.IsSet())
+	const bool bMoved = Target->AddItem(MovedItem, Location);
+	if (ReturnedOccupant)
 	{
-		AddItem(OccupantManifest.GetValue(), SourceLocation.GetValue());
+		AddItem(ReturnedOccupant, SourceLocation.GetValue());
 	}
 	return ensure(bMoved);
 }
