@@ -12,6 +12,7 @@
 #include "Movement/JumpGameplayAbility.h"
 #include "Movement/MovementAttributeSet.h"
 #include "Movement/MovementAttributesComponent.h"
+#include "PowerGrid/PowerEffectsComponent.h"
 #include "PowerGrid/PowerGridComponent.h"
 #include "PowerGrid/ReceiverAbilitiesComponent.h"
 #include "TS_GAS.h"
@@ -80,6 +81,7 @@ ATypicalShooterCharacter::ATypicalShooterCharacter()
 	InventoryComponent = CreateDefaultSubobject<UInventoryComponent>(TEXT("Inventory Component"));
 	PowerGrid = CreateDefaultSubobject<UPowerGridComponent>(TEXT("Power Grid"));
 	ReceiverAbilities = CreateDefaultSubobject<UReceiverAbilitiesComponent>(TEXT("Receiver Abilities"));
+	PowerEffects = CreateDefaultSubobject<UPowerEffectsComponent>(TEXT("Power Effects"));
 	StartingItems = DefaultLoadout::MakeStartingItems();
 }
 

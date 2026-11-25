@@ -239,6 +239,9 @@ feature's doc and updated as they change; finished features are merged into `mai
   `FPowerGrid_ItemFragment` (source / receiver / connector, open hex faces, rotated by `UInventoryItem::Rotation`)
   form a grid solved by `PowerGridSolver::Solve`; `UPowerGridComponent` (character and containers) re-solves on
   every layout event. Receiver slots: `ReceiverSlots` (cells (0,-1) / (-1,1) / (1,0)).
+  Item threshold effects: `FPowerEffects_ItemFragment` (steps: `Threshold`, `CharacterEffect` GE, slot-agnostic
+  `AttackBonuses`) applied by `UPowerEffectsComponent` (server) — character GEs for reached steps, attack bonuses of
+  items connected to each active receiver summed into one `UAttackBonusEffect` (SetByCaller per slot attribute).
 
 ## Current state (as of 2026-11-25)
 

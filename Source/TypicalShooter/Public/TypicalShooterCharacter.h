@@ -21,6 +21,7 @@ class UMovementAttributesComponent;
 class UInteractionComponent;
 class UInventoryComponent;
 class UPowerGridComponent;
+class UPowerEffectsComponent;
 class UReceiverAbilitiesComponent;
 class UInputComponent;
 class USkeletalMeshComponent;
@@ -110,6 +111,10 @@ protected:
 	/** Grants the abilities of the receivers working in the power grid's slots (attacks come only from them). */
 	UPROPERTY(VisibleAnywhere, Category ="Attack")
 	TObjectPtr<UReceiverAbilitiesComponent> ReceiverAbilities;
+
+	/** Applies the threshold effects of the inventory items (power grid R13-R14a). */
+	UPROPERTY(VisibleAnywhere, Category ="Attack")
+	TObjectPtr<UPowerEffectsComponent> PowerEffects;
 
 	/** Applied once on the server at BeginPlay: starting reserve ammo (attack attributes stay neutral). */
 	UPROPERTY(EditDefaultsOnly, Category ="Attack")
