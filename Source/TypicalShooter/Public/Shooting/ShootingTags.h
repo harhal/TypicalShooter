@@ -14,4 +14,7 @@ namespace ShootingTags
 	TYPICALSHOOTER_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(Damage_Type_Plasma);
 	TYPICALSHOOTER_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(Damage_Type_Ice);
 	TYPICALSHOOTER_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(Damage_Type_Radiation);
+
+	/** All concrete damage types, in a fixed order. */
+	TYPICALSHOOTER_API TConstArrayView<FGameplayTag> GetDamageTypes();
 }

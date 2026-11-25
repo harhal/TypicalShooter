@@ -1,6 +1,6 @@
 # Стрельба: абилки основной и альтернативной атаки
 
-**Статус:** 🟡 В работе (ветка `feature/shooting-abilities`): есть приём урона простыми получателями; стрельбы ещё нет.
+**Статус:** 🟡 В работе (ветка `feature/shooting-abilities`): есть приём урона (простой и GAS-получатели); стрельбы ещё нет.
 
 ## Что это
 Шутерная составляющая. Основная и альтернативная атаки — это GAS-абилки, которые запускаются
@@ -53,6 +53,9 @@ GameplayEffect'ы на цель / на себя при попадании.
   - GAS-получатель: применяет к ASC владельца GameplayEffect урона (SetByCaller по тегу типа урона),
     уменьшающий атрибут здоровья;
   - простой получатель без GAS (простреливаемые стены, ящики): своё число прочности, событие при нуле.
+- R13a. **Мишень-манекен** (`ATargetDummy`) для проверки стрельбы: GAS-здоровье, над ним надпись
+  «здоровье / максимум», каждое попадание пишется в лог; манекен не умирает — при нуле здоровье сразу
+  восстанавливается до максимума, растёт счётчик «поражений».
 - R14. Урон и все решения о попадании считаются **на сервере**; снаряды спавнятся на сервере и реплицируются.
 
 **Боеприпасы и снаряжение**
@@ -90,15 +93,17 @@ R17 подтверждено; дистанции от дула, дуло — `Mu
 ## План итераций
 - [x] 1. Теги типов урона + интерфейс получателя урона + `FShotDamage` (урон по тегам типов) + простой получатель с прочностью —
   тест: `TypicalShooter.Shooting.Damage.SimpleReceiver`
-- [ ] 2. Атрибут здоровья + GE урона (SetByCaller) + GAS-получатель —
-  тест: `TypicalShooter.Shooting.Damage.GasReceiver`
-- [ ] 3. Наборы атрибутов основной/альтернативной атаки + клампы (R1–R3) —
+- [x] 2. Атрибут здоровья + GE урона (SetByCaller) + GAS-получатель —
+  тест: `TypicalShooter.Shooting.Damage.GasReceiver`, `.HealthClamp`
+- [ ] 3. Мишень-манекен: GAS-здоровье, надпись со здоровьем, восстановление при нуле (R13a) —
+  тест: `TypicalShooter.Shooting.TargetDummy.*`
+- [ ] 4. Актор снаряда: гравитация, предел дистанции, урон, потеря урона и пробитие (R7–R9) —
+  тест: `TypicalShooter.Shooting.Projectile.*` (игровой мир без PIE, снаряды по манекенам)
+- [ ] 5. Наборы атрибутов основной/альтернативной атаки + клампы (R1–R3) —
   тест: `TypicalShooter.Shooting.Attributes.*`
-- [ ] 4. Математика выстрела: направления снарядов по паттерну и масштабу, направление от дула к точке
+- [ ] 5a. Математика выстрела: направления снарядов по паттерну и масштабу, направление от дула к точке
   прицела, точка появления (R5, R6) —
   тест: `TypicalShooter.Shooting.Pattern.*`
-- [ ] 5. Актор снаряда: гравитация, предел дистанции, урон, потеря урона и пробитие (R6–R9) —
-  тест: `TypicalShooter.Shooting.Projectile.*` (игровой мир без PIE)
 - [ ] 6. Абилка атаки (слот основная/альтернативная): трата патрона, спавн снарядов, очередь и интервалы (R10, R11) —
   тест: `TypicalShooter.Shooting.Ability.Burst`
 - [ ] 7. Абилка перезарядки с бесконечным запасом + автоперезарядка на пустой обойме (R11, R12) —
@@ -123,6 +128,14 @@ R17 подтверждено; дистанции от дула, дуло — `Mu
   получатель без GAS: прочность `MaxDurability` (выставляется в `InitializeComponent`), все типы урона
   отнимаются суммой; при нуле один раз `OnDepleted` (BP) / `GetDepletedDelegate` (C++), опционально
   `bDestroyOwnerOnDepleted`.
+- GAS-урон: [`UHealthAttributeSet`](../../Source/TypicalShooter/Public/Shooting/HealthAttributeSet.h) —
+  `Health` / `MaxHealth` (реплицируются, `Health` клампится в [0, Max]) и мета-атрибут `IncomingDamage`.
+  [`UShotDamageEffect`](../../Source/TypicalShooter/Public/Shooting/ShotDamageEffect.h) — мгновенный GE, по
+  модификатору на каждый тип урона: SetByCaller с тегом `Damage.Type.*` → `IncomingDamage`; в
+  `PostGameplayEffectExecute` сумма вычитается из `Health` и `IncomingDamage` обнуляется (сюда же лягут
+  сопротивления). [`UGasDamageReceiverComponent`](../../Source/TypicalShooter/Public/Shooting/GasDamageReceiverComponent.h)
+  находит ASC владельца, проставляет все типы (отсутствующие = 0) и применяет `DamageEffect` к нему; в контекст
+  эффекта кладутся инстигатор и хит.
 
 ## Настройка контента
 Простреливаемая стена / ящик: добавить актору компонент `Simple Damage Receiver`, задать `Max Durability`
@@ -132,6 +145,7 @@ R17 подтверждено; дистанции от дула, дуло — `Mu
 [ShootingDamageTest.cpp](../../Source/TypicalShooter/Private/Tests/ShootingDamageTest.cpp) (игровой мир без PIE,
 фикстура [ShootingTestFixture.h](../../Source/TypicalShooter/Private/Tests/ShootingTestFixture.h)):
 `TypicalShooter.Shooting.Damage.ShotDamageAmounts`, `.SimpleReceiver`, `.SimpleReceiverDestroysOwner`.
+[ShootingGasDamageTest.cpp](../../Source/TypicalShooter/Private/Tests/ShootingGasDamageTest.cpp): `TypicalShooter.Shooting.Damage.HealthClamp`, `.GasReceiver`.
 
 ## Ограничения и грабли
 
