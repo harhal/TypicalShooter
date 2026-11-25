@@ -30,6 +30,10 @@ public:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Attack")
 	TSubclassOf<AShotProjectile> ProjectileClass;
 
+	/** False = a shot spawns nothing and only applies recoil (the double jump receiver's ability). */
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Attack")
+	bool bSpawnsProjectiles = true;
+
 	/** The air slot works only while the avatar character is airborne (power grid R5). */
 	virtual bool CanActivateAbility(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo,
 		const FGameplayTagContainer* SourceTags, const FGameplayTagContainer* TargetTags,

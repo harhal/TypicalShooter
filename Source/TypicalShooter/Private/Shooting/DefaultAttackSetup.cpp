@@ -17,6 +17,12 @@ UAlternateAttackAbility::UAlternateAttackAbility()
 		FVector2D(-3.f, 0.f), FVector2D(-1.5f, -2.6f), FVector2D(1.5f, -2.6f) };
 }
 
+UDoubleJumpAbility::UDoubleJumpAbility()
+{
+	Slot = EAttackSlot::Air;
+	bSpawnsProjectiles = false;
+}
+
 UDefaultAttackStatsEffect::UDefaultAttackStatsEffect()
 {
 	DurationPolicy = EGameplayEffectDurationType::Instant;

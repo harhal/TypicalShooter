@@ -30,7 +30,7 @@ namespace DefaultLoadout
 	TYPICALSHOOTER_API FInventoryItemManifest MakeRifleReceiver();
 	/** Receiver repeating the old alternate attack: 7-pellet shotgun, 6 physical per pellet, 3000 cm. */
 	TYPICALSHOOTER_API FInventoryItemManifest MakeShotgunReceiver();
-	/** Receiver for the air slot: a weak shot straight down whose recoil is a double jump (900 cm/s up). */
+	/** Recoil-only receiver (no projectile, 900 cm/s away from the aim): in the air slot it is a double jump. */
 	TYPICALSHOOTER_API FInventoryItemManifest MakeDoubleJumpReceiver();
 
 	TYPICALSHOOTER_API TArray<FStartingInventoryItem> MakeStartingItems();

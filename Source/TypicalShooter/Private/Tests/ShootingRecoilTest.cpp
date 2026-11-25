@@ -6,6 +6,8 @@
 #if WITH_DEV_AUTOMATION_TESTS
 
 #include "GameFramework/CharacterMovementComponent.h"
+#include "PowerGrid/DefaultLoadout.h"
+#include "PowerGrid/ReceiverSlots.h"
 #include "Tests/PowerGridTestFixture.h"
 
 namespace ShootingRecoilTest
@@ -58,6 +60,25 @@ bool FShootingNoRecoilTest::RunTest(const FString& Parameters)
 	TestTrue(TEXT("Shot fired"), A.Asc->TryActivateAbility(Primary));
 	F.Tick(1.f / 60.f);
 	TestTrue(TEXT("No recoil: the character stays put"), A.Character->GetCharacterMovement()->Velocity.IsNearlyZero(1.f));
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FShootingRecoilOnlyTest, "TypicalShooter.Shooting.Ability.DoubleJumpRecoilOnly", ShootingTest::Flags)
+bool FShootingRecoilOnlyTest::RunTest(const FString& Parameters)
+{
+	const ShootingTest::FWorldFixture F(true);
+	PowerGridTest::FArmed A(F);
+	// The double jump receiver placed in the primary slot: a shot is a pure push back, no projectile.
+	A.Inventory->AddItem(PowerGridTest::Manifest(EPowerItemType::Source), FHhAxialCoord(0, 0));
+	A.Inventory->AddItem(DefaultLoadout::MakeDoubleJumpReceiver(), ReceiverSlots::GetLocation(EReceiverSlot::Primary));
+	F.Tick(1.f);
+
+	const FGameplayAbilitySpec* Spec = A.FindSpec(EAttackInputID::PrimaryAttack);
+	TestTrue(TEXT("Double jump receiver works in the primary slot"), Spec && A.Asc->TryActivateAbility(Spec->Handle));
+	F.Tick(1.f / 60.f);
+	TestEqual(TEXT("The double jump ability spawns no projectile"), A.Projectiles.Num(), 0);
+	const float Vx = A.Character->GetCharacterMovement()->Velocity.X;
+	TestTrue(FString::Printf(TEXT("It only pushes the character back from the aim (vx %.0f)"), Vx), Vx < -300.f);
 	return true;
 }
 

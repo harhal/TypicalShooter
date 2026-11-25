@@ -143,6 +143,10 @@ FVector UAttackGameplayAbility::SpawnProjectiles(const FAttackStats& Stats) cons
 	Params.MaxTravelDistance = Stats.FireEndDistance - Stats.FireStartDistance;
 	Params.DamageLossPerHit = Stats.DamageLoss;
 
+	if (!bSpawnsProjectiles)
+	{
+		return AimDirection;
+	}
 	APawn* Instigator = Cast<APawn>(Avatar);
 	for (const FVector& Direction : ShotMath::ProjectileDirections(AimDirection, Pattern, Stats.PatternScale))
 	{

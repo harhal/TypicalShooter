@@ -1,5 +1,5 @@
 // Attack abilities of the starting receivers (power grid DefaultLoadout): a single-projectile ability and a
-// 7-pellet one (the slot comes from the receiver slot), plus the character's starting reserve ammo effect.
+// 7-pellet one, a recoil-only double jump (the slot comes from the receiver slot), plus the character's starting reserve ammo effect.
 
 #pragma once
 
@@ -26,6 +26,16 @@ class TYPICALSHOOTER_API UAlternateAttackAbility : public UAttackGameplayAbility
 
 public:
 	UAlternateAttackAbility();
+};
+
+/** Recoil only, no projectile: in the air slot it throws the character up, in other slots it pushes back from the aim. */
+UCLASS()
+class TYPICALSHOOTER_API UDoubleJumpAbility : public UAttackGameplayAbility
+{
+	GENERATED_BODY()
+
+public:
+	UDoubleJumpAbility();
 };
 
 /** Instant effect with the starting reserve ammo. Attack parameters are neutral until receivers work (power grid R5a). */
