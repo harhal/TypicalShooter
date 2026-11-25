@@ -108,7 +108,7 @@ feature's doc and updated as they change; finished features are merged into `mai
   info view without a window), `TypicalShooter.Inventory.UIFlow` (PIE), `HarhalHexagonalGrid.*` (pure math),
   `TypicalShooter.Shooting.*` (bare world, `Private/Tests/ShootingTestFixture.h`; `FWorldFixture(true)` marks
   the world as playing and `Tick` steps it — bumps `GFrameCounter`, since tick functions run once per engine
-  frame; attack/reload tests share `ShootingAbilityFixture.h`), `TypicalShooter.Shooting.Flow` (PIE).
+  frame; attack tests share `ShootingAbilityFixture.h`, which counts shots by spawned projectiles), `TypicalShooter.Shooting.Flow` (PIE).
 - Headless alternative (editor closed, also runs the PIE test):
   `UnrealEditor-Cmd.exe <uproject> "-ExecCmds=Automation RunTests TypicalShooter.+HarhalHexagonalGrid.;Quit" -unattended -nopause -NullRHI -abslog=<file>`
   and grep the log for `Test Completed. Result=`.
@@ -216,18 +216,19 @@ feature's doc and updated as they change; finished features are merged into `mai
     the displayed item's icon / name / description; it lives in `BP_ItemInfo`.
 - Custom content lives in `Content/Inventory` (note the folder typo `Bllueprints`).
 - **Shooting** (`Public|Private/Shooting/`, doc `Docs/Features/Shooting.md`): primary / alternate attacks are
-  server-only GAS abilities (`UAttackGameplayAbility`, `UReloadGameplayAbility`, slot = `EAttackSlot`) driven by
+  server-only GAS abilities (`UAttackGameplayAbility`, slot = `EAttackSlot`) driven by
   attributes: `UAttackAttributeSet` (`Primary_*` / `Alternate_*`, read via `GetAttribute(Slot, EAttackAttribute)` /
-  `ReadStats`) and `UAmmoAttributeSet` (reserve per `Ammo.*` kind). A shot spends one clip round and spawns one
+  `ReadStats`) and `UAmmoAttributeSet` (reserve per `Ammo.*` kind). Attacks have no clip / reload (moved to power
+  grid sources, `Docs/Features/ItemPowerGrid.md`). A shot spawns one
   `AShotProjectile` per `FShotPattern` point from the `Muzzle`-tagged component towards the camera aim point;
   projectiles pierce (`UShotProjectileMovementComponent::HandleBlockingHit`) losing damage per hit. Damage goes
   through `IShotDamageReceiver` components (`UGasDamageReceiverComponent` → `UShotDamageEffect` SetByCaller per
   `Damage.Type.*` → `UHealthAttributeSet`; `USimpleDamageReceiverComponent` for plain durability). The character
   grants `AttackAbilities` + `UDefaultAttackStatsEffect` at BeginPlay; input is generated in
-  `UAttackInputComponent` (LMB / RT, RMB / LT, R / B → ability InputIDs, ignored while the inventory is open).
+  `UAttackInputComponent` (LMB / RT, RMB / LT → ability InputIDs, ignored while the inventory is open).
   Items change attacks via `FAttackModifier_ItemFragment` (GE while held, pattern replacement, ammo-gated
   per-shot bonuses), applied by `UAttackModifiersComponent`. `ATargetDummy` is a refilling GAS target;
-  `UAmmoCounterWidget` (in `BP_HUD`) shows clip / reserve.
+  `UAmmoCounterWidget` (in `BP_HUD`) shows the reserve per ammo kind.
 
 ## Current state (as of 2026-11-25)
 
@@ -273,7 +274,7 @@ Open work:
   projectile visuals, multiplayer check (see `Docs/Features/Shooting.md`).
 
 Shooting works in PIE: the player fires at three `ATargetDummy` on `Lvl_FirstPerson` (LMB rifle-like, RMB
-7-pellet spread, R reload from reserve), `BP_HUD.AmmoCounter` shows clip / reserve; covered by
+7-pellet spread), `BP_HUD.AmmoCounter` shows the ammo reserve; covered by
 `TypicalShooter.Shooting.Flow`.
 
 Verify blueprints headlessly with:

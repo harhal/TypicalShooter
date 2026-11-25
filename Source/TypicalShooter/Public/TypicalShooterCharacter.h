@@ -91,7 +91,7 @@ protected:
 	UPROPERTY()
 	TObjectPtr<UAmmoAttributeSet> AmmoAttributes;
 
-	/** Attack / reload abilities granted on the server at BeginPlay. */
+	/** Attack abilities granted on the server at BeginPlay. */
 	UPROPERTY(EditDefaultsOnly, Category ="Attack")
 	TArray<FAttackAbilityGrant> AttackAbilities;
 

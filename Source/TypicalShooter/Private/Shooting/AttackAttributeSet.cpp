@@ -57,7 +57,6 @@ namespace AttackAttributeSetPrivate
 		switch (Attribute)
 		{
 		case EAttackAttribute::FireEndDistance: return 10000.f;
-		case EAttackAttribute::ClipSize: return 1.f;
 		case EAttackAttribute::PatternScale: return 1.f;
 		case EAttackAttribute::ShotsPerBurst: return 1.f;
 		case EAttackAttribute::ProjectileSpeed: return 5000.f;
@@ -94,22 +93,18 @@ FGameplayAttribute UAttackAttributeSet::GetAttribute(const EAttackSlot Slot, con
 
 FAttackStats UAttackAttributeSet::ReadStats(const UAbilitySystemComponent& Asc, const EAttackSlot Slot)
 {
-	const float ClipSize = ClampValue(EAttackAttribute::ClipSize, Asc.GetNumericAttribute(GetAttribute(Slot, EAttackAttribute::ClipSize)), 0.f);
-	auto Read = [&Asc, Slot, ClipSize](const EAttackAttribute Attribute)
+	auto Read = [&Asc, Slot](const EAttackAttribute Attribute)
 	{
-		return ClampValue(Attribute, Asc.GetNumericAttribute(GetAttribute(Slot, Attribute)), ClipSize);
+		return ClampValue(Attribute, Asc.GetNumericAttribute(GetAttribute(Slot, Attribute)));
 	};
 
 	FAttackStats Stats;
 	Stats.FireStartDistance = Read(EAttackAttribute::FireStartDistance);
 	Stats.FireEndDistance = FMath::Max(Read(EAttackAttribute::FireEndDistance), Stats.FireStartDistance);
-	Stats.Ammo = FMath::FloorToInt32(Read(EAttackAttribute::Ammo));
-	Stats.ClipSize = FMath::RoundToInt32(ClipSize);
 	Stats.PatternScale = Read(EAttackAttribute::PatternScale);
 	Stats.ShotsPerBurst = FMath::RoundToInt32(Read(EAttackAttribute::ShotsPerBurst));
 	Stats.ShotInterval = Read(EAttackAttribute::ShotInterval);
 	Stats.BurstInterval = Read(EAttackAttribute::BurstInterval);
-	Stats.ReloadTime = Read(EAttackAttribute::ReloadTime);
 	Stats.ProjectileSpeed = Read(EAttackAttribute::ProjectileSpeed);
 	Stats.GravityScale = Read(EAttackAttribute::GravityScale);
 	Stats.DamageLoss = Read(EAttackAttribute::DamageLoss);
@@ -129,7 +124,7 @@ FAttackStats UAttackAttributeSet::ReadStats(const UAbilitySystemComponent& Asc, 
 
 void UAttackAttributeSet::AddToStats(FAttackStats& Stats, const EAttackAttribute Attribute, const float Value)
 {
-	auto Add = [Attribute, Value, &Stats](float& Field) { Field = ClampValue(Attribute, Field + Value, Stats.ClipSize); };
+	auto Add = [Attribute, Value](float& Field) { Field = ClampValue(Attribute, Field + Value); };
 	switch (Attribute)
 	{
 	case EAttackAttribute::FireStartDistance: Add(Stats.FireStartDistance); break;
@@ -137,12 +132,9 @@ void UAttackAttributeSet::AddToStats(FAttackStats& Stats, const EAttackAttribute
 	case EAttackAttribute::PatternScale: Add(Stats.PatternScale); break;
 	case EAttackAttribute::ShotInterval: Add(Stats.ShotInterval); break;
 	case EAttackAttribute::BurstInterval: Add(Stats.BurstInterval); break;
-	case EAttackAttribute::ReloadTime: Add(Stats.ReloadTime); break;
 	case EAttackAttribute::ProjectileSpeed: Add(Stats.ProjectileSpeed); break;
 	case EAttackAttribute::GravityScale: Add(Stats.GravityScale); break;
 	case EAttackAttribute::DamageLoss: Add(Stats.DamageLoss); break;
-	case EAttackAttribute::Ammo:
-	case EAttackAttribute::ClipSize:
 	case EAttackAttribute::ShotsPerBurst:
 	case EAttackAttribute::Count:
 		break; // not per-shot parameters
@@ -158,13 +150,10 @@ void UAttackAttributeSet::AddToStats(FAttackStats& Stats, const EAttackAttribute
 	Stats.FireEndDistance = FMath::Max(Stats.FireEndDistance, Stats.FireStartDistance);
 }
 
-float UAttackAttributeSet::ClampValue(const EAttackAttribute Attribute, const float Value, const float ClipSize)
+float UAttackAttributeSet::ClampValue(const EAttackAttribute Attribute, const float Value)
 {
 	switch (Attribute)
 	{
-	case EAttackAttribute::Ammo:
-		return FMath::Clamp(FMath::FloorToFloat(Value), 0.f, FMath::Max(ClipSize, 1.f));
-	case EAttackAttribute::ClipSize:
 	case EAttackAttribute::ShotsPerBurst:
 		return FMath::Max(FMath::RoundToFloat(Value), 1.f);
 	case EAttackAttribute::DamageLoss:
@@ -188,33 +177,13 @@ void UAttackAttributeSet::PreAttributeChange(const FGameplayAttribute& Attribute
 	ClampAttribute(Attribute, NewValue);
 }
 
-void UAttackAttributeSet::PostAttributeChange(const FGameplayAttribute& Attribute, const float OldValue, const float NewValue)
-{
-	Super::PostAttributeChange(Attribute, OldValue, NewValue);
-
-	EAttackSlot Slot;
-	EAttackAttribute Parameter;
-	if (!AttackAttributeSetPrivate::Find(Attribute, Slot, Parameter) || Parameter != EAttackAttribute::ClipSize)
-	{
-		return;
-	}
-	// A smaller clip drops the ammo that no longer fits.
-	const FGameplayAttribute Ammo = GetAttribute(Slot, EAttackAttribute::Ammo);
-	UAbilitySystemComponent* Asc = GetOwningAbilitySystemComponent();
-	if (Asc && Ammo.GetNumericValue(this) > NewValue)
-	{
-		Asc->SetNumericAttributeBase(Ammo, NewValue);
-	}
-}
-
 void UAttackAttributeSet::ClampAttribute(const FGameplayAttribute& Attribute, float& NewValue) const
 {
 	EAttackSlot Slot;
 	EAttackAttribute Parameter;
 	if (AttackAttributeSetPrivate::Find(Attribute, Slot, Parameter))
 	{
-		const float ClipSize = GetAttribute(Slot, EAttackAttribute::ClipSize).GetNumericValue(this);
-		NewValue = ClampValue(Parameter, NewValue, ClipSize);
+		NewValue = ClampValue(Parameter, NewValue);
 	}
 }
 
@@ -228,13 +197,10 @@ void UAttackAttributeSet::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& 
 
 	TS_REP_ATTACK_ATTRIBUTE(FireStartDistance)
 	TS_REP_ATTACK_ATTRIBUTE(FireEndDistance)
-	TS_REP_ATTACK_ATTRIBUTE(Ammo)
-	TS_REP_ATTACK_ATTRIBUTE(ClipSize)
 	TS_REP_ATTACK_ATTRIBUTE(PatternScale)
 	TS_REP_ATTACK_ATTRIBUTE(ShotsPerBurst)
 	TS_REP_ATTACK_ATTRIBUTE(ShotInterval)
 	TS_REP_ATTACK_ATTRIBUTE(BurstInterval)
-	TS_REP_ATTACK_ATTRIBUTE(ReloadTime)
 	TS_REP_ATTACK_ATTRIBUTE(ProjectileSpeed)
 	TS_REP_ATTACK_ATTRIBUTE(GravityScale)
 	TS_REP_ATTACK_ATTRIBUTE(DamageLoss)
@@ -246,24 +212,4 @@ void UAttackAttributeSet::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& 
 	TS_REP_ATTACK_ATTRIBUTE(DamageRadiation)
 
 #undef TS_REP_ATTACK_ATTRIBUTE
-}
-
-void UAttackAttributeSet::OnRep_Primary_Ammo(const FGameplayAttributeData& OldValue)
-{
-	GAMEPLAYATTRIBUTE_REPNOTIFY(UAttackAttributeSet, Primary_Ammo, OldValue);
-}
-
-void UAttackAttributeSet::OnRep_Primary_ClipSize(const FGameplayAttributeData& OldValue)
-{
-	GAMEPLAYATTRIBUTE_REPNOTIFY(UAttackAttributeSet, Primary_ClipSize, OldValue);
-}
-
-void UAttackAttributeSet::OnRep_Alternate_Ammo(const FGameplayAttributeData& OldValue)
-{
-	GAMEPLAYATTRIBUTE_REPNOTIFY(UAttackAttributeSet, Alternate_Ammo, OldValue);
-}
-
-void UAttackAttributeSet::OnRep_Alternate_ClipSize(const FGameplayAttributeData& OldValue)
-{
-	GAMEPLAYATTRIBUTE_REPNOTIFY(UAttackAttributeSet, Alternate_ClipSize, OldValue);
 }

@@ -1,5 +1,5 @@
 // End-to-end shooting check in Play In Editor: the player fires primary / alternate attacks at a target dummy
-// with real key events (UGameViewportClient::InputKey), reloads, and can't fire with the inventory open.
+// with real key events (UGameViewportClient::InputKey) and can't fire with the inventory open. Attacks have no clips.
 
 #include "Misc/AutomationTest.h"
 
@@ -16,6 +16,7 @@
 #include "Shooting/AmmoAttributeSet.h"
 #include "Shooting/AttackAttributeSet.h"
 #include "Shooting/ShootingTags.h"
+#include "Shooting/ShotProjectile.h"
 #include "Shooting/TargetDummy.h"
 #include "Tests/AutomationEditorCommon.h"
 #include "TypicalShooterPlayerController.h"
@@ -31,7 +32,10 @@ namespace ShootingFlowTest
 		TWeakObjectPtr<UAbilitySystemComponent> Asc;
 		TWeakObjectPtr<ATargetDummy> Dummy;
 		float SavedDamage = 0.f;
-		float SavedAmmo = 0.f;
+		/** Projectiles spawned in the PIE world since the pawn was resolved. */
+		int32 Projectiles = 0;
+		int32 SavedProjectiles = 0;
+		float SavedBulletReserve = 0.f;
 
 		bool TryResolve()
 		{
@@ -61,9 +65,22 @@ namespace ShootingFlowTest
 			Dummy = World->SpawnActor<ATargetDummy>(ViewLocation + ViewRotation.Vector() * 400.f, ViewRotation, Params);
 		}
 
-		float Ammo(const EAttackSlot Slot) const
+		float Attribute(const EAttackSlot Slot, const EAttackAttribute Attribute) const
 		{
-			return Asc->GetNumericAttribute(UAttackAttributeSet::GetAttribute(Slot, EAttackAttribute::Ammo));
+			return Asc->GetNumericAttribute(UAttackAttributeSet::GetAttribute(Slot, Attribute));
+		}
+
+		float BulletReserve() const
+		{
+			return Asc->GetNumericAttribute(UAmmoAttributeSet::GetReserveAttribute(ShootingTags::Ammo_Bullet));
+		}
+
+		static void CountProjectiles(const TSharedRef<FState>& State)
+		{
+			State->World->AddOnActorSpawnedHandler(FOnActorSpawned::FDelegate::CreateLambda([State](AActor* Spawned)
+			{
+				State->Projectiles += Spawned && Spawned->IsA<AShotProjectile>() ? 1 : 0;
+			}));
 		}
 
 		float Damage() const { return Dummy.IsValid() ? Dummy->GetTotalDamageTaken() : 0.f; }
@@ -105,7 +122,7 @@ bool FShootingFlowTest::RunTest(const FString& Parameters)
 	};
 	auto Save = [&Step, State]()
 	{
-		Step([State]() { State->SavedDamage = State->Damage(); State->SavedAmmo = State->Ammo(EAttackSlot::Primary); }, 0.0f);
+		Step([State]() { State->SavedDamage = State->Damage(); State->SavedProjectiles = State->Projectiles; }, 0.0f);
 	};
 
 	ADD_LATENT_AUTOMATION_COMMAND(FStartPIECommand(false));
@@ -115,6 +132,7 @@ bool FShootingFlowTest::RunTest(const FString& Parameters)
 		if (State->TryResolve())
 		{
 			State->bReady = true;
+			FState::CountProjectiles(State);
 			return true;
 		}
 		if (FPlatformTime::Seconds() - State->WaitStarted > 15.0)
@@ -128,39 +146,38 @@ bool FShootingFlowTest::RunTest(const FString& Parameters)
 	// 1. Default attack stats are applied, a dummy stands in front of the player.
 	Step([this, State]()
 	{
-		TestEqual(TEXT("Primary clip loaded from the defaults effect"), State->Ammo(EAttackSlot::Primary), 30.f);
-		TestEqual(TEXT("Alternate clip loaded from the defaults effect"), State->Ammo(EAttackSlot::Alternate), 6.f);
+		TestEqual(TEXT("Primary damage from the defaults effect"), State->Attribute(EAttackSlot::Primary, EAttackAttribute::DamagePhysical), 10.f);
+		TestEqual(TEXT("Alternate damage from the defaults effect"), State->Attribute(EAttackSlot::Alternate, EAttackAttribute::DamagePhysical), 6.f);
 		State->SpawnDummyInFront();
 	}, 0.5f);
 
 	// 2. LMB fires the primary attack at the dummy.
+	Save();
 	Tap(EKeys::LeftMouseButton);
 	Step([this, State]()
 	{
-		TestEqual(TEXT("LMB spends a primary round"), State->Ammo(EAttackSlot::Primary), 29.f);
+		TestEqual(TEXT("LMB fires one primary projectile"), State->Projectiles - State->SavedProjectiles, 1);
 		TestTrue(FString::Printf(TEXT("Primary projectile hits the dummy (damage %.1f)"), State->Damage()), State->Damage() > 0.f);
-		State->SavedDamage = State->Damage();
 	}, 0.4f);
 
 	// 3. RMB fires the alternate attack (spread of projectiles).
+	Save();
 	Tap(EKeys::RightMouseButton);
 	Step([this, State]()
 	{
-		TestEqual(TEXT("RMB spends an alternate round"), State->Ammo(EAttackSlot::Alternate), 5.f);
+		TestEqual(TEXT("RMB fires the seven-pellet alternate attack"), State->Projectiles - State->SavedProjectiles, 7);
 		TestTrue(TEXT("Alternate projectiles hit the dummy"), State->Damage() > State->SavedDamage);
+		State->SavedBulletReserve = State->BulletReserve();
 	}, 0.4f);
 
-	// 4. R reloads both attacks.
+	// 4. R no longer reloads anything (clips and reloads were removed, power grid R9a).
+	Save();
 	Tap(EKeys::R);
 	Step([this, State]()
 	{
-		TestEqual(TEXT("R reloads the primary clip"), State->Ammo(EAttackSlot::Primary), 30.f);
-		TestEqual(TEXT("R reloads the alternate clip"), State->Ammo(EAttackSlot::Alternate), 6.f);
-		TestEqual(TEXT("Primary reload takes one bullet from the reserve"),
-			State->Asc->GetNumericAttribute(UAmmoAttributeSet::GetReserveAttribute(ShootingTags::Ammo_Bullet)), 119.f);
-		TestEqual(TEXT("Alternate reload takes one particle from the reserve"),
-			State->Asc->GetNumericAttribute(UAmmoAttributeSet::GetReserveAttribute(ShootingTags::Ammo_Particle)), 23.f);
-	}, 2.5f);
+		TestEqual(TEXT("R fires nothing"), State->Projectiles, State->SavedProjectiles);
+		TestEqual(TEXT("R takes nothing from the reserve"), State->BulletReserve(), State->SavedBulletReserve);
+	}, 0.4f);
 
 	// 5. No firing with the inventory open.
 	Tap(EKeys::Tab);
@@ -169,7 +186,7 @@ bool FShootingFlowTest::RunTest(const FString& Parameters)
 	Step([this, State]()
 	{
 		TestTrue(TEXT("Inventory is open"), State->Controller->IsInventoryOpened());
-		TestEqual(TEXT("LMB does not fire with the inventory open"), State->Ammo(EAttackSlot::Primary), State->SavedAmmo);
+		TestEqual(TEXT("LMB does not fire with the inventory open"), State->Projectiles, State->SavedProjectiles);
 	}, 0.4f);
 	Tap(EKeys::Tab);
 
@@ -178,7 +195,7 @@ bool FShootingFlowTest::RunTest(const FString& Parameters)
 	Tap(EKeys::Gamepad_RightTrigger);
 	Step([this, State]()
 	{
-		TestEqual(TEXT("RT spends a primary round"), State->Ammo(EAttackSlot::Primary), State->SavedAmmo - 1.f);
+		TestEqual(TEXT("RT fires one primary projectile"), State->Projectiles - State->SavedProjectiles, 1);
 	}, 0.4f);
 
 	ADD_LATENT_AUTOMATION_COMMAND(FEndPlayMapCommand());

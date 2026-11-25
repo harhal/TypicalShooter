@@ -21,13 +21,10 @@ enum class EAttackAttribute : uint8
 {
 	FireStartDistance,
 	FireEndDistance,
-	Ammo,
-	ClipSize,
 	PatternScale,
 	ShotsPerBurst,
 	ShotInterval,
 	BurstInterval,
-	ReloadTime,
 	ProjectileSpeed,
 	GravityScale,
 	DamageLoss,
@@ -49,8 +46,6 @@ enum class EAttackInputID : uint8
 	None = 0,
 	PrimaryAttack = 1,
 	AlternateAttack = 2,
-	/** Every reload ability shares it: one button reloads both attacks. */
-	Reload = 3,
 };
 
 /** An ability granted to the character on spawn, bound to an input. */
@@ -75,13 +70,10 @@ struct TYPICALSHOOTER_API FAttackStats
 	UPROPERTY(BlueprintReadOnly, Category = "Attack") float FireStartDistance = 0.f;
 	/** Never less than FireStartDistance. */
 	UPROPERTY(BlueprintReadOnly, Category = "Attack") float FireEndDistance = 0.f;
-	UPROPERTY(BlueprintReadOnly, Category = "Attack") int32 Ammo = 0;
-	UPROPERTY(BlueprintReadOnly, Category = "Attack") int32 ClipSize = 1;
 	UPROPERTY(BlueprintReadOnly, Category = "Attack") float PatternScale = 1.f;
 	UPROPERTY(BlueprintReadOnly, Category = "Attack") int32 ShotsPerBurst = 1;
 	UPROPERTY(BlueprintReadOnly, Category = "Attack") float ShotInterval = 0.f;
 	UPROPERTY(BlueprintReadOnly, Category = "Attack") float BurstInterval = 0.f;
-	UPROPERTY(BlueprintReadOnly, Category = "Attack") float ReloadTime = 0.f;
 	UPROPERTY(BlueprintReadOnly, Category = "Attack") float ProjectileSpeed = 0.f;
 	UPROPERTY(BlueprintReadOnly, Category = "Attack") float GravityScale = 0.f;
 	UPROPERTY(BlueprintReadOnly, Category = "Attack") float DamageLoss = 1.f;

@@ -1,4 +1,4 @@
-// Tests for the HUD ammo text: "clip / reserve" per attack slot.
+// Tests for the HUD ammo text: the character's reserve per ammo kind (attacks have no clips, power grid R9a).
 
 #include "Misc/AutomationTest.h"
 
@@ -14,19 +14,16 @@ bool FAmmoDisplayTextTest::RunTest(const FString& Parameters)
 	using namespace ShootingAbilityTest;
 	const ShootingTest::FWorldFixture F(true);
 	const FShooter Shooter(F, EAttackSlot::Primary);
-	Shooter.Setup(EAttackSlot::Primary, 7.f, 1.f, 0.f, 0.f, 1.f);
 
-	TestEqual(TEXT("Unlimited reserve"), AmmoDisplay::GetSlotText(*Shooter.Asc, EAttackSlot::Primary).ToString(), FString(TEXT("7 / ∞")));
+	TestEqual(TEXT("No reserve: nothing to show"), AmmoDisplay::GetReserveText(*Shooter.Asc).ToString(), FString());
 
-	Shooter.SetAmmoType(ShootingTags::Ammo_Battery);
-	Shooter.SetReserve(ShootingTags::Ammo_Battery, 40.f);
-	TestEqual(TEXT("Clip / reserve of the slot's ammo kind"), AmmoDisplay::GetSlotText(*Shooter.Asc, EAttackSlot::Primary).ToString(), FString(TEXT("7 / 40")));
+	Shooter.SetReserve(ShootingTags::Ammo_Particle, 24.f);
+	Shooter.SetReserve(ShootingTags::Ammo_Bullet, 120.f);
+	TestEqual(TEXT("One line per ammo kind with a reserve, in tag order"),
+		AmmoDisplay::GetReserveText(*Shooter.Asc).ToString(), FString(TEXT("Bullet: 120\nParticle: 24")));
 
-	Shooter.Set(EAttackSlot::Primary, EAttackAttribute::ReloadTime, 1.f);
-	Shooter.Reload();
-	TestTrue(TEXT("Reload is shown"), AmmoDisplay::GetSlotText(*Shooter.Asc, EAttackSlot::Primary).ToString().Contains(TEXT("Reloading")));
-	TestEqual(TEXT("Slot without a reload ability has an unlimited reserve"),
-		AmmoDisplay::GetSlotText(*Shooter.Asc, EAttackSlot::Alternate).ToString(), FString(TEXT("0 / ∞")));
+	Shooter.SetReserve(ShootingTags::Ammo_Bullet, 0.f);
+	TestEqual(TEXT("Empty kinds are hidden"), AmmoDisplay::GetReserveText(*Shooter.Asc).ToString(), FString(TEXT("Particle: 24")));
 	return true;
 }
 

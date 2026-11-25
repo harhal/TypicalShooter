@@ -25,11 +25,9 @@ namespace ShootingTags
 	UE_DEFINE_GAMEPLAY_TAG_COMMENT(Ammo_Radiator, "Ammo.Radiator", "Radiators");
 	UE_DEFINE_GAMEPLAY_TAG_COMMENT(Ammo_Particle, "Ammo.Particle", "Particles");
 
-	UE_DEFINE_GAMEPLAY_TAG_COMMENT(State_Reloading_Primary, "State.Reloading.Primary", "Primary attack is reloading");
-	UE_DEFINE_GAMEPLAY_TAG_COMMENT(State_Reloading_Alternate, "State.Reloading.Alternate", "Alternate attack is reloading");
-
-	FGameplayTag GetReloadingTag(const uint8 SlotIndex)
+	TConstArrayView<FGameplayTag> GetAmmoTypes()
 	{
-		return SlotIndex == 0 ? State_Reloading_Primary.GetTag() : State_Reloading_Alternate.GetTag();
+		static const TArray<FGameplayTag> Types = { Ammo_Bullet, Ammo_Battery, Ammo_Grenade, Ammo_Radiator, Ammo_Particle };
+		return Types;
 	}
 }

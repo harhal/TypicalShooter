@@ -81,7 +81,7 @@ bool FAmmoGatedModifierTest::RunTest(const FString& Parameters)
 	const ShootingTest::FWorldFixture F(true);
 	const ATargetDummy* Dummy = ShootingAbilityTest::SpawnDummy(F);
 	const FArmedShooter Shooter(F, EAttackSlot::Primary);
-	Shooter.Setup(EAttackSlot::Primary, 10.f, 1.f, 0.f, 0.f, 10.f);
+	Shooter.Setup(EAttackSlot::Primary, 1.f, 0.f, 0.f, 10.f);
 	Shooter.SetReserve(ShootingTags::Ammo_Battery, 3.f);
 	Shooter.Inventory->AddItem(AmmoGatedManifest(EAttackSlot::Primary, 2, 7.f), FHhAxialCoord(0, 0));
 	Shooter.Inventory->AddItem(AmmoGatedManifest(EAttackSlot::Alternate, 1, 100.f), FHhAxialCoord(1, 0));
@@ -95,7 +95,6 @@ bool FAmmoGatedModifierTest::RunTest(const FString& Parameters)
 	F.Tick(0.2f);
 	TestEqual(TEXT("Without enough reserve the modifier is skipped, the shot still fires"), ShootingAbilityTest::Lost(Dummy), 27.f);
 	TestEqual(TEXT("Nothing is taken when the cost can't be paid"), Shooter.Reserve(ShootingTags::Ammo_Battery), 1.f);
-	TestEqual(TEXT("Clip rounds spent as usual"), Shooter.Get(EAttackSlot::Primary, EAttackAttribute::Ammo), 8.f);
 	return true;
 }
 
@@ -153,7 +152,7 @@ bool FItemModifierFireTest::RunTest(const FString& Parameters)
 	const ShootingTest::FWorldFixture F(true);
 	const ATargetDummy* Dummy = ShootingAbilityTest::SpawnDummy(F);
 	const FArmedShooter Shooter(F, EAttackSlot::Primary);
-	Shooter.Setup(EAttackSlot::Primary, 10.f, 1.f, 0.f, 0.f, 10.f);
+	Shooter.Setup(EAttackSlot::Primary, 1.f, 0.f, 0.f, 10.f);
 	Shooter.Inventory->AddItem(ModifierManifest(UTestPrimaryDamageBonusEffect::StaticClass()), FHhAxialCoord(0, 0));
 	Shooter.Inventory->AddItem(PatternManifest(EAttackSlot::Primary, 3), FHhAxialCoord(1, 0));
 

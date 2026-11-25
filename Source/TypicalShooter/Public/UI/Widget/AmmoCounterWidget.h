@@ -1,12 +1,11 @@
-// HUD ammo counter: one line per attack slot, "<label>: clip / reserve", read every frame from the owning
-// player's pawn ASC (text from AmmoDisplay::GetSlotText).
+// HUD ammo counter: the owning player's reserve per ammo kind, read every frame from the pawn's ASC
+// (text from AmmoDisplay::GetReserveText).
 
 #pragma once
 
 #include "CoreMinimal.h"
 #include "Components/Widget.h"
 #include "Fonts/SlateFontInfo.h"
-#include "Shooting/AttackTypes.h"
 #include "AmmoCounterWidget.generated.h"
 
 class STextBlock;
@@ -25,20 +24,13 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Appearance")
 	FSlateColor ColorAndOpacity = FSlateColor(FLinearColor::White);
 
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Appearance")
-	FText PrimaryLabel;
-
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Appearance")
-	FText AlternateLabel;
-
 	virtual void ReleaseSlateResources(bool bReleaseChildren) override;
 
 protected:
 	virtual TSharedRef<SWidget> RebuildWidget() override;
 
 private:
-	TSharedRef<STextBlock> MakeLine(EAttackSlot AttackSlot) const;
-	FText GetLine(EAttackSlot AttackSlot) const;
+	FText GetText() const;
 
-	TSharedPtr<SWidget> Root;
+	TSharedPtr<STextBlock> Text;
 };

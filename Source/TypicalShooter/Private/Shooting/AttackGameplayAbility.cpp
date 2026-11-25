@@ -6,8 +6,6 @@
 #include "Shooting/AmmoAttributeSet.h"
 #include "Shooting/AttackAttributeSet.h"
 #include "Shooting/AttackModifiersComponent.h"
-#include "Shooting/ReloadGameplayAbility.h"
-#include "Shooting/ShootingTags.h"
 #include "Shooting/ShotAim.h"
 #include "Shooting/ShotProjectile.h"
 #include "TimerManager.h"
@@ -18,17 +16,6 @@ UAttackGameplayAbility::UAttackGameplayAbility()
 	NetExecutionPolicy = EGameplayAbilityNetExecutionPolicy::ServerOnly;
 	bReplicateInputDirectly = true; // the server checks the held button to repeat bursts
 	ProjectileClass = AShotProjectile::StaticClass();
-}
-
-bool UAttackGameplayAbility::CanActivateAbility(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo,
-	const FGameplayTagContainer* SourceTags, const FGameplayTagContainer* TargetTags, FGameplayTagContainer* OptionalRelevantTags) const
-{
-	const UAbilitySystemComponent* Asc = ActorInfo ? ActorInfo->AbilitySystemComponent.Get() : nullptr;
-	if (Asc && Asc->HasMatchingGameplayTag(ShootingTags::GetReloadingTag(static_cast<uint8>(Slot))))
-	{
-		return false;
-	}
-	return Super::CanActivateAbility(Handle, ActorInfo, SourceTags, TargetTags, OptionalRelevantTags);
 }
 
 void UAttackGameplayAbility::ActivateAbility(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo,
@@ -66,14 +53,7 @@ void UAttackGameplayAbility::FireNextShot()
 	// Shots with no interval go out in the same frame.
 	while (ShotsLeftInBurst > 0)
 	{
-		if (!FireShot())
-		{
-			// An empty clip cuts the burst and starts this slot's reload.
-			UAbilitySystemComponent* Asc = GetAbilitySystemComponentFromActorInfo();
-			Finish();
-			UReloadGameplayAbility::TryReload(*Asc, Slot);
-			return;
-		}
+		FireShot();
 		--ShotsLeftInBurst;
 		if (ShotsLeftInBurst > 0 && Stats.ShotInterval > 0.f)
 		{
@@ -97,19 +77,12 @@ void UAttackGameplayAbility::OnBurstIntervalElapsed()
 	}
 }
 
-bool UAttackGameplayAbility::FireShot()
+void UAttackGameplayAbility::FireShot()
 {
 	UAbilitySystemComponent* Asc = GetAbilitySystemComponentFromActorInfo();
-	const FAttackStats Stats = UAttackAttributeSet::ReadStats(*Asc, Slot);
-	if (Stats.Ammo <= 0)
-	{
-		return false;
-	}
-	Asc->SetNumericAttributeBase(UAttackAttributeSet::GetAttribute(Slot, EAttackAttribute::Ammo), Stats.Ammo - 1);
-	FAttackStats ShotStats = Stats;
+	FAttackStats ShotStats = UAttackAttributeSet::ReadStats(*Asc, Slot);
 	ApplyShotModifiers(*Asc, ShotStats);
 	SpawnProjectiles(ShotStats);
-	return true;
 }
 
 void UAttackGameplayAbility::ApplyShotModifiers(UAbilitySystemComponent& Asc, FAttackStats& Stats) const
@@ -170,7 +143,7 @@ void UAttackGameplayAbility::SetTimer(const float Delay, void (UAttackGameplayAb
 	FTimerManager& Timers = GetWorld()->GetTimerManager();
 	if (Delay <= 0.f)
 	{
-		// Never loop within a frame (zero burst interval + held input would empty the clip at once).
+		// Never loop within a frame (zero burst interval + held input would fire endlessly in one frame).
 		Timer = Timers.SetTimerForNextTick(FTimerDelegate::CreateUObject(this, Callback));
 		return;
 	}

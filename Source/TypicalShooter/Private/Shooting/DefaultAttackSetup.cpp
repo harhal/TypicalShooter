@@ -18,18 +18,6 @@ UAlternateAttackAbility::UAlternateAttackAbility()
 		FVector2D(-3.f, 0.f), FVector2D(-1.5f, -2.6f), FVector2D(1.5f, -2.6f) };
 }
 
-UPrimaryReloadAbility::UPrimaryReloadAbility()
-{
-	Slot = EAttackSlot::Primary;
-	AmmoType = ShootingTags::Ammo_Bullet;
-}
-
-UAlternateReloadAbility::UAlternateReloadAbility()
-{
-	Slot = EAttackSlot::Alternate;
-	AmmoType = ShootingTags::Ammo_Particle;
-}
-
 UDefaultAttackStatsEffect::UDefaultAttackStatsEffect()
 {
 	DurationPolicy = EGameplayEffectDurationType::Instant;
@@ -37,14 +25,11 @@ UDefaultAttackStatsEffect::UDefaultAttackStatsEffect()
 
 	// Primary: automatic rifle (held button repeats single-shot bursts).
 	constexpr EAttackSlot P = EAttackSlot::Primary;
-	AddOverride(P, A::ClipSize, 30.f);
-	AddOverride(P, A::Ammo, 30.f);
 	AddOverride(P, A::FireStartDistance, 0.f);
 	AddOverride(P, A::FireEndDistance, 8000.f);
 	AddOverride(P, A::ShotsPerBurst, 1.f);
 	AddOverride(P, A::ShotInterval, 0.f);
 	AddOverride(P, A::BurstInterval, 0.12f);
-	AddOverride(P, A::ReloadTime, 1.5f);
 	AddOverride(P, A::ProjectileSpeed, 8000.f);
 	AddOverride(P, A::GravityScale, 0.f);
 	AddOverride(P, A::DamageLoss, 1.f);
@@ -53,14 +38,11 @@ UDefaultAttackStatsEffect::UDefaultAttackStatsEffect()
 
 	// Alternate: shotgun (seven pellets, slower, shorter range, slight drop).
 	constexpr EAttackSlot S = EAttackSlot::Alternate;
-	AddOverride(S, A::ClipSize, 6.f);
-	AddOverride(S, A::Ammo, 6.f);
 	AddOverride(S, A::FireStartDistance, 0.f);
 	AddOverride(S, A::FireEndDistance, 3000.f);
 	AddOverride(S, A::ShotsPerBurst, 1.f);
 	AddOverride(S, A::ShotInterval, 0.f);
 	AddOverride(S, A::BurstInterval, 0.8f);
-	AddOverride(S, A::ReloadTime, 2.f);
 	AddOverride(S, A::ProjectileSpeed, 6000.f);
 	AddOverride(S, A::GravityScale, 0.2f);
 	AddOverride(S, A::DamageLoss, 1.f);
