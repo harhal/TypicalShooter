@@ -47,7 +47,10 @@ private:
 
 	/** Spawns the pattern's projectiles (attacks have no clip, power grid R9a). */
 	void FireShot();
-	void SpawnProjectiles(const FAttackStats& Stats) const;
+	/** Spawns the shot's projectiles; returns the shot direction (centre of the pattern). */
+	FVector SpawnProjectiles(const FAttackStats& Stats) const;
+	/** Pushes the avatar character opposite to the shot by Recoil cm/s (power grid R5c). */
+	void ApplyRecoil(const FVector& ShotDirection, float Recoil) const;
 
 	/** Pays the held items' ammo-gated modifiers for this shot and adds their bonuses to Stats (R15a). */
 	void ApplyShotModifiers(UAbilitySystemComponent& Asc, FAttackStats& Stats) const;

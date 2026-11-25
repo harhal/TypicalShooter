@@ -121,6 +121,8 @@ R17 подтверждено; дистанции от дула, дуло — `Mu
 - [x] 13. (Энергосеть, итерация 7) Удалены атрибуты обоймы и перезарядки, абилки перезарядки и кнопка R / B; HUD
   показывает запас по видам — тесты: `TypicalShooter.Shooting.Ability.NoClipLimit`, `.UI.AmmoText`, `.Flow` (обновлены)
 - [x] 14. (Энергосеть, итерация 7a) Слот `Air` (`Air_*`) и атрибут отдачи `Recoil` — тест: `TypicalShooter.Shooting.Attributes.AirSlot`, `.Recoil`
+- [x] 15. (Энергосеть, итерация 9) Атаки выдают приёмники в слотах, база — от приёмника; воздушная атака вниз; отдача —
+  тесты: `TypicalShooter.PowerGrid.Receivers.*`, `TypicalShooter.Shooting.Ability.Recoil`
 
 ## Как устроено
 - Теги типов урона `Damage.Type.{Physical,Acid,Electric,Plasma,Ice,Radiation}` — нативные, в

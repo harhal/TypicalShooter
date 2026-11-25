@@ -98,7 +98,18 @@ void UAttackGameplayAbility::FireShot()
 	UAbilitySystemComponent* Asc = GetAbilitySystemComponentFromActorInfo();
 	FAttackStats ShotStats = UAttackAttributeSet::ReadStats(*Asc, Slot);
 	ApplyShotModifiers(*Asc, ShotStats);
-	SpawnProjectiles(ShotStats);
+	const FVector Direction = SpawnProjectiles(ShotStats);
+	ApplyRecoil(Direction, ShotStats.Recoil);
+}
+
+void UAttackGameplayAbility::ApplyRecoil(const FVector& ShotDirection, const float Recoil) const
+{
+	ACharacter* Character = Cast<ACharacter>(GetAvatarActorFromActorInfo());
+	if (Character && Recoil > 0.f)
+	{
+		// Added to the current velocity, once per shot whatever the projectile count (power grid R5c).
+		Character->LaunchCharacter(-ShotDirection * Recoil, false, false);
+	}
 }
 
 void UAttackGameplayAbility::ApplyShotModifiers(UAbilitySystemComponent& Asc, FAttackStats& Stats) const
@@ -124,7 +135,7 @@ void UAttackGameplayAbility::ApplyShotModifiers(UAbilitySystemComponent& Asc, FA
 	}
 }
 
-void UAttackGameplayAbility::SpawnProjectiles(const FAttackStats& Stats) const
+FVector UAttackGameplayAbility::SpawnProjectiles(const FAttackStats& Stats) const
 {
 	AActor* Avatar = GetAvatarActorFromActorInfo();
 	const FShotAim Aim = FShotAim::Compute(*Avatar, Stats.FireEndDistance);
@@ -149,6 +160,7 @@ void UAttackGameplayAbility::SpawnProjectiles(const FAttackStats& Stats) const
 		AShotProjectile::SpawnShot(Avatar->GetWorld(), ProjectileClass,
 			ShotMath::SpawnTransform(Aim.Muzzle, Direction, Stats.FireStartDistance), Params, Avatar, Instigator);
 	}
+	return AimDirection;
 }
 
 void UAttackGameplayAbility::Finish()
