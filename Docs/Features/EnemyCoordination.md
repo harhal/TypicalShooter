@@ -114,8 +114,8 @@
   `.RoleBand`, `.RoleBandOverride`; поведение роли — `TypicalShooter.Enemies.Coordination.RoleStand.*`
 - [x] 8. StateTree: условие `Enemy: Has Role`, состояния ролей, перегенерация `ST_Enemy` (R15) — тест:
   `TypicalShooter.Enemies.Behavior.TreeCompiles`, `.RoleStates`
-- [ ] 9. Отладочная отрисовка (R17) — ручная проверка в PIE (описать в доке), плюс тест, что при выключенной переменной
-  отрисовки нет: `TypicalShooter.Enemies.Coordination.DebugDrawOff`
+- [x] 9. Отладочная отрисовка (R17) — тест: `TypicalShooter.Enemies.Coordination.DebugDraw` (выключено — ни одной линии,
+  включено — рисует). Ручная проверка в PIE описана в «Настройке контента»; глазами ещё не проводилась.
 - [ ] 10. PIE-сценарий на `Lvl_FirstPerson`: волна из 4 врагов, одновременно стреляют не больше N, роли распределены по
   долям, враги разошлись по углу (минимальный угол между ними), фланкёр вне конуса взгляда игрока, после гибели врага роли
   перераспределяются — тест: `TypicalShooter.Enemies.Coordination.Flow`
@@ -228,6 +228,11 @@
   Combat не перезапускается и задача стрельбы не отдаёт токен при смене роли. Полосу и сектор Keep Distance всё равно
   берёт из `ApplyCoordination`, а состояния ролей — это место для поведения, которое будет у ролей своим.
   Условия лежат в [EnemyStateTreeConditions.h](../../Source/TypicalShooter/Public/Enemies/EnemyStateTreeConditions.h).
+- Отладка — [`EnemyCoordinationDebug`](../../Source/TypicalShooter/Public/Enemies/Coordination/EnemyCoordinationDebug.h).
+  Консольная переменная `TypicalShooter.Enemies.Debug.Coordination`. Пока она включена, директор в конце каждого тика
+  рисует один кадр (сервер): белый конус взгляда цели (±`FlankViewHalfAngle`); луч сектора каждого врага от цели длиной до
+  дальнего края его полосы, в цвете роли (давящий — красный, фланкёр — оранжевый, прикрывающий — голубой); толстую линию от
+  врага к его точке стояния; над врагом — роль и `[TOKEN]` у держателя (жёлтым).
 
 ## Настройка контента
 Project Settings → Game → **Enemy Coordination**:
@@ -241,6 +246,10 @@ Project Settings → Game → **Enemy Coordination**:
 Класс врага (`BP_Enemy` и будущие типы), категория **Enemy | Coordination**:
 - `Allowed Roles` — какие роли можно выдавать. Пустой список = любые.
 - `Role Band Overrides` — свои полосы по ролям. Например, ближний бой: `Pressure` 0–150, `Flank` 0–200.
+
+Отладка в PIE: в консоли `TypicalShooter.Enemies.Debug.Coordination 1`. Что проверить глазами: у волны из трёх-четырёх
+врагов лучи секторов расходятся по кругу; оранжевый луч фланкёра вне белого конуса; `[TOKEN]` висит не более чем над
+`GetTokenCount(N)` врагами и переходит от одного к другому за несколько секунд. Выключить — `... 0`.
 
 Ближний бой и камикадзе в C++ переопределяют `CanAttack` (своя дальность атаки) и решают, что делать с токеном (удар,
 рывок). Координатор для них не меняется.
@@ -293,6 +302,10 @@ Project Settings → Game → **Enemy Coordination**:
 `Pressure` под `Combat`. После `AllowedRoles = {Cover}` дерево переходит в `Cover`, и враг сохраняет токен (то есть Combat не
 перезапущен; если направить переходы в сам `Combat`, тест падает). `TypicalShooter.Enemies.Behavior.TreeCompiles` теперь
 ждёт 6 состояний.
+
+[EnemiesCoordinationDebugTest.cpp](../../Source/TypicalShooter/Private/Tests/EnemiesCoordinationDebugTest.cpp):
+`TypicalShooter.Enemies.Coordination.DebugDraw` — один тик директора при выключенной переменной не добавляет линий в
+line batcher мира, при включённой добавляет (сектора, конус, линии к точкам).
 
 Обновлены под роли: `TypicalShooter.Enemies.Controller.KeepsDistance` (одиночка — давящий с токеном, полоса 500–900) и
 `TypicalShooter.Enemies.Flow` (полоса своей роли ±150; отход — до ближнего края полосы роли − 150).

@@ -1,5 +1,6 @@
 #include "Enemies/EnemyDirectorSubsystem.h"
 
+#include "Enemies/Coordination/EnemyCoordinationDebug.h"
 #include "Enemies/Coordination/EnemyCoordinationSettings.h"
 #include "Enemies/EnemyCharacter.h"
 #include "Engine/World.h"
@@ -113,6 +114,10 @@ void UEnemyDirectorSubsystem::Tick(const float DeltaTime)
 	if (SinceUpdate >= GetDefault<UEnemyCoordinationSettings>()->UpdateInterval || AnyTargetChanged())
 	{
 		Recompute();
+	}
+	if (EnemyCoordinationDebug::IsEnabled())
+	{
+		EnemyCoordinationDebug::Draw(*this);
 	}
 }
 
