@@ -15,6 +15,9 @@ class UAttackAttributeSet;
 class UAttackInputComponent;
 class UGameplayAbility;
 class UGameplayEffect;
+class UGasDamageReceiverComponent;
+class UHealthAttributeSet;
+class UHealthComponent;
 class UMovementAttributeSet;
 class UMovementAttributesComponent;
 class UInteractionComponent;
@@ -92,6 +95,17 @@ protected:
 	/** Reserve ammo per kind. */
 	UPROPERTY()
 	TObjectPtr<UAmmoAttributeSet> AmmoAttributes;
+
+	/** Player health (enemies' shots). */
+	UPROPERTY()
+	TObjectPtr<UHealthAttributeSet> HealthAttributes;
+
+	/** Refills at zero for now: the player is immortal. */
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category ="Health", meta = (AllowPrivateAccess = "true"))
+	TObjectPtr<UHealthComponent> Health;
+
+	UPROPERTY(VisibleAnywhere, Category ="Health")
+	TObjectPtr<UGasDamageReceiverComponent> DamageReceiver;
 
 	/** Jump power / air control (power grid R6c), mirrored into the movement component by MovementAttributes. */
 	UPROPERTY()

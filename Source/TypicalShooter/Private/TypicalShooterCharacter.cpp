@@ -21,6 +21,9 @@
 #include "Shooting/AttackAttributeSet.h"
 #include "Shooting/AttackInputComponent.h"
 #include "Shooting/DefaultAttackSetup.h"
+#include "Shooting/GasDamageReceiverComponent.h"
+#include "Shooting/HealthAttributeSet.h"
+#include "Shooting/HealthComponent.h"
 #include "Shooting/ShotAim.h"
 #include "GameFramework/CharacterMovementComponent.h"
 #include "TypicalShooter.h"
@@ -63,6 +66,10 @@ ATypicalShooterCharacter::ATypicalShooterCharacter()
 	Gas->SetReplicationMode(EGameplayEffectReplicationMode::Mixed);
 	AttackAttributes = CreateDefaultSubobject<UAttackAttributeSet>(TEXT("Attack Attributes"));
 	AmmoAttributes = CreateDefaultSubobject<UAmmoAttributeSet>(TEXT("Ammo Attributes"));
+	HealthAttributes = CreateDefaultSubobject<UHealthAttributeSet>(TEXT("Health Attributes"));
+	Health = CreateDefaultSubobject<UHealthComponent>(TEXT("Health"));
+	Health->bRefillWhenDepleted = true;
+	DamageReceiver = CreateDefaultSubobject<UGasDamageReceiverComponent>(TEXT("Damage Receiver"));
 	MovementAttributeSet = CreateDefaultSubobject<UMovementAttributeSet>(TEXT("Movement Attribute Set"));
 	MovementAttributes = CreateDefaultSubobject<UMovementAttributesComponent>(TEXT("Movement Attributes"));
 	JumpAbility = UJumpGameplayAbility::StaticClass();

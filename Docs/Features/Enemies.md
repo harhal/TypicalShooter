@@ -63,7 +63,7 @@
 ## План итераций
 - [x] 1. Удалить шаблонные NPC-классы и зависимые ассеты, составить список кандидатов на удаление (R13) —
   проверка: сборка, все тесты, `CompileAllBlueprints`
-- [ ] 2. Здоровье игрока и бессмертие (R1, R2) — тест: `TypicalShooter.Enemies.PlayerHealth.*`
+- [x] 2. Здоровье игрока и бессмертие (R1, R2) — тест: `TypicalShooter.Enemies.Health.*`, `.PlayerHealth.CharacterIsImmortal`
 - [ ] 3. Здоровье в HUD (R3) — тест: `TypicalShooter.Enemies.UI.HealthText` + виджет в `BP_HUD`
 - [ ] 4. `AEnemyCharacter`: здоровье, урон, атака с базовыми параметрами (R4, R5) — тест: `TypicalShooter.Enemies.Character.*`
 - [ ] 5. Смерть врага (R6) — тест: `TypicalShooter.Enemies.Character.Dies*`
@@ -77,13 +77,21 @@
   убивает, приходит следующая волна)
 
 ## Как устроено
-Будет заполнено по ходу итераций.
+- Здоровье — [`UHealthComponent`](../../Source/TypicalShooter/Public/Shooting/HealthComponent.h) (общий для игрока и врагов):
+  на сервере в `BeginPlay` выставляет `Health` / `MaxHealth` = `MaxHealth` в `UHealthAttributeSet` ASC владельца
+  (набор и ASC создаёт сам актор); при падении здоровья до нуля один раз считает «поражение» и шлёт
+  `OnDepleted` / `GetDepletedDelegate()`. `bRefillWhenDepleted` — на следующем тике восстановить здоровье (игрок пока
+  бессмертен, R2), иначе остаётся на нуле (враг умирает по событию).
+- Игрок (`ATypicalShooterCharacter`): `UHealthAttributeSet` + `UHealthComponent` (`bRefillWhenDepleted`) +
+  `UGasDamageReceiverComponent`.
 
 ## Настройка контента
 Будет заполнено по ходу итераций.
 
 ## Тесты
-Будет заполнено по ходу итераций.
+[EnemiesHealthTest.cpp](../../Source/TypicalShooter/Private/Tests/EnemiesHealthTest.cpp) (мир без PIE):
+`TypicalShooter.Enemies.Health.StartsFull`, `.RefillsWhenDepleted`, `.StaysDepleted`,
+`TypicalShooter.Enemies.PlayerHealth.CharacterIsImmortal` (компоненты на CDO персонажа).
 
 ## Ограничения и грабли
 
