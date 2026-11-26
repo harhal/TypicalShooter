@@ -98,8 +98,9 @@
 - [x] 2. Распределение ролей, чистая функция (разрешённые роли, доли, устойчивость) (R7–R9; полосы дистанций ролей из R7
   добавятся в итерации 7, вместе с их использованием) — тест: `TypicalShooter.Enemies.Coordination.Roles.*` (`.Quotas`,
   `.RespectsWeights`, `.OnlyAllowed`, `.NoOvershootWhenAnotherCanCover`, `.StableOnRecompute`, `.MinimalChangeOnDeath`)
-- [ ] 3. Раздача секторов, чистая функция (равномерно, ближайший свободный, фланкёры вне конуса взгляда, гистерезис)
-  (R12, R13) — тест: `TypicalShooter.Enemies.Coordination.Sectors.*`
+- [x] 3. Раздача секторов, чистая функция (равномерно, ближайший свободный, фланкёры вне конуса взгляда, гистерезис)
+  (R12, R13) — тест: `TypicalShooter.Enemies.Coordination.Sectors.*` (`.EvenSpread`, `.NearestFree`, `.FlankersOutOfView`,
+  `.ReaimHysteresis`)
 - [ ] 4. Раздача токенов, чистая логика со временем (приоритет, удержание, кулдаун, потеря видимости) (R5, R6) — тест:
   `TypicalShooter.Enemies.Coordination.Tokens.*`
 - [ ] 5. Точка в заданном секторе и полосе роли (`FEnemyStandQuery` + угол сектора), разнесение точек (R11, R14) — тест:
@@ -138,9 +139,21 @@
     всего свободных мест. Если таких нет, поиск в ширину по ролям ищет цепочку сдвигов: гибкий враг переходит в роль
     со свободным местом и освобождает место для ограниченного. Только если сдвиг невозможен, роль перебирается
     (выбирается наименее переполненная).
+- Сектора — [`EnemySectors`](../../Source/TypicalShooter/Public/Enemies/Coordination/EnemySectors.h). Все углы — это yaw
+  в градусах вокруг цели в мировых осях (`YawAround(Target, Point)`).
+  - `Assign({Members: роль + текущий угол, ViewYaw, FlankViewHalfAngle})` ставит N равноотстоящих слотов. Их фаза
+    подгоняется под текущие углы врагов (круговое среднее N·θ, делённое на N), поэтому уже разошедшаяся группа
+    остаётся на месте, а сбившаяся в кучу расходится с минимальными перебежками.
+  - Первыми слоты получают фланкёры, только вне конуса взгляда (`|угол − ViewYaw| > FlankViewHalfAngle`). Если таких
+    слотов меньше, чем фланкёров, слоты переставляются так, чтобы один встал строго за спиной цели. Остальные враги и
+    фланкёры, которым не хватило места, занимают слоты жадно, начиная с ближайших пар «враг — слот».
+  - Сектора общие для всех ролей: роли различаются полосой дистанций, а не кругом.
+  - `SectorHalfWidth(N)` = 180 / N — в его пределах враг разбросает точку (итерация 5).
+  - `ShouldReaimFlank(Опорный, Текущий, Порог)` — гистерезис. Директор хранит опорный взгляд цели и передаёт его в
+    `Assign` как `ViewYaw`, а обновляет его, только когда взгляд ушёл дальше порога.
 
 Задуманное устройство (дальнейшие итерации):
-- Чистая логика без мира (тестируется без PIE): `EnemySectors::Assign`, `FEnemyTokenPool` (токены со временем), `EnemyPositioning` (угол сектора).
+- Чистая логика без мира (тестируется без PIE): `FEnemyTokenPool` (токены со временем), `EnemyPositioning` (угол сектора).
 - `UEnemyDirectorSubsystem` становится `UTickableWorldSubsystem`: держит группы по цели (`FEnemyGroup`: участники, их роли,
   сектора, токены), пересчитывает их раз в `UpdateInterval` и по событиям; отвечает контроллеру на вопросы о роли, угле
   сектора и токене.
@@ -150,6 +163,7 @@
 Project Settings → Game → **Enemy Coordination**:
 - **Tokens:** `Token Fraction` (0.4), `Min Tokens` (1), `Max Tokens` (3).
 - **Roles:** `Role Weights` — `Pressure` 2, `Flank` 1, `Cover` 1.
+- **Sectors:** `Flank View Half Angle` (60°), `Flank Reaim Degrees` (30°).
 
 Дальше сюда добавятся параметры ролей, секторов и ротации токенов, а также `AllowedRoles` / `RoleBandOverrides` в `BP_Enemy`.
 
@@ -164,6 +178,11 @@ Project Settings → Game → **Enemy Coordination**:
 давить, квота перебирается), `.NoOvershootWhenAnotherCanCover` (гибкий враг уступает роль), `.StableOnRecompute`
 (никто не меняет роль без причины; новичок занимает свободное место; запрещённая роль сбрасывается),
 `.MinimalChangeOnDeath`.
+
+[EnemiesCoordinationSectorsTest.cpp](../../Source/TypicalShooter/Private/Tests/EnemiesCoordinationSectorsTest.cpp):
+`TypicalShooter.Enemies.Coordination.Sectors.EvenSpread` (куча расходится на четверти), `.NearestFree` (ровная группа
+стоит, почти ровная сдвигается меньше чем на 25°), `.FlankersOutOfView` (фланкёр перед игроком уходит из конуса; одиночный —
+за спину; двое из трёх — оба вне конуса), `.ReaimHysteresis` (порог, переход через ±180°, `YawAround`, умолчания).
 
 ## Ограничения и грабли
 
