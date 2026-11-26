@@ -76,7 +76,7 @@
 - [x] 7. `AItemsContainer`: `LootTable` / `LootLevel` / `LootSeed`, заполнение после ручного манифеста — тест:
   `TypicalShooter.Loot.Container.Fill`
 - [x] 8. UI: цвет редкости в сетке и инфо-панели — тест: `TypicalShooter.Loot.UI.Rarity*`
-- [ ] 9. UI: процедурная подложка с выходами + иконка по центру — тест: `TypicalShooter.Loot.UI.Underlay`
+- [x] 9. UI: процедурная подложка с выходами + иконка по центру — тест: `TypicalShooter.Loot.UI.Underlay`
   (+ скриншот из `PowerGrid.Flow` для визуальной проверки)
 - [ ] 10. Контент: 2–3 редкости, несколько модификаторов, шаблоны источника / коннектора / приёмника, лут-таблица;
   подключить к одному контейнеру на `Lvl_FirstPerson` — ручная проверка в PIE + `TypicalShooter.Inventory.UIFlow`
@@ -134,6 +134,11 @@
 - UI редкости: `IInventoryItem_Model::GetItemRarity` (`UInventoryItem` читает фрагмент происхождения) →
   `IInventoryItem_View::SetRarity` (`UI/InventoryItem/ItemRarityDisplay.h`): `SInventoryGridItem` — гекс-рамка цветом
   редкости (`GetFrameColor`), `SInventoryItemInfo` — имя цветом редкости + строка с её названием.
+- Подложка с выходами: `SInventoryGrid::ApplyUnderlays` (`InventoryGridUnderlay.cpp`; на `SetPowerGrid`, добавление и
+  перенос предмета) передаёт в `SInventoryGridItem::SetUnderlay` грани клетки из `FPowerGridDisplay` (уже с поворотом)
+  и `bPowered`. `SInventoryGridItem::OnPaint` рисует «спицы» из центра к каждой открытой грани
+  (`PowerGridOverlay::GetFaceSpoke`, жёлтые / серые), поверх — рамку редкости и детей (иконка по центру, имя внизу).
+  Штрихи граней в `InventoryGridPowerPaint.cpp` убраны; связи, подписи и метки слотов рисуются как раньше.
 
 ## Настройка контента
 - Project Settings → Game → Loot: кривая множителя уровня.
@@ -156,6 +161,9 @@
   детерминизм по seed, без таблицы, переполнение сетки, seed 0.
 - `TypicalShooter.Loot.UI.Rarity*` (`LootRarityUITest.cpp`, презентеры + Slate без окна): модель, рамка в сетке,
   инфо-панель.
+- `TypicalShooter.Loot.UI.Underlay.*` (`LootUnderlayTest.cpp`): геометрия спиц, сетка раздаёт грани виджетам
+  (и снимает, и сразу выдаёт новым). Визуально — скриншот `TypicalShooter.PowerGrid.Flow` в рендерящем редакторе
+  (`Saved/Screenshots/WindowsEditor/PowerGridFlow.png`; работает и из `UnrealEditor-Cmd` без `-NullRHI`).
 
 ## Ограничения и грабли
 - В тестах держите сгенерированный манифест в локальной переменной: указатель на фрагмент временного манифеста

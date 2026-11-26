@@ -218,7 +218,9 @@ feature's doc and updated as they change; finished features are merged into `mai
     `BP_ItemInfo`.
   - Power grid on screen (`UI/PowerGrid/PowerGridDisplay.h`, `UI/Slate/PowerGridOverlay.h`): the container presenter
     pushes `PowerGridDisplay::Build(grid)` into `SInventoryGrid::SetPowerGrid` on every grid change; the grid paints
-    faces, links, power / clip labels and slot marks over the items (`InventoryGridPowerPaint.cpp`).
+    links, power / clip labels and slot marks over the items (`InventoryGridPowerPaint.cpp`) and pushes each cell's
+    rotated faces into its `SInventoryGridItem`, which draws them as an underlay (spokes) under the centred icon
+    (`InventoryGridUnderlay.cpp`); generated items also get a rarity-colored hex frame.
 - Custom content lives in `Content/Inventory` (note the folder typo `Bllueprints`).
 - **Shooting** (`Public|Private/Shooting/`, doc `Docs/Features/Shooting.md`): primary / alternate attacks are
   server-only GAS abilities (`UAttackGameplayAbility`, slot = `EAttackSlot`) driven by

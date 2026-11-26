@@ -6,7 +6,9 @@
 #include "Rendering/DrawElements.h"
 #include "SlateOptMacros.h"
 #include "Styling/CoreStyle.h"
+#include "UI/Slate/PowerGridOverlay.h"
 #include "Widgets/Images/SImage.h"
+#include "Widgets/SOverlay.h"
 #include "Widgets/Layout/SScaleBox.h"
 #include "Widgets/Text/STextBlock.h"
 
@@ -16,16 +18,17 @@ void SInventoryGridItem::Construct(const FArguments& InArgs)
 {
 	SetVisibility(EVisibility::HitTestInvisible);
 
-	// The slot is the hex's bounding box; keep the content inside the hex.
+	// The slot is the hex's bounding box; keep the content inside the hex. The icon sits in the centre, over the
+	// underlay (LootGeneration R11); the name stays at the bottom.
 	ChildSlot
 	.Padding(FMargin(12.f, 14.f))
 	[
-		SNew(SVerticalBox)
+		SNew(SOverlay)
 
-		+ SVerticalBox::Slot()
-		.FillHeight(1.f)
+		+ SOverlay::Slot()
 		.HAlign(HAlign_Center)
 		.VAlign(VAlign_Center)
+		.Padding(FMargin(4.f))
 		[
 			SNew(SScaleBox)
 			.Stretch(EStretch::ScaleToFit)
@@ -35,9 +38,9 @@ void SInventoryGridItem::Construct(const FArguments& InArgs)
 			]
 		]
 
-		+ SVerticalBox::Slot()
-		.AutoHeight()
+		+ SOverlay::Slot()
 		.HAlign(HAlign_Center)
+		.VAlign(VAlign_Bottom)
 		[
 			SAssignNew(NameTextBlock, STextBlock)
 			.Font(FCoreStyle::GetDefaultFontStyle("Bold", 7))
@@ -78,15 +81,49 @@ void SInventoryGridItem::SetRarity(const TOptional<FItemRarityDisplay>& InRarity
 	Invalidate(EInvalidateWidgetReason::Paint);
 }
 
+void SInventoryGridItem::SetUnderlay(const TOptional<FItemUnderlay>& InUnderlay)
+{
+	if (Underlay != InUnderlay)
+	{
+		Underlay = InUnderlay;
+		Invalidate(EInvalidateWidgetReason::Paint);
+	}
+}
+
 namespace InventoryGridItemPaint
 {
 	constexpr float FrameThickness = 2.f;
+	/** Spoke width as a fraction of the hex size. */
+	constexpr float SpokeWidth = 0.22f;
+
+	float HexSizeOf(const FVector2D& Size)
+	{
+		return FMath::Min(Size.Y * 0.5f, Size.X / UE_SQRT_3);
+	}
+
+	/** Spokes from the centre to every open face: the same picture for every item with the same faces. */
+	void PaintUnderlay(const FItemUnderlay& Underlay, const FGeometry& Geometry, FSlateWindowElementList& Elements, const int32 Layer)
+	{
+		const FVector2D Size = Geometry.GetLocalSize();
+		const float HexSize = HexSizeOf(Size);
+		const FLinearColor Color = Underlay.bPowered ? PowerGridOverlay::PoweredColor : PowerGridOverlay::UnpoweredColor;
+		for (int32 Index = 0; Index < HexFaces::Num; ++Index)
+		{
+			const EHexFace Face = HexFaces::FromIndex(Index);
+			if (HexFaces::IsOpen(Underlay.OpenFaces, Face))
+			{
+				const TPair<FVector2D, FVector2D> Spoke = PowerGridOverlay::GetFaceSpoke(Size * 0.5f, HexSize, Face);
+				FSlateDrawElement::MakeLines(Elements, Layer, Geometry.ToPaintGeometry(), { Spoke.Key, Spoke.Value },
+					ESlateDrawEffect::None, Color, true, HexSize * SpokeWidth);
+			}
+		}
+	}
 
 	/** Closed outline of the pointy-top hex inscribed in Size, inset by Inset. */
 	TArray<FVector2D> HexOutline(const FVector2D& Size, const float Inset)
 	{
 		const FVector2D Center = Size * 0.5f;
-		const float Radius = FMath::Min(Size.Y * 0.5f, Size.X / UE_SQRT_3) - Inset;
+		const float Radius = HexSizeOf(Size) - Inset;
 		TArray<FVector2D> Points;
 		for (int32 Corner = 0; Corner <= 6; ++Corner)
 		{
@@ -100,9 +137,13 @@ namespace InventoryGridItemPaint
 int32 SInventoryGridItem::OnPaint(const FPaintArgs& Args, const FGeometry& AllottedGeometry, const FSlateRect& MyCullingRect,
 	FSlateWindowElementList& OutDrawElements, const int32 LayerId, const FWidgetStyle& InWidgetStyle, const bool bParentEnabled) const
 {
+	using namespace InventoryGridItemPaint;
+	if (Underlay)
+	{
+		PaintUnderlay(*Underlay, AllottedGeometry, OutDrawElements, LayerId);
+	}
 	if (FrameColor)
 	{
-		using namespace InventoryGridItemPaint;
 		FSlateDrawElement::MakeLines(OutDrawElements, LayerId, AllottedGeometry.ToPaintGeometry(),
 			HexOutline(AllottedGeometry.GetLocalSize(), FrameThickness), ESlateDrawEffect::None, *FrameColor, true, FrameThickness);
 	}

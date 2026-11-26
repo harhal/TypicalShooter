@@ -140,6 +140,8 @@ private:
 	/** Power grid over the items: links, open faces, slot marks, power labels (R16). Returns the last layer used. */
 	int32 PaintPowerGrid(const FGeometry& Geometry, FSlateWindowElementList& OutDrawElements, int32 LayerId) const;
 	TOptional<FHhAxialCoord> GetSlotLocation(const FGuid& SlotGuid) const;
+	/** Pushes the power grid cells' faces into the item views at their locations (LootGeneration R11). */
+	void ApplyUnderlays();
 
 	TSharedPtr<SHhGridPanel> CellsPanel;
 	TSharedPtr<SHhGridPanel> ItemsPanel;

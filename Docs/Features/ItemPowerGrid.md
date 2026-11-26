@@ -292,8 +292,10 @@
   `IItemsContainer_View::SetPowerGrid(PowerGridDisplay::Build(Grid))` — при пересборке вида и на каждое изменение сети
   (перенос, поворот, обойма; на клиентах — после репликации). Нет сети — пустое отображение. `SInventoryGrid` хранит
   его и рисует поверх предметов в `OnPaint` (`Private/UI/Slate/InventoryGridPowerPaint.cpp`): соединения — штрих через
-  общую грань (запитанные — жёлтые толстые, прочие — серые), открытые грани — штрихи вдоль рёбер гекса
-  (`PowerGridOverlay::GetFaceSegment`, цвет по `bPowered`), подпись мощности внизу клетки (`GetPowerLabel`: «2»,
+  общую грань (запитанные — жёлтые толстые, прочие — серые), открытые грани рисует **подложка предмета** под его
+  иконкой — «спицы» из центра к каждой открытой грани (`SInventoryGridItem`, `PowerGridOverlay::GetFaceSpoke`, цвет по
+  `bPowered`; см. [LootGeneration.md](LootGeneration.md) R11; прежние штрихи вдоль рёбер `GetFaceSegment` больше не
+  рисуются), подпись мощности внизу клетки (`GetPowerLabel`: «2»,
   приёмник «2/3», обойма «2 [1/4]»), метки слотов вверху клеток слотов («LMB» / «RMB» / «AIR», только если
   `bShowSlots`). Визуально проверяется в итерации 15 (ручная проверка в PIE).
 - **Инфо-панель** (R16): `UInventoryItem_Presenter` для предмета инвентаря находит его сеть (`PowerGridDisplay::FindGridOf`),

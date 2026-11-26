@@ -144,6 +144,7 @@ FGuid SInventoryGrid::AddInventoryItem(UInventoryItem_Presenter* Item, const FHh
 	{
 		Item->SetView(ItemWidget);
 	}
+	ApplyUnderlays();
 
 	return SlotGuid;
 }
@@ -160,6 +161,7 @@ void SInventoryGrid::MoveInventoryItem(const FGuid& SlotGuid, const FHhAxialCoor
 	{
 		Slot->SetCoord(Location);
 	}
+	ApplyUnderlays();
 }
 
 void SInventoryGrid::RemoveInventoryItem(const FGuid& SlotGuid)
