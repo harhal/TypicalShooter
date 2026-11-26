@@ -67,7 +67,7 @@
 - [x] 3. Текст здоровья и виджет `UHealthCounterWidget` (R3) — тест: `TypicalShooter.Enemies.UI.HealthText`
   (сам виджет в `BP_HUD` ставится в итерации 11 — нужен открытый редактор)
 - [x] 4. `AEnemyCharacter`: здоровье, урон, атака с базовыми параметрами (R4, R5) — тест: `TypicalShooter.Enemies.Character.*`
-- [ ] 5. Смерть врага (R6) — тест: `TypicalShooter.Enemies.Character.Dies*`
+- [x] 5. Смерть врага (R6) — тест: `TypicalShooter.Enemies.Character.Dies*`
 - [ ] 6. Огонь только при линии видимости (R9) — тест: `TypicalShooter.Enemies.Combat.*`
 - [ ] 7. Выбор точки в полосе дистанций (R8) — тест: `TypicalShooter.Enemies.Positioning.*`
 - [ ] 8. `UEnemyDirectorSubsystem`: регистрация, поиск цели (R7, R11) — тест: `TypicalShooter.Enemies.Director.*`
@@ -94,6 +94,9 @@
   (по умолчанию: очередь 3 × 0.15 с, пауза 1.5 с, 2500 см/с, 4 физ., конец огня 5000) и выдаёт `AttackAbility`
   (`UPrimaryAttackAbility`) с InputID `PrimaryAttack`. `SetFiring(true/false)` — «зажать / отпустить» атаку
   (`AbilityLocalInputPressed/Released`): пока зажато, абилка повторяет очереди.
+- Смерть врага (`Die`, сервер, по `UHealthComponent::GetDepletedDelegate`): отпускает атаку и отменяет абилки,
+  останавливает движение, выключает коллизию капсулы, отцепляется от контроллера, шлёт `OnDied` /
+  `GetDiedDelegate()` и исчезает через `DeathLifeSpan` (0.1 с). Мёртвый враг не стреляет (`SetFiring` игнорируется).
 
 ## Настройка контента
 Будет заполнено по ходу итераций.
@@ -106,6 +109,8 @@
 [EnemiesCharacterTest.cpp](../../Source/TypicalShooter/Private/Tests/EnemiesCharacterTest.cpp) (мир с полом, фикстура
 [EnemiesTestFixture.h](../../Source/TypicalShooter/Private/Tests/EnemiesTestFixture.h)): `TypicalShooter.Enemies.Character.Defaults`,
 `.TakesDamage`, `.FiresWhileFiring` (очереди по манекену, после отпускания новых снарядов нет).
+[EnemiesDeathTest.cpp](../../Source/TypicalShooter/Private/Tests/EnemiesDeathTest.cpp): `TypicalShooter.Enemies.Character.DiesAtZeroHealth`,
+`.DiesAndStopsFiring`.
 
 ## Ограничения и грабли
 

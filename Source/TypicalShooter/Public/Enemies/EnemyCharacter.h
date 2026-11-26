@@ -14,6 +14,10 @@ class UAttackGameplayAbility;
 class UGasDamageReceiverComponent;
 class UHealthAttributeSet;
 class UHealthComponent;
+class AEnemyCharacter;
+
+DECLARE_MULTICAST_DELEGATE_OneParam(FEnemyDiedNative, AEnemyCharacter*);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FEnemyDiedDynamic, AEnemyCharacter*, Enemy);
 
 UCLASS()
 class TYPICALSHOOTER_API AEnemyCharacter : public ACharacter, public IAbilitySystemInterface
@@ -42,11 +46,28 @@ public:
 	UFUNCTION(BlueprintPure, Category = "Enemy|Attack")
 	bool IsFiring() const { return bFiring; }
 
+	/** Seconds the dead body stays before it is destroyed. */
+	UPROPERTY(EditDefaultsOnly, Category = "Enemy", meta = (ClampMin = 0.01))
+	float DeathLifeSpan = 0.1f;
+
+	/** Server: health reached zero; the enemy stopped and will disappear after DeathLifeSpan. */
+	UPROPERTY(BlueprintAssignable, Category = "Enemy")
+	FEnemyDiedDynamic OnDied;
+
+	FEnemyDiedNative& GetDiedDelegate() { return DiedDelegate; }
+
+	UFUNCTION(BlueprintPure, Category = "Enemy")
+	bool IsDead() const { return bDead; }
+
 protected:
 	virtual void BeginPlay() override;
 
 private:
 	void GrantAttack();
+	void Die();
+
+	FEnemyDiedNative DiedDelegate;
+	bool bDead = false;
 
 	UPROPERTY(VisibleAnywhere, Category = "Components")
 	TObjectPtr<UAbilitySystemComponent> Gas;

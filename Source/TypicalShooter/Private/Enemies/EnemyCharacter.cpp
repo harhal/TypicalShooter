@@ -2,6 +2,9 @@
 
 #include "TS_GAS.h"
 #include "Components/CapsuleComponent.h"
+#include "GameFramework/CharacterMovementComponent.h"
+#include "GameFramework/Controller.h"
+#include "TypicalShooter.h"
 #include "Shooting/AttackAttributeSet.h"
 #include "Shooting/DefaultAttackSetup.h"
 #include "Shooting/GasDamageReceiverComponent.h"
@@ -40,7 +43,7 @@ UAbilitySystemComponent* AEnemyCharacter::GetAbilitySystemComponent() const
 
 void AEnemyCharacter::SetFiring(const bool bFire)
 {
-	if (bFire == bFiring || !HasAuthority())
+	if (bFire == bFiring || bDead || !HasAuthority())
 	{
 		return;
 	}
@@ -64,7 +67,33 @@ void AEnemyCharacter::BeginPlay()
 	if (HasAuthority())
 	{
 		GrantAttack();
+		Health->GetDepletedDelegate().AddUObject(this, &AEnemyCharacter::Die);
 	}
+}
+
+void AEnemyCharacter::Die()
+{
+	if (bDead)
+	{
+		return;
+	}
+	SetFiring(false);
+	bDead = true;
+	Gas->CancelAllAbilities();
+
+	GetCharacterMovement()->StopMovementImmediately();
+	GetCharacterMovement()->DisableMovement();
+	GetCapsuleComponent()->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+	if (AController* OwnController = GetController())
+	{
+		OwnController->StopMovement();
+	}
+	DetachFromControllerPendingDestroy();
+	SetLifeSpan(DeathLifeSpan);
+
+	UE_LOG(LogTypicalShooter, Log, TEXT("Enemy %s died"), *GetName());
+	DiedDelegate.Broadcast(this);
+	OnDied.Broadcast(this);
 }
 
 void AEnemyCharacter::GrantAttack()
