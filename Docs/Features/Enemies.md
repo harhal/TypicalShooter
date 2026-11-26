@@ -108,6 +108,8 @@
   (`FEnemyStandQuery`): по горизонтали внутри полосы [Min, Max] и цель видна — стоять; иначе точка на середине полосы
   (без видимости — на её ближнем крае) со стороны врага, повёрнутая вокруг цели на случайный угол в пределах
   `JitterDegrees` (20°; без видимости — `FlankDegrees` 60°, чтобы зайти с другого угла), на высоте самого врага.
+  `ChooseReachableStandPoint` — то же, но точка должна пройти проверку (контроллер проецирует её на навмеш); иначе она
+  поворачивается вокруг цели дальше (±30°…180°) — враг у стены отходит вбок, а не в стену.
 - Директор — [`UEnemyDirectorSubsystem`](../../Source/TypicalShooter/Public/Enemies/EnemyDirectorSubsystem.h)
   (`UWorldSubsystem`): враг регистрируется на сервере в `BeginPlay` и снимается при смерти и в `EndPlay`;
   `GetEnemies()` — живые враги, `FindTargetFor(Enemy)` — ближайшая пешка игрока (по контроллерам игроков). Сюда же
@@ -117,7 +119,7 @@
   пешки ставит в него `Behavior` (ассет StateTree) и запускает, при отпускании — останавливает. Шаги поведения:
   `UpdateTarget` (цель от директора + `SetFocus` — враг поворачивается и целится в центр цели), `UpdateFire`
   (`UpdateFiring(Target)`), `UpdatePosition(FEnemyStandSettings)` (когда стоит или прошло `RepathInterval` — выбирает
-  точку `ChooseStandPoint` с видимостью от `CanShootAt` и идёт туда `MoveToLocation` по навмешу; без навданных — по
+  точку `ChooseReachableStandPoint` (проекция на навмеш, без навданных — любая) с видимостью от `CanShootAt` и идёт туда `MoveToLocation` по навмешу; без навданных — по
   прямой; дошёл до полосы по дороге — останавливается), `StopCombat`.
 - Задачи StateTree — [EnemyStateTreeTasks.h](../../Source/TypicalShooter/Public/Enemies/EnemyStateTreeTasks.h) (категория
   «Enemy», контекст — `AIController`): `Enemy: Track Target`, `Enemy: Shoot When Visible` (на выходе отпускает атаку),
@@ -151,7 +153,7 @@
 [EnemiesCombatTest.cpp](../../Source/TypicalShooter/Private/Tests/EnemiesCombatTest.cpp): `TypicalShooter.Enemies.Combat.FiresWithLineOfSight`,
 `.WallBlocksFire`, `.AllyBlocksFire`, `.OutOfRange`.
 [EnemiesPositioningTest.cpp](../../Source/TypicalShooter/Private/Tests/EnemiesPositioningTest.cpp): `TypicalShooter.Enemies.Positioning.InsideBandStays`,
-`.TooCloseBacksOff`, `.TooFarApproaches`, `.NoLineOfSightApproaches`, `.OnTopOfTarget`.
+`.TooCloseBacksOff`, `.TooFarApproaches`, `.NoLineOfSightApproaches`, `.TurnsAwayFromUnreachablePoints`, `.OnTopOfTarget`.
 [EnemiesDirectorTest.cpp](../../Source/TypicalShooter/Private/Tests/EnemiesDirectorTest.cpp): `TypicalShooter.Enemies.Director.RegistersLiveEnemies`,
 `.NearestPlayerTarget`.
 [EnemiesControllerTest.cpp](../../Source/TypicalShooter/Private/Tests/EnemiesControllerTest.cpp) (мир с навигационной системой

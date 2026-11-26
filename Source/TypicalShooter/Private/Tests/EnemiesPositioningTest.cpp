@@ -83,6 +83,34 @@ bool FEnemiesPositioningNoSightTest::RunTest(const FString& Parameters)
 	return true;
 }
 
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FEnemiesPositioningReachableTest, "TypicalShooter.Enemies.Positioning.TurnsAwayFromUnreachablePoints", EnemiesPositioningTest::Flags)
+bool FEnemiesPositioningReachableTest::RunTest(const FString& Parameters)
+{
+	using namespace EnemiesPositioningTest;
+	// Enemy between the target and a wall at X = -1000: backing straight off would leave the arena.
+	FEnemyStandQuery Q = Query(FVector(-300.f, 0.f, 100.f));
+	Q.Target = FVector(0.f, 0.f, 100.f);
+	const auto InsideArena = [](FVector& Point) { return Point.X > -1000.f; };
+	for (int32 Seed = 0; Seed < 20; ++Seed)
+	{
+		FRandomStream Random(Seed);
+		FVector Point;
+		TestTrue(TEXT("Finds a reachable point"), EnemyPositioning::ChooseReachableStandPoint(Q, Random, InsideArena, Point));
+		TestTrue(TEXT("The point is reachable"), Point.X > -1000.f);
+		TestEqual(TEXT("Still in the middle of the band"), Distance2D(Point, Q.Target), 1200.f, 1.f);
+	}
+
+	FRandomStream Random(1);
+	FVector Point;
+	const auto Nowhere = [](FVector&) { return false; };
+	TestFalse(TEXT("Nothing reachable: no move"), EnemyPositioning::ChooseReachableStandPoint(Q, Random, Nowhere, Point));
+
+	const auto Snap = [](FVector& P) { P.Z = 0.f; return true; };
+	EnemyPositioning::ChooseReachableStandPoint(Q, Random, Snap, Point);
+	TestEqual(TEXT("The acceptor may adjust the point (navmesh projection)"), Point.Z, 0.0);
+	return true;
+}
+
 IMPLEMENT_SIMPLE_AUTOMATION_TEST(FEnemiesPositioningSameSpotTest, "TypicalShooter.Enemies.Positioning.OnTopOfTarget", EnemiesPositioningTest::Flags)
 bool FEnemiesPositioningSameSpotTest::RunTest(const FString& Parameters)
 {

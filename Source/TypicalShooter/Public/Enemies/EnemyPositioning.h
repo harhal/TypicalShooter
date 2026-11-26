@@ -27,4 +27,11 @@ namespace EnemyPositioning
 	 * the target turned by a random angle within the jitter (flank angle without line of sight), at the enemy's own height.
 	 */
 	TYPICALSHOOTER_API bool ChooseStandPoint(const FEnemyStandQuery& Query, FRandomStream& Random, FVector& OutPoint);
+
+	/**
+	 * ChooseStandPoint, but the point must pass Accept (which may adjust it, e.g. project it to the navmesh). Rejected points
+	 * are retried turned further around the target (up to the opposite side). false: stay, or nothing acceptable.
+	 */
+	TYPICALSHOOTER_API bool ChooseReachableStandPoint(const FEnemyStandQuery& Query, FRandomStream& Random,
+		TFunctionRef<bool(FVector&)> Accept, FVector& OutPoint);
 }

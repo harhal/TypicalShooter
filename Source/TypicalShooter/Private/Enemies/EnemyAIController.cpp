@@ -6,6 +6,7 @@
 #include "Enemies/EnemyPositioning.h"
 #include "Engine/World.h"
 #include "Navigation/PathFollowingComponent.h"
+#include "NavigationSystem.h"
 
 AEnemyAIController::AEnemyAIController()
 {
@@ -63,7 +64,7 @@ bool AEnemyAIController::UpdatePosition(const FEnemyStandSettings& Settings)
 	Query.FlankDegrees = Settings.FlankDegrees;
 	Query.bHasLineOfSight = Enemy->CanShootAt(Target);
 	LastStandChoiceTime = Now;
-	if (!EnemyPositioning::ChooseStandPoint(Query, Random, StandPoint))
+	if (!EnemyPositioning::ChooseReachableStandPoint(Query, Random, [this](FVector& Point) { return ProjectToNavigation(Point); }, StandPoint))
 	{
 		if (bMoving)
 		{
@@ -72,6 +73,23 @@ bool AEnemyAIController::UpdatePosition(const FEnemyStandSettings& Settings)
 		return false;
 	}
 	MoveToStandPoint(Settings);
+	return true;
+}
+
+bool AEnemyAIController::ProjectToNavigation(FVector& Point) const
+{
+	const UNavigationSystemV1* Nav = FNavigationSystem::GetCurrent<UNavigationSystemV1>(GetWorld());
+	if (!Nav || !Nav->GetDefaultNavDataInstance())
+	{
+		return true; // no nav data (tests): straight-line moves, any point goes
+	}
+	// Small horizontal extent: a point outside the arena must not snap back to its edge.
+	FNavLocation Projected;
+	if (!Nav->ProjectPointToNavigation(Point, Projected, FVector(50.f, 50.f, 300.f)))
+	{
+		return false;
+	}
+	Point = Projected.Location;
 	return true;
 }
 

@@ -85,6 +85,8 @@ protected:
 private:
 	AEnemyCharacter* GetEnemy() const;
 	void MoveToStandPoint(const FEnemyStandSettings& Settings);
+	/** Snaps Point onto the navmesh; false if it is off the navmesh (outside the arena, inside a wall). */
+	bool ProjectToNavigation(FVector& Point) const;
 
 	UPROPERTY(VisibleAnywhere, Category = "Components")
 	TObjectPtr<UStateTreeAIComponent> StateTreeAI;
