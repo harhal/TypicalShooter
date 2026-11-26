@@ -95,8 +95,9 @@
 ## План итераций
 - [x] 1. `UEnemyCoordinationSettings` + число токенов от размера группы (R3, R16) — тест:
   `TypicalShooter.Enemies.Coordination.TokenCount`
-- [ ] 2. Распределение ролей, чистая функция (разрешённые роли, доли, устойчивость) (R7–R9) — тест:
-  `TypicalShooter.Enemies.Coordination.Roles.*` (`.RespectsWeights`, `.OnlyAllowed`, `.StableOnRecompute`, `.MinimalChangeOnDeath`)
+- [x] 2. Распределение ролей, чистая функция (разрешённые роли, доли, устойчивость) (R7–R9; полосы дистанций ролей из R7
+  добавятся в итерации 7, вместе с их использованием) — тест: `TypicalShooter.Enemies.Coordination.Roles.*` (`.Quotas`,
+  `.RespectsWeights`, `.OnlyAllowed`, `.NoOvershootWhenAnotherCanCover`, `.StableOnRecompute`, `.MinimalChangeOnDeath`)
 - [ ] 3. Раздача секторов, чистая функция (равномерно, ближайший свободный, фланкёры вне конуса взгляда, гистерезис)
   (R12, R13) — тест: `TypicalShooter.Enemies.Coordination.Sectors.*`
 - [ ] 4. Раздача токенов, чистая логика со временем (приоритет, удержание, кулдаун, потеря видимости) (R5, R6) — тест:
@@ -126,10 +127,20 @@
   максимум).
 - Число токенов — `EnemyCoordination::TokenCount(GroupSize, Settings)`: `round(доля × размер)` в пределах [Min, Max], но
   не больше размера группы; у пустой группы 0. Обёртка на настройках — `GetTokenCount(GroupSize)`.
+- Роли — [`EEnemyRole`](../../Source/TypicalShooter/Public/Enemies/Coordination/EnemyRole.h) (`Pressure`, `Flank`,
+  `Cover`) и веса `FEnemyRoleWeights` (настройка `RoleWeights`, 2 : 1 : 1).
+- Распределение ролей — [`EnemyRoles`](../../Source/TypicalShooter/Public/Enemies/Coordination/EnemyRoleAssignment.h):
+  - `ComputeQuotas(N, Weights)` делит N по весам методом наибольшего остатка. При равных остатках выигрывает роль,
+    которая раньше в перечислении. Роль с весом 0 квоты не получает. Если все веса нулевые, все враги давящие.
+  - `Assign(Candidates, Weights)` принимает кандидатов `{Allowed — маска ролей (0 = любая), Current — прошлая роль}`.
+    Сначала каждый сохраняет текущую роль, если она разрешена и квота не перебрана. Остальных обрабатывает по
+    порядку, начиная с самых ограниченных (меньше разрешённых ролей). Каждый получает разрешённую роль, где больше
+    всего свободных мест. Если таких нет, поиск в ширину по ролям ищет цепочку сдвигов: гибкий враг переходит в роль
+    со свободным местом и освобождает место для ограниченного. Только если сдвиг невозможен, роль перебирается
+    (выбирается наименее переполненная).
 
 Задуманное устройство (дальнейшие итерации):
-- Чистая логика без мира (тестируется без PIE): `EnemyCoordination::TokenCount`, `EnemyRoles::Assign`,
-  `EnemySectors::Assign`, `FEnemyTokenPool` (токены со временем), `EnemyPositioning` (угол сектора).
+- Чистая логика без мира (тестируется без PIE): `EnemySectors::Assign`, `FEnemyTokenPool` (токены со временем), `EnemyPositioning` (угол сектора).
 - `UEnemyDirectorSubsystem` становится `UTickableWorldSubsystem`: держит группы по цели (`FEnemyGroup`: участники, их роли,
   сектора, токены), пересчитывает их раз в `UpdateInterval` и по событиям; отвечает контроллеру на вопросы о роли, угле
   сектора и токене.
@@ -138,6 +149,7 @@
 ## Настройка контента
 Project Settings → Game → **Enemy Coordination**:
 - **Tokens:** `Token Fraction` (0.4), `Min Tokens` (1), `Max Tokens` (3).
+- **Roles:** `Role Weights` — `Pressure` 2, `Flank` 1, `Cover` 1.
 
 Дальше сюда добавятся параметры ролей, секторов и ротации токенов, а также `AllowedRoles` / `RoleBandOverrides` в `BP_Enemy`.
 
@@ -145,6 +157,13 @@ Project Settings → Game → **Enemy Coordination**:
 [EnemiesCoordinationTokenCountTest.cpp](../../Source/TypicalShooter/Private/Tests/EnemiesCoordinationTokenCountTest.cpp):
 `TypicalShooter.Enemies.Coordination.TokenCount` — округление, ограничения, пустая группа, минимум не больше размера группы,
 значения по умолчанию в настройках проекта.
+
+[EnemiesCoordinationRolesTest.cpp](../../Source/TypicalShooter/Private/Tests/EnemiesCoordinationRolesTest.cpp):
+`TypicalShooter.Enemies.Coordination.Roles.Quotas` (метод наибольшего остатка, нулевые веса, умолчания проекта),
+`.RespectsWeights`, `.OnlyAllowed` (бойцы ближнего боя давят и фланкуют, снайпер прикрывает; если всем разрешено только
+давить, квота перебирается), `.NoOvershootWhenAnotherCanCover` (гибкий враг уступает роль), `.StableOnRecompute`
+(никто не меняет роль без причины; новичок занимает свободное место; запрещённая роль сбрасывается),
+`.MinimalChangeOnDeath`.
 
 ## Ограничения и грабли
 

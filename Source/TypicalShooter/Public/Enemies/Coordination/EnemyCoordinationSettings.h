@@ -4,6 +4,7 @@
 
 #include "CoreMinimal.h"
 #include "Engine/DeveloperSettings.h"
+#include "Enemies/Coordination/EnemyRole.h"
 #include "Enemies/Coordination/EnemyTokenCount.h"
 #include "EnemyCoordinationSettings.generated.h"
 
@@ -21,4 +22,8 @@ public:
 	/** How many enemies of one target group may attack at once. */
 	UPROPERTY(Config, EditAnywhere, Category = "Tokens", meta = (ShowOnlyInnerProperties))
 	FEnemyTokenCountSettings Tokens;
+
+	/** Wanted share of each role in a target group. */
+	UPROPERTY(Config, EditAnywhere, Category = "Roles")
+	FEnemyRoleWeights RoleWeights;
 };
