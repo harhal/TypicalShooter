@@ -2,6 +2,7 @@
 
 #include "TS_GAS.h"
 #include "Components/CapsuleComponent.h"
+#include "Enemies/EnemyDirectorSubsystem.h"
 #include "Engine/World.h"
 #include "GameFramework/CharacterMovementComponent.h"
 #include "GameFramework/Controller.h"
@@ -72,7 +73,20 @@ void AEnemyCharacter::BeginPlay()
 	{
 		GrantAttack();
 		Health->GetDepletedDelegate().AddUObject(this, &AEnemyCharacter::Die);
+		if (UEnemyDirectorSubsystem* Director = GetWorld()->GetSubsystem<UEnemyDirectorSubsystem>())
+		{
+			Director->Register(this);
+		}
 	}
+}
+
+void AEnemyCharacter::EndPlay(const EEndPlayReason::Type EndPlayReason)
+{
+	if (UEnemyDirectorSubsystem* Director = GetWorld()->GetSubsystem<UEnemyDirectorSubsystem>())
+	{
+		Director->Unregister(this);
+	}
+	Super::EndPlay(EndPlayReason);
 }
 
 bool AEnemyCharacter::CanShootAt(const AActor* Target) const
@@ -118,6 +132,10 @@ void AEnemyCharacter::Die()
 	}
 	DetachFromControllerPendingDestroy();
 	SetLifeSpan(DeathLifeSpan);
+	if (UEnemyDirectorSubsystem* Director = GetWorld()->GetSubsystem<UEnemyDirectorSubsystem>())
+	{
+		Director->Unregister(this);
+	}
 
 	UE_LOG(LogTypicalShooter, Log, TEXT("Enemy %s died"), *GetName());
 	DiedDelegate.Broadcast(this);

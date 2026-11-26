@@ -70,7 +70,7 @@
 - [x] 5. Смерть врага (R6) — тест: `TypicalShooter.Enemies.Character.Dies*`
 - [x] 6. Огонь только при линии видимости (R9) — тест: `TypicalShooter.Enemies.Combat.*`
 - [x] 7. Выбор точки в полосе дистанций (R8) — тест: `TypicalShooter.Enemies.Positioning.*`
-- [ ] 8. `UEnemyDirectorSubsystem`: регистрация, поиск цели (R7, R11) — тест: `TypicalShooter.Enemies.Director.*`
+- [x] 8. `UEnemyDirectorSubsystem`: регистрация, поиск цели (R7, R11) — тест: `TypicalShooter.Enemies.Director.*`
 - [ ] 9. `AEnemyAIController` + задачи StateTree (цель, держать дистанцию, стрелять) (R8–R10) — тест: `TypicalShooter.Enemies.Tasks.*`
 - [ ] 10. `AEnemyWaveSpawner` (R12) — тест: `TypicalShooter.Enemies.Spawner.*`
 - [ ] 11. Контент: `HealthCounter` в `BP_HUD`, `BP_Enemy`, `BP_EnemyAIController`, `ST_Enemy`, навмеш и спавнер на `Lvl_FirstPerson` (R14) —
@@ -105,6 +105,10 @@
   (`FEnemyStandQuery`): по горизонтали внутри полосы [Min, Max] и цель видна — стоять; иначе точка на середине полосы
   (без видимости — на её ближнем крае) со стороны врага, повёрнутая вокруг цели на случайный угол в пределах
   `JitterDegrees` (20°; без видимости — `FlankDegrees` 60°, чтобы зайти с другого угла), на высоте самого врага.
+- Директор — [`UEnemyDirectorSubsystem`](../../Source/TypicalShooter/Public/Enemies/EnemyDirectorSubsystem.h)
+  (`UWorldSubsystem`): враг регистрируется на сервере в `BeginPlay` и снимается при смерти и в `EndPlay`;
+  `GetEnemies()` — живые враги, `FindTargetFor(Enemy)` — ближайшая пешка игрока (по контроллерам игроков). Сюда же
+  ляжет координация группы.
 
 ## Настройка контента
 Будет заполнено по ходу итераций.
@@ -123,6 +127,8 @@
 `.WallBlocksFire`, `.AllyBlocksFire`, `.OutOfRange`.
 [EnemiesPositioningTest.cpp](../../Source/TypicalShooter/Private/Tests/EnemiesPositioningTest.cpp): `TypicalShooter.Enemies.Positioning.InsideBandStays`,
 `.TooCloseBacksOff`, `.TooFarApproaches`, `.NoLineOfSightApproaches`, `.OnTopOfTarget`.
+[EnemiesDirectorTest.cpp](../../Source/TypicalShooter/Private/Tests/EnemiesDirectorTest.cpp): `TypicalShooter.Enemies.Director.RegistersLiveEnemies`,
+`.NearestPlayerTarget`.
 
 ## Ограничения и грабли
 
