@@ -7,6 +7,8 @@
 #include "LootOriginFragment.generated.h"
 
 class ULootItemTemplate;
+class ULootModifier;
+class ULootRarity;
 
 USTRUCT(BlueprintType)
 struct TYPICALSHOOTER_API FLootOrigin_ItemFragment : public FItemFragment
@@ -22,4 +24,11 @@ struct TYPICALSHOOTER_API FLootOrigin_ItemFragment : public FItemFragment
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Loot")
 	int32 Seed = 0;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Loot")
+	TObjectPtr<const ULootRarity> Rarity = nullptr;
+
+	/** Picked modifiers, in slot order. */
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Loot")
+	TArray<TObjectPtr<const ULootModifier>> Modifiers;
 };

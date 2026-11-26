@@ -8,6 +8,8 @@
 
 #include "InventoryItemManifest.h"
 #include "Loot/LootItemTemplate.h"
+#include "Loot/LootModifier.h"
+#include "Loot/LootRarity.h"
 #include "Loot/LootOriginFragment.h"
 #include "PowerGrid/PowerGridFragment.h"
 
@@ -32,6 +34,34 @@ namespace LootTestFixture
 		Template->FaceShapes = Shapes;
 		Template->bRandomRotation = bRandomRotation;
 		return Template;
+	}
+
+	inline ULootModifier* MakeModifier(const int32 Tier, const FGameplayTag& Tag, const int32 Threshold = 1)
+	{
+		ULootModifier* Modifier = NewObject<ULootModifier>();
+		Modifier->Tier = Tier;
+		Modifier->Tag = Tag;
+		Modifier->Threshold = FLootIntRange(Threshold, Threshold);
+		return Modifier;
+	}
+
+	inline ULootRarity* MakeRarity(std::initializer_list<TPair<int32, FGameplayTag>> Slots)
+	{
+		ULootRarity* Rarity = NewObject<ULootRarity>();
+		for (const TPair<int32, FGameplayTag>& Slot : Slots)
+		{
+			FLootModifierSlot& Added = Rarity->Slots.AddDefaulted_GetRef();
+			Added.Tier = Slot.Key;
+			Added.Tag = Slot.Value;
+		}
+		return Rarity;
+	}
+
+	inline void AddToPool(ULootItemTemplate& Template, const ULootModifier* Modifier, const float Weight = 1.f)
+	{
+		FLootModifierEntry& Entry = Template.ModifierPool.AddDefaulted_GetRef();
+		Entry.Modifier = Modifier;
+		Entry.Weight = Weight;
 	}
 
 	inline FLootFaceShape Shape(const int32 Mask, const float Weight = 1.f)

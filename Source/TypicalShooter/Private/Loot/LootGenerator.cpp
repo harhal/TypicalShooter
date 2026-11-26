@@ -1,6 +1,8 @@
 #include "Loot/LootGenerator.h"
 
 #include "Loot/LootItemTemplate.h"
+#include "Loot/LootModifier.h"
+#include "Loot/LootModifierPicker.h"
 #include "Loot/LootOriginFragment.h"
 #include "Loot/LootRandom.h"
 #include "Loot/LootSettings.h"
@@ -36,12 +38,25 @@ namespace LootGeneratorPrivate
 		return PowerGrid;
 	}
 
-	FLootOrigin_ItemFragment MakeOrigin(const ULootItemTemplate& Template, const FLootGenerationParams& Params)
+	FPowerEffects_ItemFragment MakeEffects(TConstArrayView<const ULootModifier*> Modifiers, FRandomStream& Stream, const float LevelMultiplier)
+	{
+		FPowerEffects_ItemFragment Effects;
+		for (const ULootModifier* Modifier : Modifiers)
+		{
+			Effects.Effects.Add(Modifier->Roll(Stream, LevelMultiplier));
+		}
+		Effects.Effects.StableSort([](const FPowerThresholdEffect& A, const FPowerThresholdEffect& B) { return A.Threshold < B.Threshold; });
+		return Effects;
+	}
+
+	FLootOrigin_ItemFragment MakeOrigin(const ULootItemTemplate& Template, const FLootGenerationParams& Params, TConstArrayView<const ULootModifier*> Modifiers)
 	{
 		FLootOrigin_ItemFragment Origin;
 		Origin.Template = &Template;
 		Origin.Level = ULootSettings::ClampLevel(Params.Level);
 		Origin.Seed = Params.Seed;
+		Origin.Rarity = Params.Rarity;
+		Origin.Modifiers = Modifiers;
 		return Origin;
 	}
 }
@@ -55,6 +70,11 @@ FInventoryItemManifest LootGenerator::Generate(const ULootItemTemplate& Template
 	FInventoryItemManifest Manifest;
 	Manifest.Fragments = Template.FixedFragments;
 	Manifest.Fragments.Add(TInstancedStruct<FItemFragment>::Make<FPowerGrid_ItemFragment>(MakePowerGrid(Template, Stream, LevelMultiplier)));
-	Manifest.Fragments.Add(TInstancedStruct<FItemFragment>::Make<FLootOrigin_ItemFragment>(MakeOrigin(Template, Params)));
+	const TArray<const ULootModifier*> Modifiers = LootModifierPicker::Pick(Template.ModifierPool, Params.Rarity, Stream);
+	if (!Modifiers.IsEmpty())
+	{
+		Manifest.Fragments.Add(TInstancedStruct<FItemFragment>::Make<FPowerEffects_ItemFragment>(MakeEffects(Modifiers, Stream, LevelMultiplier)));
+	}
+	Manifest.Fragments.Add(TInstancedStruct<FItemFragment>::Make<FLootOrigin_ItemFragment>(MakeOrigin(Template, Params, Modifiers)));
 	return Manifest;
 }

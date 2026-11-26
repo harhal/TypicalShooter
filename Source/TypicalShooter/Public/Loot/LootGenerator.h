@@ -6,12 +6,15 @@
 #include "InventoryItemManifest.h"
 
 class ULootItemTemplate;
+class ULootRarity;
 
 struct FLootGenerationParams
 {
 	int32 Level = 1;
 	/** Everything random about the item comes from a stream with this seed. */
 	int32 Seed = 0;
+	/** Null = no modifiers. */
+	const ULootRarity* Rarity = nullptr;
 };
 
 namespace LootGenerator

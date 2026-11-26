@@ -64,8 +64,11 @@
   + `FLootOrigin_ItemFragment`, детерминизм по seed — тест: `TypicalShooter.Loot.Generator.Shape`,
   `.Determinism`
 - [x] 3. Числа энергосети источника / приёмника из диапазонов с уровнем — тест: `TypicalShooter.Loot.Generator.PowerParams`
-- [ ] 4. `ULootRarity` + `ULootModifier`: выбор по слотам (тег, тир строго, веса, без повторов, пропуск без
-  кандидата) → `FPowerEffects_ItemFragment` — тест: `TypicalShooter.Loot.Generator.Modifiers`
+- [x] 4. `ULootRarity` + `ULootModifier`: выбор по слотам (тег, тир строго, веса, без повторов, пропуск без
+  кандидата) → `FPowerEffects_ItemFragment` — тест: `TypicalShooter.Loot.Modifiers.*`, `.Generator.Modifiers`
+- [ ] 4б. Уровень GE модификатора = уровень предмета: поле уровня в `FPowerThresholdEffect`, его учитывает
+  `UPowerEffectsComponent` (затрагивает энергосеть, поэтому отдельный шаг) — тест: `TypicalShooter.PowerGrid.Effects.*`,
+  `TypicalShooter.Loot.Generator.Modifiers`
 - [ ] 5. `FInfo_ItemFragment`: имя, описание с плейсхолдерами + строки модификаторов, иконка по редкости —
   тест: `TypicalShooter.Loot.Generator.Info`
 - [ ] 6. `ULootTable`: количество, шаблоны по весам, редкость по весам-кривым от уровня — тест:
@@ -91,21 +94,30 @@
   (веса ≤ 0 не выигрывают), общий для форм, пулов и таблиц.
 - [`LootItemTemplate.h`](../../Source/TypicalShooter/Public/Loot/LootItemTemplate.h): `ULootItemTemplate` —
   `ItemType`, `FaceShapes` (`FLootFaceShape`: маска + вес; пусто = все грани), `bRandomRotation`, `FixedFragments`,
-  `Source` / `Receiver` (видны по `ItemType`).
+  `Source` / `Receiver` (видны по `ItemType`), `ModifierPool` (`FLootModifierEntry`: модификатор + вес).
+- [`LootModifier.h`](../../Source/TypicalShooter/Public/Loot/LootModifier.h): `ULootModifier` — `Tier`, `Tag`
+  (`Loot.Modifier.*`, нативные теги в `LootTags.h`), диапазон `Threshold`, `AttackBonuses`, `CharacterEffect`,
+  `DescriptionLine`; `Roll` → один `FPowerThresholdEffect`.
+- [`LootRarity.h`](../../Source/TypicalShooter/Public/Loot/LootRarity.h): `ULootRarity` — `DisplayName`, `Color`,
+  `Slots` (`FLootModifierSlot`: `Tier`, `Tag`; пустой тег = любой).
+- [`LootModifierPicker.h`](../../Source/TypicalShooter/Public/Loot/LootModifierPicker.h): по слоту — кандидаты пула с
+  тиром == тиру слота и тегом, совпадающим с тегом слота (`MatchesTag`, иерархически), ещё не взятые; выбор по весам.
+  Нет кандидата — Warning `Loot: rarity ... has no modifier for slot`, слот пропускается.
 - [`LootPowerParams.h`](../../Source/TypicalShooter/Public/Loot/LootPowerParams.h): `FLootSourceParams` (диапазоны
   `Power`, `Capacity`, `CostPerUse`, `RechargeDelay`, фиксированный `AmmoType`), `FLootReceiverParams` (фиксированный
   `Ability`, диапазон `RequiredPower`, `BaseStats` из `FLootAttackStatRange`). Каждый `Roll` даёт готовые
   `FPowerSourceParams` / `FPowerReceiverParams`; коннектор оставляет их по умолчанию.
 - [`LootGenerator.h`](../../Source/TypicalShooter/Public/Loot/LootGenerator.h): `LootGenerator::Generate(Template,
-  {Level, Seed})` → `FInventoryItemManifest` = фиксированные фрагменты + `FPowerGrid_ItemFragment` + фрагмент
+  {Level, Seed, Rarity})` → `FInventoryItemManifest` = фиксированные фрагменты + `FPowerGrid_ItemFragment` +
+  `FPowerEffects_ItemFragment` (только если выпали модификаторы; шаги отсортированы по `Threshold`) + фрагмент
   происхождения. Весь рандом — из `FRandomStream(Seed)`. **Случайный поворот** применяется к самой маске
   (`HexFaces::RotateMask`), а не к `UInventoryItem::Rotation`: поворот — состояние экземпляра, в манифесте его нет.
 - [`LootOriginFragment.h`](../../Source/TypicalShooter/Public/Loot/LootOriginFragment.h): `FLootOrigin_ItemFragment`
-  — шаблон, уровень (после clamp), seed.
+  — шаблон, уровень (после clamp), seed, редкость, модификаторы в порядке слотов.
 
 ## Настройка контента
 - Project Settings → Game → Loot: кривая множителя уровня.
-- Шаблон предмета: Data Asset класса `LootItemTemplate`.
+- Data Assets классов `LootItemTemplate`, `LootModifier`, `LootRarity`.
 
 ## Тесты
 - `TypicalShooter.Loot.Range.*` (`Private/Tests/LootRangeTest.cpp`, без мира): границы, масштабирование и округление,
@@ -114,6 +126,8 @@
   хелперы — `LootTestFixture.h`): форма по весам и поворот, фиксированные фрагменты, детерминизм, происхождение.
 - `TypicalShooter.Loot.Generator.PowerParams.*` (`LootPowerParamsTest.cpp`): числа источника / приёмника с уровнем,
   коннектор не трогает их.
+- `TypicalShooter.Loot.Modifiers.*`, `TypicalShooter.Loot.Generator.Modifiers` (`LootModifiersTest.cpp`): тег / тир
+  слота, без повторов, пропуск слота, бросок шага, сортировка, происхождение.
 
 ## Ограничения и грабли
 - В тестах держите сгенерированный манифест в локальной переменной: указатель на фрагмент временного манифеста

@@ -11,6 +11,8 @@
 #include "StructUtils/InstancedStruct.h"
 #include "LootItemTemplate.generated.h"
 
+class ULootModifier;
+
 /** One possible arrangement of open faces, picked by weight. */
 USTRUCT(BlueprintType)
 struct TYPICALSHOOTER_API FLootFaceShape
@@ -19,6 +21,19 @@ struct TYPICALSHOOTER_API FLootFaceShape
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Loot", meta = (Bitmask, BitmaskEnum = "/Script/TypicalShooter.EHexFace"))
 	int32 OpenFaces = HexFaces::AllFaces;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Loot", meta = (ClampMin = 0))
+	float Weight = 1.f;
+};
+
+/** A modifier the template can get, with its pick weight. */
+USTRUCT(BlueprintType)
+struct TYPICALSHOOTER_API FLootModifierEntry
+{
+	GENERATED_BODY()
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Loot")
+	TObjectPtr<const ULootModifier> Modifier = nullptr;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Loot", meta = (ClampMin = 0))
 	float Weight = 1.f;
@@ -47,6 +62,10 @@ public:
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Power Grid", meta = (EditCondition = "ItemType == EPowerItemType::Receiver", EditConditionHides))
 	FLootReceiverParams Receiver;
+
+	/** Modifiers the rarity slots pick from. */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Modifiers")
+	TArray<FLootModifierEntry> ModifierPool;
 
 	/** Copied into every generated item as is. */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Item", meta = (ExcludeBaseStruct))
