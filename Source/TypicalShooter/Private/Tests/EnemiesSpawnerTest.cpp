@@ -4,6 +4,8 @@
 
 #if WITH_DEV_AUTOMATION_TESTS
 
+#include "Components/BoxComponent.h"
+#include "Components/CapsuleComponent.h"
 #include "Enemies/EnemyDirectorSubsystem.h"
 #include "Enemies/EnemyWaveSpawner.h"
 #include "Tests/EnemiesTestFixture.h"
@@ -47,6 +49,38 @@ namespace EnemiesSpawnerTest
 			EnemiesTest::Hit(Enemy, 10000.f);
 		}
 	}
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FEnemiesSpawnerClearTest, "TypicalShooter.Enemies.Spawner.AvoidsLevelGeometry", ShootingTest::Flags)
+bool FEnemiesSpawnerClearTest::RunTest(const FString& Parameters)
+{
+	using namespace EnemiesSpawnerTest;
+	const ShootingTest::FWorldFixture F(true);
+	EnemiesTest::SpawnFloor(F);
+	// A thick block covers the half of the spawn circle with X > 2000 (seen on Lvl_FirstPerson: the circle reached into
+	// the back wall and an enemy was born stuck in it).
+	AActor* Block = F.World->SpawnActor<AActor>();
+	UBoxComponent* Box = NewObject<UBoxComponent>(Block);
+	Box->SetBoxExtent(FVector(500.f, 1000.f, 300.f));
+	Box->SetCollisionProfileName(UCollisionProfile::BlockAll_ProfileName);
+	Block->SetRootComponent(Box);
+	Box->RegisterComponent();
+	Box->SetWorldLocation(FVector(2500.f, 0.f, 300.f));
+
+	SpawnSpawner(F, { 20 });
+	F.Tick(1.1f);
+	const TArray<AEnemyCharacter*> Spawned = Enemies(F);
+	TestEqual(TEXT("The whole wave spawned"), Spawned.Num(), 20);
+	int32 Stuck = 0;
+	for (const AEnemyCharacter* Enemy : Spawned)
+	{
+		const UCapsuleComponent* Capsule = Enemy->GetCapsuleComponent();
+		const FCollisionShape Shape = FCollisionShape::MakeCapsule(Capsule->GetScaledCapsuleRadius() - 2.f, Capsule->GetScaledCapsuleHalfHeight() - 2.f);
+		FCollisionQueryParams Params(SCENE_QUERY_STAT(SpawnerClearTest), false, Enemy);
+		Stuck += F.World->OverlapAnyTestByObjectType(Enemy->GetActorLocation(), FQuat::Identity, FCollisionObjectQueryParams(ECC_WorldStatic), Shape, Params) ? 1 : 0;
+	}
+	TestEqual(TEXT("Nobody spawned inside the block"), Stuck, 0);
+	return true;
 }
 
 IMPLEMENT_SIMPLE_AUTOMATION_TEST(FEnemiesSpawnerFirstWaveTest, "TypicalShooter.Enemies.Spawner.FirstWaveAfterDelay", ShootingTest::Flags)

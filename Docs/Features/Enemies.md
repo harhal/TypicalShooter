@@ -143,7 +143,9 @@
   `FEnemyWaveEntry` = класс × количество; по умолчанию 2, 3, 4 `AEnemyCharacter`), первая волна через `FirstWaveDelay`,
   следующая — через `WaveDelay` после гибели (или уничтожения) последнего врага текущей, после последней — снова первая.
   Точки появления — `SpawnPoints` по очереди или случайная точка в круге `SpawnRadius` вокруг спавнера (над точкой на
-  полвысоты капсулы, случайный поворот). `OnWaveStarted(WaveIndex)`, `GetWaveIndex` / `GetWavesStarted` / `GetAliveCount`.
+  полвысоты капсулы, случайный поворот). Случайную точку спавнер пробует до 10 раз, пока капсула не поместится без
+  пересечения с `WorldStatic` / `WorldDynamic`. На `Lvl_FirstPerson` круг заходил в заднюю стену, и враг рождался застрявшим
+  в ней. `OnWaveStarted(WaveIndex)`, `GetWaveIndex` / `GetWavesStarted` / `GetAliveCount`.
   Консольная переменная `TypicalShooter.Enemies.Waves 0` — спавнеры, начавшие игру, волн не запускают (отладка; PIE-тесты
   не про врагов выключают волны через [EnemyWavesTestGuard.h](../../Source/TypicalShooter/Private/Tests/EnemyWavesTestGuard.h)).
 
@@ -193,7 +195,8 @@ HUD: `BP_HUD` → `HealthCounter` (`UHealthCounterWidget`), левый нижн�
 `TypicalShooter.Enemies.Controller.StandPointClearOfWalls` (точка в 10 см от стены отвергается и поворачивается вокруг цели;
 без проверки получалось 30 см при радиусе капсулы 34).
 [EnemiesSpawnerTest.cpp](../../Source/TypicalShooter/Private/Tests/EnemiesSpawnerTest.cpp): `TypicalShooter.Enemies.Spawner.FirstWaveAfterDelay`,
-`.NextWaveWhenAllDead` (и повтор списка), `.UsesSpawnPoints`, `.DisabledByConsoleVariable`.
+`.NextWaveWhenAllDead` (и повтор списка), `.UsesSpawnPoints`, `.DisabledByConsoleVariable`, `.AvoidsLevelGeometry` (блок
+закрывает половину круга появления: из 20 врагов ни один не внутри; до исправления — 7).
 [EnemiesAvoidanceTest.cpp](../../Source/TypicalShooter/Private/Tests/EnemiesAvoidanceTest.cpp): `TypicalShooter.Enemies.Movement.AvoidsStandingAlly`
 (враг обходит союзника, стоящего на прямой к цели; без RVO застревал в 6.7 м от неё).
 [EnemiesBehaviorTreeTest.cpp](../../Source/TypicalShooter/Private/Tests/EnemiesBehaviorTreeTest.cpp): `TypicalShooter.Enemies.Behavior.TreeCompiles`.
