@@ -37,18 +37,7 @@ bool FPowerGridOverlayGeometryTest::RunTest(const FString& Parameters)
 	TestTrue(TEXT("... others offset like the grid panel"),
 		PowerGridOverlay::GetCellCenter(FHhAxialCoord(1, 0), HexSize, Size).Equals(Size * 0.5f + UHhGridFunctions::HexAxialCoordToPoint(FHhAxialCoord(1, 0), HexSize)));
 
-	for (int32 Index = 0; Index < HexFaces::Num; ++Index)
-	{
-		const EHexFace Face = HexFaces::FromIndex(Index);
-		const TPair<FVector2D, FVector2D> Segment = PowerGridOverlay::GetFaceSegment(FVector2D::ZeroVector, HexSize, Face);
-		const FVector2D Middle = (Segment.Key + Segment.Value) * 0.5f;
-		const FHhAxialCoord Offset = HexFaces::GetNeighborOffset(Face);
-		const FVector2D Towards = UHhGridFunctions::HexAxialCoordToPoint(Offset, HexSize).GetSafeNormal();
-		TestTrue(FString::Printf(TEXT("Face %d faces its neighbour"), Index), Middle.GetSafeNormal().Equals(Towards, 0.01f));
-		TestTrue(FString::Printf(TEXT("Face %d lies on the hex edge, inset a little"), Index),
-			Middle.Size() > 0.7f * HexSize && Middle.Size() < 0.87f * HexSize);
-		TestTrue(FString::Printf(TEXT("Face %d runs along the edge"), Index), FMath::Abs(FVector2D::DotProduct((Segment.Value - Segment.Key).GetSafeNormal(), Towards)) < 0.01f);
-	}
+	// Open faces are drawn by the item underlay: geometry tested in TypicalShooter.Loot.UI.Underlay.SpokeGeometry.
 
 	FPowerCellDisplay Cell;
 	Cell.Power = 2;
