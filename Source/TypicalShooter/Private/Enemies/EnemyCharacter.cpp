@@ -35,6 +35,13 @@ AEnemyCharacter::AEnemyCharacter()
 	Muzzle->SetRelativeLocation(FVector(50.f, 0.f, 50.f));
 	Muzzle->ComponentTags.Add(FShotAim::MuzzleTag);
 
+	// Steer around other enemies (RVO): path following ignores pawns, and an ally standing on the path would otherwise
+	// stop an enemy on its way to its sector for good.
+	UCharacterMovementComponent* Movement = GetCharacterMovement();
+	Movement->bUseRVOAvoidance = true;
+	Movement->AvoidanceConsiderationRadius = 400.f;
+	Movement->AvoidanceWeight = 0.5f;
+
 	AIControllerClass = AEnemyAIController::StaticClass();
 	AutoPossessAI = EAutoPossessAI::PlacedInWorldOrSpawned;
 

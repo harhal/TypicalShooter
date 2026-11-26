@@ -97,7 +97,9 @@
   дуло `Muzzle` у капсулы (50 вперёд, 50 вверх). На сервере в `BeginPlay` выставляет базу основного слота из `AttackStats`
   (по умолчанию: очередь 3 × 0.15 с, пауза 1.5 с, 2500 см/с, 4 физ., конец огня 5000) и выдаёт `AttackAbility`
   (`UPrimaryAttackAbility`) с InputID `PrimaryAttack`. `SetFiring(true/false)` — «зажать / отпустить» атаку
-  (`AbilityLocalInputPressed/Released`): пока зажато, абилка повторяет очереди.
+  (`AbilityLocalInputPressed/Released`): пока зажато, абилка повторяет очереди. У `CharacterMovement` включено RVO-избегание
+  (`bUseRVOAvoidance`, радиус учёта 400, вес 0.5): следование по пути пешек не видит, и стоящий на пути союзник иначе
+  навсегда останавливал врага.
 - Смерть врага (`Die`, сервер, по `UHealthComponent::GetDepletedDelegate`): отпускает атаку и отменяет абилки,
   останавливает движение, выключает коллизию капсулы, отцепляется от контроллера, шлёт `OnDied` /
   `GetDiedDelegate()` и исчезает через `DeathLifeSpan` (0.1 с). Мёртвый враг не стреляет (`SetFiring` игнорируется).
@@ -110,30 +112,40 @@
   (без видимости — на её ближнем крае) со стороны врага, повёрнутая вокруг цели на случайный угол в пределах
   `JitterDegrees` (20°; без видимости — `FlankDegrees` 60°, чтобы зайти с другого угла), на высоте самого врага.
   `ChooseReachableStandPoint` — то же, но точка должна пройти проверку (контроллер проецирует её на навмеш); иначе она
-  поворачивается вокруг цели дальше (±30°…180°) — враг у стены отходит вбок, а не в стену.
+  поворачивается вокруг цели дальше (±30°…180°) — враг у стены отходит вбок, а не в стену. Если координатор выдал
+  сектор (`SectorYaw`), точка строится от него и не выходит за его пределы — см. [EnemyCoordination.md](EnemyCoordination.md).
 - Директор — [`UEnemyDirectorSubsystem`](../../Source/TypicalShooter/Public/Enemies/EnemyDirectorSubsystem.h)
   (`UWorldSubsystem`): враг регистрируется на сервере в `BeginPlay` и снимается при смерти и в `EndPlay`;
-  `GetEnemies()` — живые враги, `FindTargetFor(Enemy)` — ближайшая пешка игрока (по контроллерам игроков). Сюда же
-  ляжет координация группы.
+  `GetEnemies()` — живые враги, `FindTargetFor(Enemy)` — ближайшая пешка игрока (по контроллерам игроков). Он же
+  координирует группы врагов по цели (роли, сектора, токены атаки) — см. [EnemyCoordination.md](EnemyCoordination.md).
 - Контроллер — [`AEnemyAIController`](../../Source/TypicalShooter/Public/Enemies/EnemyAIController.h) (у врага
   `AIControllerClass`, `AutoPossessAI = PlacedInWorldOrSpawned`): `UStateTreeAIComponent` без автозапуска; при захвате
   пешки ставит в него `Behavior` (ассет StateTree) и запускает, при отпускании — останавливает. Шаги поведения:
   `UpdateTarget` (цель от директора + `SetFocus` — враг поворачивается и целится в центр цели), `UpdateFire`
-  (`UpdateFiring(Target)`), `UpdatePosition(FEnemyStandSettings)` (когда стоит или прошло `RepathInterval` — выбирает
-  точку `ChooseReachableStandPoint` (проекция на навмеш, без навданных — любая) с видимостью от `CanShootAt` и идёт туда `MoveToLocation` по навмешу; без навданных — по
-  прямой; дошёл до полосы по дороге — останавливается), `StopCombat`.
+  (стреляет, только если держит токен атаки группы и `CanAttack(Target)`), `UpdatePosition(FEnemyStandSettings)` (когда
+  стоит или прошло `RepathInterval` — выбирает точку `ChooseReachableStandPoint` с видимостью от `CanShootAt` и идёт туда
+  `MoveToLocation` по навмешу; без навданных — по прямой (в Verbose-логе — если пути по навмешу нет); дошёл до полосы по
+  дороге — останавливается). Точку пропускает `AcceptStandPoint`: проекция на навмеш (без навданных — любая), а затем
+  вокруг точки должно хватать места капсуле (радиус +10 см): никаких пересечений с `WorldStatic` / `WorldDynamic`, пешки не
+  в счёт. Без этого точка у самой стены давала врагу вклиниться в геометрию уровня и застрять. Если директор координирует врага, полоса берётся из роли, а точка — из сектора
+  (`EnemyRoleStand::Apply`); `Min/MaxDistance` из `FEnemyStandSettings` работают только без координации. `StopCombat`
+  отдаёт токен. Подробности — [EnemyCoordination.md](EnemyCoordination.md).
 - Задачи StateTree — [EnemyStateTreeTasks.h](../../Source/TypicalShooter/Public/Enemies/EnemyStateTreeTasks.h) (категория
   «Enemy», контекст — `AIController`): `Enemy: Track Target`, `Enemy: Shoot When Visible` (на выходе отпускает атаку),
   `Enemy: Keep Distance` (параметры `FEnemyStandSettings`: полоса 800–1600, разброс 20° / 60°, на выходе останавливается).
   Все бегут бесконечно — кладутся в одно состояние и работают параллельно.
 - Дерево `/Game/Enemies/AI/ST_Enemy` (схема StateTree AI Component) собирается из кода:
   [`UBuildEnemyStateTreeCommandlet`](../../Source/TypicalShooter/Public/Enemies/BuildEnemyStateTreeCommandlet.h) —
-  Root → Combat {Track Target, Shoot When Visible, Keep Distance}; контекст задач привязывается автоматически по типу.
+  Root → Combat {Track Target, Shoot When Visible} → по состоянию на роль (`Pressure` / `Flank` / `Cover`, условие
+  `Enemy: Has Role`) и `Free`, в каждом Keep Distance (схема — в [EnemyCoordination.md](EnemyCoordination.md)); контекст
+  задач и условий привязывается автоматически по типу.
 - Волны — [`AEnemyWaveSpawner`](../../Source/TypicalShooter/Public/Enemies/EnemyWaveSpawner.h) (сервер): `Waves` (список
   `FEnemyWaveEntry` = класс × количество; по умолчанию 2, 3, 4 `AEnemyCharacter`), первая волна через `FirstWaveDelay`,
   следующая — через `WaveDelay` после гибели (или уничтожения) последнего врага текущей, после последней — снова первая.
   Точки появления — `SpawnPoints` по очереди или случайная точка в круге `SpawnRadius` вокруг спавнера (над точкой на
-  полвысоты капсулы, случайный поворот). `OnWaveStarted(WaveIndex)`, `GetWaveIndex` / `GetWavesStarted` / `GetAliveCount`.
+  полвысоты капсулы, случайный поворот). Случайную точку спавнер пробует до 10 раз, пока капсула не поместится без
+  пересечения с `WorldStatic` / `WorldDynamic`. На `Lvl_FirstPerson` круг заходил в заднюю стену, и враг рождался застрявшим
+  в ней. `OnWaveStarted(WaveIndex)`, `GetWaveIndex` / `GetWavesStarted` / `GetAliveCount`.
   Консольная переменная `TypicalShooter.Enemies.Waves 0` — спавнеры, начавшие игру, волн не запускают (отладка; PIE-тесты
   не про врагов выключают волны через [EnemyWavesTestGuard.h](../../Source/TypicalShooter/Private/Tests/EnemyWavesTestGuard.h)).
 
@@ -179,12 +191,19 @@ HUD: `BP_HUD` → `HealthCounter` (`UHealthCounterWidget`), левый нижн�
 [EnemiesControllerTest.cpp](../../Source/TypicalShooter/Private/Tests/EnemiesControllerTest.cpp) (мир с навигационной системой
  без навмеша — `EnemiesTest::AddNavigation`): `TypicalShooter.Enemies.Controller.PossessesSpawnedEnemy`, `.TracksAndShootsTarget`,
 `.KeepsDistance` (слишком близко → отходит в полосу и там стоит).
+[EnemiesStandClearanceTest.cpp](../../Source/TypicalShooter/Private/Tests/EnemiesStandClearanceTest.cpp):
+`TypicalShooter.Enemies.Controller.StandPointClearOfWalls` (точка в 10 см от стены отвергается и поворачивается вокруг цели;
+без проверки получалось 30 см при радиусе капсулы 34).
 [EnemiesSpawnerTest.cpp](../../Source/TypicalShooter/Private/Tests/EnemiesSpawnerTest.cpp): `TypicalShooter.Enemies.Spawner.FirstWaveAfterDelay`,
-`.NextWaveWhenAllDead` (и повтор списка), `.UsesSpawnPoints`, `.DisabledByConsoleVariable`.
+`.NextWaveWhenAllDead` (и повтор списка), `.UsesSpawnPoints`, `.DisabledByConsoleVariable`, `.AvoidsLevelGeometry` (блок
+закрывает половину круга появления: из 20 врагов ни один не внутри; до исправления — 7).
+[EnemiesAvoidanceTest.cpp](../../Source/TypicalShooter/Private/Tests/EnemiesAvoidanceTest.cpp): `TypicalShooter.Enemies.Movement.AvoidsStandingAlly`
+(враг обходит союзника, стоящего на прямой к цели; без RVO застревал в 6.7 м от неё).
 [EnemiesBehaviorTreeTest.cpp](../../Source/TypicalShooter/Private/Tests/EnemiesBehaviorTreeTest.cpp): `TypicalShooter.Enemies.Behavior.TreeCompiles`.
 [EnemiesFlowTest.cpp](../../Source/TypicalShooter/Private/Tests/EnemiesFlowTest.cpp) — PIE `TypicalShooter.Enemies.Flow` на
-`Lvl_FirstPerson`: первая волна, дерево ведёт игрока, враг в полосе дистанций, игрок ранен, игрок телепортируется в 3 м от
-врага у стены — враг отходит по навмешу (≥ 6.5 м), волна убита — приходит следующая. Пишет в лог состояние навмеша и
+`Lvl_FirstPerson`: первая волна, дерево ведёт игрока, враг в полосе дистанций своей роли (±150), игрок ранен, игрок
+телепортируется в 3 м от врага у стены — враг отходит по навмешу (до ближнего края полосы своей роли − 150), волна убита —
+приходит следующая. Пишет в лог состояние навмеша и
 движения отходящего врага. Остальные PIE-тесты выключают волны (`EnemyWavesTestGuard`).
 
 Видео: [RecordingEnemyKillTest.cpp](../../Source/TypicalShooter/Private/Tests/RecordingEnemyKillTest.cpp) —
@@ -203,9 +222,11 @@ HUD: `BP_HUD` → `HealthCounter` (`UHealthCounterWidget`), левый нижн�
   навмеш пересобирается в рантайме (динамическая генерация); безвредно.
 - Враги не различают «своих»: снаряд врага ранит другого врага, если тот влезет на линию огня после выстрела
   (`CanShootAt` проверяет линию только в момент решения стрелять).
+- RVO учитывает только агентов с избеганием (враги). Игрок к ним не относится, так что врага на пути через игрока
+  останавливает обычная коллизия капсул.
 
 ## Открытые задачи
-- [ ] Координация группы через `UEnemyDirectorSubsystem`.
+- [x] Координация группы через `UEnemyDirectorSubsystem` — роли, сектора, токены атаки: [EnemyCoordination.md](EnemyCoordination.md).
 - [ ] Смерть игрока (сейчас бессмертен).
 - [ ] Анимации стрельбы / смерти, звук, VFX; оружие в руках у манекена.
 - [ ] Разные типы врагов (свои `AttackStats`, паттерны, полосы дистанций).

@@ -9,6 +9,7 @@
 #include "EnemyWaveSpawner.generated.h"
 
 class AEnemyCharacter;
+class UCapsuleComponent;
 
 USTRUCT(BlueprintType)
 struct TYPICALSHOOTER_API FEnemyWaveEntry
@@ -82,7 +83,11 @@ private:
 	void ScheduleNextWave(float Delay);
 	void StartNextWave();
 	void SpawnEnemy(TSubclassOf<AEnemyCharacter> EnemyClass);
-	FVector NextSpawnLocation();
+	/** Spawn location (capsule centre): the next spawn point, or a random point in SpawnRadius with room for Capsule. */
+	FVector NextSpawnLocation(const UCapsuleComponent& Capsule);
+	bool HasRoomFor(const UCapsuleComponent& Capsule, const FVector& Location) const;
+
+	static constexpr int32 MaxSpawnTries = 10;
 	void OnEnemyGone(AEnemyCharacter* Enemy);
 
 	/** An enemy destroyed without dying (level unload, editor) also leaves the wave. */

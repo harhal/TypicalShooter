@@ -84,8 +84,7 @@ void AEnemyWaveSpawner::SpawnEnemy(const TSubclassOf<AEnemyCharacter> EnemyClass
 	{
 		return;
 	}
-	const float HalfHeight = EnemyClass.GetDefaultObject()->GetCapsuleComponent()->GetScaledCapsuleHalfHeight();
-	const FVector Location = NextSpawnLocation() + FVector(0.f, 0.f, HalfHeight + 5.f);
+	const FVector Location = NextSpawnLocation(*EnemyClass.GetDefaultObject()->GetCapsuleComponent());
 	const FRotator Rotation(0.f, Random.FRandRange(-180.f, 180.f), 0.f);
 
 	FActorSpawnParameters Params;
@@ -99,18 +98,40 @@ void AEnemyWaveSpawner::SpawnEnemy(const TSubclassOf<AEnemyCharacter> EnemyClass
 	}
 }
 
-FVector AEnemyWaveSpawner::NextSpawnLocation()
+FVector AEnemyWaveSpawner::NextSpawnLocation(const UCapsuleComponent& Capsule)
 {
+	const FVector Lift(0.f, 0.f, Capsule.GetScaledCapsuleHalfHeight() + 5.f);
 	for (int32 Tries = 0; Tries < SpawnPoints.Num(); ++Tries)
 	{
 		const AActor* Point = SpawnPoints[NextSpawnPoint++ % SpawnPoints.Num()];
 		if (Point)
 		{
-			return Point->GetActorLocation();
+			return Point->GetActorLocation() + Lift;
 		}
 	}
-	const FVector2D Offset = FVector2D(Random.GetUnitVector()).GetSafeNormal() * SpawnRadius * FMath::Sqrt(Random.FRand());
-	return GetActorLocation() + FVector(Offset, 0.f);
+	// A random point in the circle where the capsule fits: the circle may reach into level geometry, and an enemy born
+	// deep inside a wall stays stuck there. If nothing fits, the last try (spawning adjusts it if it can).
+	FVector Location = GetActorLocation() + Lift;
+	for (int32 Try = 0; Try < MaxSpawnTries; ++Try)
+	{
+		const FVector2D Offset = FVector2D(Random.GetUnitVector()).GetSafeNormal() * SpawnRadius * FMath::Sqrt(Random.FRand());
+		Location = GetActorLocation() + FVector(Offset, 0.f) + Lift;
+		if (HasRoomFor(Capsule, Location))
+		{
+			break;
+		}
+	}
+	return Location;
+}
+
+bool AEnemyWaveSpawner::HasRoomFor(const UCapsuleComponent& Capsule, const FVector& Location) const
+{
+	FCollisionObjectQueryParams Objects;
+	Objects.AddObjectTypesToQuery(ECC_WorldStatic);
+	Objects.AddObjectTypesToQuery(ECC_WorldDynamic);
+	const FCollisionShape Shape = FCollisionShape::MakeCapsule(Capsule.GetScaledCapsuleRadius(), Capsule.GetScaledCapsuleHalfHeight());
+	FCollisionQueryParams Params(SCENE_QUERY_STAT(EnemySpawnRoom), false, this);
+	return !GetWorld()->OverlapAnyTestByObjectType(Location, FQuat::Identity, Objects, Shape, Params);
 }
 
 void AEnemyWaveSpawner::OnEnemyEndPlay(AActor* Actor, const EEndPlayReason::Type Reason)

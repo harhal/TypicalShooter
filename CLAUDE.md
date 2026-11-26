@@ -271,12 +271,23 @@ feature's doc and updated as they change; finished features are merged into `mai
   (`UStateTreeAIComponent` running `Behavior`; steps `UpdateTarget` / `UpdateFire` / `UpdatePosition`). StateTree tasks
   (`EnemyStateTreeTasks.h`) are thin wrappers; `ST_Enemy` is **generated** by `-run=BuildEnemyStateTree` (MCP can't edit
   StateTrees) — change the tree in `UBuildEnemyStateTreeCommandlet::BuildTree`. Stand points: `EnemyPositioning`
-  (distance band, jitter, navmesh-reachable). `UEnemyDirectorSubsystem` registers live enemies and picks the target
-  (nearest player pawn) — the place for future group coordination. `AEnemyWaveSpawner` spawns waves (next after the
-  whole wave died, list loops); cvar `TypicalShooter.Enemies.Waves 0` disables them — PIE tests not about enemies use
-  `Tests/EnemyWavesTestGuard.h`. Navmesh is generated at runtime (`RuntimeGeneration=Dynamic` in `DefaultEngine.ini`).
+  (distance band, jitter, sector, navmesh-reachable with room for the capsule; `NextArcWaypoint` = go around the target
+  along the band instead of through it). Enemies use RVO avoidance. `AEnemyWaveSpawner` spawns waves (next after the
+  whole wave died, list loops; random points only where the capsule fits); cvar `TypicalShooter.Enemies.Waves 0`
+  disables them — PIE tests not about enemies use `Tests/EnemyWavesTestGuard.h`. Navmesh is generated at runtime
+  (`RuntimeGeneration=Dynamic` in `DefaultEngine.ini`).
+- **Enemy coordination** (`Public|Private/Enemies/Coordination/`, doc `Docs/Features/EnemyCoordination.md`):
+  `UEnemyDirectorSubsystem` (tickable, server) groups live enemies by target (nearest player pawn) and runs one
+  `FEnemyGroupCoordinator` per group: roles `EEnemyRole` Pressure / Flank / Cover (`EnemyRoles::Assign`: weighted quotas,
+  `AEnemyCharacter::AllowedRoles`, stable), sectors around the target (`EnemySectors::Assign`; flankers outside the target's
+  view), attack tokens (`FEnemyTokenPool`: count from group size, hold time, cooldown, rarer out of the target's view).
+  Recomputed on register / death / target change and every `UpdateInterval`. The controller fires only with a token
+  (`CanAttack` — melee / kamikaze types override it) and stands by role band (`RoleBandOverrides` per class) and sector
+  (`EnemyRoleStand::Apply`). `ST_Enemy`: Combat → Pressure / Flank / Cover / Free states (`Enemy: Has Role`). All tuning in
+  Project Settings → Game → Enemy Coordination (`UEnemyCoordinationSettings`); debug draw:
+  `TypicalShooter.Enemies.Debug.Coordination 1`.
 
-## Current state (as of 2026-11-26)
+## Current state (as of 2026-11-27)
 
 C++ and all project blueprints compile. In PIE (standalone, server) both level containers fill
 their inventories (`LogTypicalShooter: ... placed N of N manifest items`). The inventory screen has
@@ -329,8 +340,11 @@ Shooting works in PIE: the player fires at three `ATargetDummy` on `Lvl_FirstPer
 Verify blueprints headlessly with:
 `UnrealEditor-Cmd.exe <uproject> -run=CompileAllBlueprints -unattended -nopause -NullRHI -stdout`
 
-Enemies work in PIE: `EnemyWaveSpawner_Back` on `Lvl_FirstPerson` sends waves of `BP_Enemy` (2 / 3 / 4) that keep
-800–1600 cm from the player and shoot when they see him; covered by `TypicalShooter.Enemies.Flow`. The template NPC AI
-was removed; unused template content is listed in `Docs/ContentCleanup.md`.
+Enemies work in PIE: `EnemyWaveSpawner_Back` on `Lvl_FirstPerson` sends waves of `BP_Enemy` (2 / 3 / 4) that are
+coordinated as a group: roles 2 : 1 : 1, spread around the player (flanker out of his view, going around along an arc),
+at most `GetTokenCount(N)` firing at once; covered by `TypicalShooter.Enemies.Flow` and
+`TypicalShooter.Enemies.Coordination.Flow`. The template NPC AI was removed; unused template content is listed in
+`Docs/ContentCleanup.md`. `TypicalShooter.PowerGrid.Flow` is flaky (picks a random-loot container instead of the one with
+the damage amplifier); its fix is tracked separately.
 
 Game design (roguelike arena loop) has not been started.

@@ -6,6 +6,8 @@
 #include "CoreMinimal.h"
 #include "AbilitySystemInterface.h"
 #include "GameFramework/Character.h"
+#include "Enemies/Coordination/EnemyRole.h"
+#include "Enemies/Coordination/EnemyRoleStand.h"
 #include "Shooting/ShotModifier.h"
 #include "EnemyCharacter.generated.h"
 
@@ -49,6 +51,26 @@ public:
 	/** Target within the attack's fire end distance and a Visibility trace from the muzzle reaches it unblocked. */
 	UFUNCTION(BlueprintPure, Category = "Enemy|Attack")
 	bool CanShootAt(const AActor* Target) const;
+
+	/**
+	 * Could this enemy's attack reach Target right now (the coordinator hands attack tokens only to such enemies)? A shooter
+	 * checks CanShootAt; melee / kamikaze enemies override it with their own reach.
+	 */
+	virtual bool CanAttack(const AActor* Target) const { return CanShootAt(Target); }
+
+	/** Roles the coordinator may give this enemy; empty = any. */
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Enemy|Coordination")
+	TArray<EEnemyRole> AllowedRoles = {EEnemyRole::Pressure, EEnemyRole::Flank, EEnemyRole::Cover};
+
+	/** Distance bands of this enemy class per role; roles without an entry use the project's bands. */
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Enemy|Coordination")
+	TMap<EEnemyRole, FEnemyDistanceBand> RoleBandOverrides;
+
+	/** EnemyRoles::Mask bits of AllowedRoles (0 = any). */
+	uint8 GetAllowedRoleMask() const;
+
+	/** Band for Role: this class's override, else UEnemyCoordinationSettings::RoleBands. */
+	FEnemyDistanceBand GetRoleBand(EEnemyRole ForRole) const;
 
 	/** Server: fire while CanShootAt(Target), otherwise release the attack. */
 	UFUNCTION(BlueprintCallable, Category = "Enemy|Attack")

@@ -14,7 +14,7 @@ bool FEnemiesBehaviorTreeCompilesTest::RunTest(const FString& Parameters)
 	UStateTree* Tree = NewObject<UStateTree>(GetTransientPackage());
 	TestTrue(TEXT("The enemy tree compiles"), UBuildEnemyStateTreeCommandlet::BuildTree(*Tree));
 	TestTrue(TEXT("Compiled tree is ready to run"), Tree->IsReadyToRun());
-	TestEqual(TEXT("Root + Combat states"), Tree->GetStates().Num(), 2);
+	TestEqual(TEXT("Root + Combat + Pressure / Flank / Cover / Free states"), Tree->GetStates().Num(), 6);
 	return true;
 }
 

@@ -87,7 +87,8 @@ bool FEnemiesControllerDistanceTest::RunTest(const FString& Parameters)
 	}
 	S.Controller->UpdateTarget();
 	TestTrue(TEXT("Too close: starts moving"), S.Controller->UpdatePosition(EnemiesControllerTest::Settings()));
-	TestEqual(TEXT("Stand point in the middle of the band"), FVector::Dist2D(S.Controller->GetStandPoint(), S.Player->GetActorLocation()), 1200.0, 1.0);
+	// A lone enemy is the group's pressure enemy and holds the token: its band is the role's (500-900), not Settings().
+	TestEqual(TEXT("Stand point in the middle of the pressure band"), FVector::Dist2D(S.Controller->GetStandPoint(), S.Player->GetActorLocation()), 700.0, 1.0);
 
 	for (int32 Step = 0; Step < 300; ++Step)
 	{
@@ -95,7 +96,7 @@ bool FEnemiesControllerDistanceTest::RunTest(const FString& Parameters)
 		F.Tick(1.f / 60.f);
 	}
 	const double Distance = FVector::Dist2D(S.Enemy->GetActorLocation(), S.Player->GetActorLocation());
-	TestTrue(FString::Printf(TEXT("Moved into the band (distance %.0f)"), Distance), Distance >= 750.0 && Distance <= 1650.0);
+	TestTrue(FString::Printf(TEXT("Moved into the band (distance %.0f)"), Distance), Distance >= 450.0 && Distance <= 950.0);
 	TestFalse(TEXT("Inside the band with a visible target: stays"), S.Controller->UpdatePosition(EnemiesControllerTest::Settings()));
 	return true;
 }
