@@ -53,8 +53,8 @@ Regenerate IDE project files (`.sln` / `.slnx` are gitignored):
 
 - `Source/TypicalShooter/` — template base classes (`TypicalShooterGameMode`, `PlayerController`,
   `CameraManager`) from the UE First Person template.
-- `Source/TypicalShooter/Variant_Shooter/`, `Variant_Horror/` — template variants (weapons, AI via
-  StateTree/EQS, pickups, UI). Template code; modify freely but treat as a starting point.
+- `Source/TypicalShooter/Variant_Shooter/`, `Variant_Horror/` — template variants (weapons,
+  pickups, UI; the template NPC AI was removed, see `Docs/ContentCleanup.md`). Template code; modify freely but treat as a starting point.
 - `Source/TypicalShooter/Public|Private/` — custom gameplay code:
   - Inventory core: `InventoryComponent`, `InventoryArray` (likely FastArray replication),
     `InventoryItem`, `InventoryItemManifest`, `ItemFragment`, `ItemsContainer`.
@@ -305,5 +305,5 @@ Shooting works in PIE: the player fires at three `ATargetDummy` on `Lvl_FirstPer
 Verify blueprints headlessly with:
 `UnrealEditor-Cmd.exe <uproject> -run=CompileAllBlueprints -unattended -nopause -NullRHI -stdout`
 
-Game design (roguelike arena loop, enemies) has not been started; enemies / AI still come from the
-`Variant_Shooter` template (not hooked to the new damage receivers).
+Game design (roguelike arena loop) has not been started. Enemies are in progress on `feature/enemies`
+(`Docs/Features/Enemies.md`); the template NPC AI was removed.
