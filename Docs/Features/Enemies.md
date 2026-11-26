@@ -68,7 +68,7 @@
   (сам виджет в `BP_HUD` ставится в итерации 11 — нужен открытый редактор)
 - [x] 4. `AEnemyCharacter`: здоровье, урон, атака с базовыми параметрами (R4, R5) — тест: `TypicalShooter.Enemies.Character.*`
 - [x] 5. Смерть врага (R6) — тест: `TypicalShooter.Enemies.Character.Dies*`
-- [ ] 6. Огонь только при линии видимости (R9) — тест: `TypicalShooter.Enemies.Combat.*`
+- [x] 6. Огонь только при линии видимости (R9) — тест: `TypicalShooter.Enemies.Combat.*`
 - [ ] 7. Выбор точки в полосе дистанций (R8) — тест: `TypicalShooter.Enemies.Positioning.*`
 - [ ] 8. `UEnemyDirectorSubsystem`: регистрация, поиск цели (R7, R11) — тест: `TypicalShooter.Enemies.Director.*`
 - [ ] 9. `AEnemyAIController` + задачи StateTree (цель, держать дистанцию, стрелять) (R8–R10) — тест: `TypicalShooter.Enemies.Tasks.*`
@@ -97,6 +97,10 @@
 - Смерть врага (`Die`, сервер, по `UHealthComponent::GetDepletedDelegate`): отпускает атаку и отменяет абилки,
   останавливает движение, выключает коллизию капсулы, отцепляется от контроллера, шлёт `OnDied` /
   `GetDiedDelegate()` и исчезает через `DeathLifeSpan` (0.1 с). Мёртвый враг не стреляет (`SetFiring` игнорируется).
+- Решение стрелять — `CanShootAt(Target)`: цель в пределах конца огня основной атаки и трасса `Visibility` от дула до
+  центра цели ничего не задевает (или задевает саму цель); `UpdateFiring(Target)` = `SetFiring(CanShootAt(Target))`.
+  Капсула врага блокирует `Visibility` (профиль Pawn её игнорирует): прицел игрока останавливается на враге, а враги
+  перекрывают линию огня друг другу.
 
 ## Настройка контента
 Будет заполнено по ходу итераций.
@@ -111,6 +115,8 @@
 `.TakesDamage`, `.FiresWhileFiring` (очереди по манекену, после отпускания новых снарядов нет).
 [EnemiesDeathTest.cpp](../../Source/TypicalShooter/Private/Tests/EnemiesDeathTest.cpp): `TypicalShooter.Enemies.Character.DiesAtZeroHealth`,
 `.DiesAndStopsFiring`.
+[EnemiesCombatTest.cpp](../../Source/TypicalShooter/Private/Tests/EnemiesCombatTest.cpp): `TypicalShooter.Enemies.Combat.FiresWithLineOfSight`,
+`.WallBlocksFire`, `.AllyBlocksFire`, `.OutOfRange`.
 
 ## Ограничения и грабли
 

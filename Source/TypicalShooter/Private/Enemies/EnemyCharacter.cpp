@@ -2,6 +2,7 @@
 
 #include "TS_GAS.h"
 #include "Components/CapsuleComponent.h"
+#include "Engine/World.h"
 #include "GameFramework/CharacterMovementComponent.h"
 #include "GameFramework/Controller.h"
 #include "TypicalShooter.h"
@@ -14,6 +15,9 @@
 
 AEnemyCharacter::AEnemyCharacter()
 {
+	// Block Visibility (the Pawn profile ignores it): aim traces stop on enemies and enemies block each other's line of sight.
+	GetCapsuleComponent()->SetCollisionResponseToChannel(ECC_Visibility, ECR_Block);
+
 	Gas = CreateDefaultSubobject<UTS_GAS>(TEXT("Ability System"));
 	Gas->SetIsReplicated(true);
 	Gas->SetReplicationMode(EGameplayEffectReplicationMode::Minimal);
@@ -69,6 +73,30 @@ void AEnemyCharacter::BeginPlay()
 		GrantAttack();
 		Health->GetDepletedDelegate().AddUObject(this, &AEnemyCharacter::Die);
 	}
+}
+
+bool AEnemyCharacter::CanShootAt(const AActor* Target) const
+{
+	if (!Target || bDead)
+	{
+		return false;
+	}
+	const FVector From = Muzzle->GetComponentLocation();
+	const FVector To = Target->GetActorLocation();
+	const float Range = Gas->GetNumericAttribute(UAttackAttributeSet::GetAttribute(EAttackSlot::Primary, EAttackAttribute::FireEndDistance));
+	if (FVector::DistSquared(From, To) > FMath::Square(Range))
+	{
+		return false;
+	}
+
+	FCollisionQueryParams Params(SCENE_QUERY_STAT(EnemyLineOfSight), false, this);
+	FHitResult Hit;
+	return !GetWorld()->LineTraceSingleByChannel(Hit, From, To, ECC_Visibility, Params) || Hit.GetActor() == Target;
+}
+
+void AEnemyCharacter::UpdateFiring(const AActor* Target)
+{
+	SetFiring(CanShootAt(Target));
 }
 
 void AEnemyCharacter::Die()

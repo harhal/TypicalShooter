@@ -46,6 +46,14 @@ public:
 	UFUNCTION(BlueprintPure, Category = "Enemy|Attack")
 	bool IsFiring() const { return bFiring; }
 
+	/** Target within the attack's fire end distance and a Visibility trace from the muzzle reaches it unblocked. */
+	UFUNCTION(BlueprintPure, Category = "Enemy|Attack")
+	bool CanShootAt(const AActor* Target) const;
+
+	/** Server: fire while CanShootAt(Target), otherwise release the attack. */
+	UFUNCTION(BlueprintCallable, Category = "Enemy|Attack")
+	void UpdateFiring(const AActor* Target);
+
 	/** Seconds the dead body stays before it is destroyed. */
 	UPROPERTY(EditDefaultsOnly, Category = "Enemy", meta = (ClampMin = 0.01))
 	float DeathLifeSpan = 0.1f;
