@@ -1,6 +1,7 @@
 # Враги: стрелки, волны, ИИ на StateTree
 
-**Статус:** ⚪ В разработке (ветка `feature/enemies`): требования и план согласуются.
+**Статус:** ✅ Работает (ветка `feature/enemies`): на `Lvl_FirstPerson` волны врагов-стрелков держат дистанцию, стреляют
+по игроку при линии видимости и умирают; игрок пока бессмертен. Мультиплеер не проверялся.
 
 ## Что это
 Первые враги арены. Враг — персонаж с GAS-здоровьем и той же атакой снарядами, что у игрока, только слабее.
@@ -76,9 +77,9 @@
 - [x] 10. `AEnemyWaveSpawner` (R12) — тест: `TypicalShooter.Enemies.Spawner.*`
 - [x] 11a. `ST_Enemy` генерируется из кода коммандлетом `BuildEnemyStateTree` (в MCP StateTree-ассеты только читаются)
   — тест: `TypicalShooter.Enemies.Behavior.TreeCompiles`
-- [ ] 11. Контент: `HealthCounter` в `BP_HUD`, `BP_Enemy`, `BP_EnemyAIController`, `ST_Enemy`, навмеш и спавнер на `Lvl_FirstPerson` (R14) —
-  тест: `TypicalShooter.Enemies.Flow` (PIE: волна появляется, враги держат дистанцию и ранят игрока, игрок их
-  убивает, приходит следующая волна)
+- [x] 11. Контент: `HealthCounter` в `BP_HUD`, `BP_Enemy`, `BP_EnemyAIController`, `ST_Enemy`, навмеш и спавнер на `Lvl_FirstPerson` (R14) —
+  тест: `TypicalShooter.Enemies.Flow` (PIE: волна появляется, дерево ведёт игрока, враги держат дистанцию и ранят
+  игрока, враг у стены отходит от подошедшего игрока по навмешу, после гибели волны приходит следующая)
 
 ## Как устроено
 - Здоровье — [`UHealthComponent`](../../Source/TypicalShooter/Public/Shooting/HealthComponent.h) (общий для игрока и врагов):
@@ -139,8 +140,25 @@
 ## Настройка контента
 Дерево поведения меняем в коде (`BuildTree`) и перегенерируем (редактор закрыт):
 `UnrealEditor-Cmd.exe <uproject> -run=BuildEnemyStateTree -unattended -nopause -NullRHI`.
-Правки дерева руками в редакторе затрутся при следующей генерации.
-Будет заполнено по ходу итераций.
+Правки дерева руками в редакторе затрутся при следующей генерации. Параметры полосы дистанций — в `BuildTree`
+(`FEnemyStandSettings` задачи Keep Distance).
+
+Ассеты — `Content/Enemies`:
+- `Blueprints/BP_Enemy` (от `AEnemyCharacter`): меш `SKM_Manny_Simple` + `ABP_Unarmed` (Z −90, Yaw −90),
+  `AIControllerClass = BP_EnemyAIController`. Здоровье — компонент `Health`, атака — `Attack Stats` / `Attack Ability`.
+- `Blueprints/BP_EnemyAIController` (от `AEnemyAIController`): `Behavior = ST_Enemy`.
+- `AI/ST_Enemy` — сгенерирован (см. выше).
+
+Уровень `Lvl_FirstPerson`:
+- `NavMeshBounds_Arena` — на всю арену (центр (0, 0, 300), масштаб 22 × 22 × 8). Навмеш строится в рантайме:
+  `DefaultEngine.ini` → `[/Script/NavigationSystem.RecastNavMesh] RuntimeGeneration=Dynamic` (уровень с OFPA, запечённых
+  навданных нет).
+- `EnemyWaveSpawner_Back` в (−1500, 0, 0) — за спиной игрока у дальнего края: волны 2 / 3 / 4 `BP_Enemy`, первая через
+  2 с, следующие через 3 с, радиус появления 300.
+
+HUD: `BP_HUD` → `HealthCounter` (`UHealthCounterWidget`), левый нижний угол (отступ 40), авторазмер.
+
+Отладка: `TypicalShooter.Enemies.Waves 0` в консоли до старта PIE — арена без врагов.
 
 ## Тесты
 [EnemiesHealthTest.cpp](../../Source/TypicalShooter/Private/Tests/EnemiesHealthTest.cpp) (мир без PIE):
@@ -164,14 +182,26 @@
 [EnemiesSpawnerTest.cpp](../../Source/TypicalShooter/Private/Tests/EnemiesSpawnerTest.cpp): `TypicalShooter.Enemies.Spawner.FirstWaveAfterDelay`,
 `.NextWaveWhenAllDead` (и повтор списка), `.UsesSpawnPoints`, `.DisabledByConsoleVariable`.
 [EnemiesBehaviorTreeTest.cpp](../../Source/TypicalShooter/Private/Tests/EnemiesBehaviorTreeTest.cpp): `TypicalShooter.Enemies.Behavior.TreeCompiles`.
+[EnemiesFlowTest.cpp](../../Source/TypicalShooter/Private/Tests/EnemiesFlowTest.cpp) — PIE `TypicalShooter.Enemies.Flow` на
+`Lvl_FirstPerson`: первая волна, дерево ведёт игрока, враг в полосе дистанций, игрок ранен, игрок телепортируется в 3 м от
+врага у стены — враг отходит по навмешу (≥ 6.5 м), волна убита — приходит следующая. Пишет в лог состояние навмеша и
+движения отходящего врага. Остальные PIE-тесты выключают волны (`EnemyWavesTestGuard`).
 
 ## Ограничения и грабли
 - В «голом» тестовом мире нет навигационной системы: `MoveToLocation` не стартует даже по прямой. Тесты движения
   вызывают `EnemiesTest::AddNavigation` (система без навданных — прямые перемещения работают).
+- StateTree-тулсет Unreal MCP только читает деревья — поэтому `ST_Enemy` генерируется коммандлетом.
+- При загрузке уровня `LogNavigation` предупреждает «Recreating dtNavMesh instance» — сохранённый `RecastNavMesh` пуст,
+  навмеш пересобирается в рантайме (динамическая генерация); безвредно.
+- Враги не различают «своих»: снаряд врага ранит другого врага, если тот влезет на линию огня после выстрела
+  (`CanShootAt` проверяет линию только в момент решения стрелять).
 
 ## Открытые задачи
 - [ ] Координация группы через `UEnemyDirectorSubsystem`.
 - [ ] Смерть игрока (сейчас бессмертен).
+- [ ] Анимации стрельбы / смерти, звук, VFX; оружие в руках у манекена.
+- [ ] Разные типы врагов (свои `AttackStats`, паттерны, полосы дистанций).
+- [ ] Проверить врагов по сети (репликация движения и снарядов, клиент).
 
 ---
 _Сверено с кодом: 2026-11-26_

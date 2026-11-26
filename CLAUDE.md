@@ -251,8 +251,21 @@ feature's doc and updated as they change; finished features are merged into `mai
   up to `Capacity` from the ammo reserve when a source enters the character's inventory and returns it on leaving;
   each attack shot calls `ReportUse(receiver)`: every ammo source feeding the receiver pays `CostPerUse`; after
   `RechargeDelay` without uses a looping timer refills the clip from the reserve until full.
+- **Health**: `UHealthComponent` (`Shooting/HealthComponent.h`) on the player (`bRefillWhenDepleted`: immortal for now)
+  and on enemies: sets `UHealthAttributeSet` health at BeginPlay, fires `GetDepletedDelegate()` once per depletion.
+  `BP_HUD.HealthCounter` (`UHealthCounterWidget`) shows it.
+- **Enemies** (`Public|Private/Enemies/`, doc `Docs/Features/Enemies.md`): `AEnemyCharacter` (ASC, health, the same
+  `UAttackGameplayAbility` with weaker `AttackStats`, `SetFiring` / `CanShootAt` = range + Visibility line from the
+  muzzle; its capsule blocks Visibility; dies at zero health) possessed by `AEnemyAIController`
+  (`UStateTreeAIComponent` running `Behavior`; steps `UpdateTarget` / `UpdateFire` / `UpdatePosition`). StateTree tasks
+  (`EnemyStateTreeTasks.h`) are thin wrappers; `ST_Enemy` is **generated** by `-run=BuildEnemyStateTree` (MCP can't edit
+  StateTrees) — change the tree in `UBuildEnemyStateTreeCommandlet::BuildTree`. Stand points: `EnemyPositioning`
+  (distance band, jitter, navmesh-reachable). `UEnemyDirectorSubsystem` registers live enemies and picks the target
+  (nearest player pawn) — the place for future group coordination. `AEnemyWaveSpawner` spawns waves (next after the
+  whole wave died, list loops); cvar `TypicalShooter.Enemies.Waves 0` disables them — PIE tests not about enemies use
+  `Tests/EnemyWavesTestGuard.h`. Navmesh is generated at runtime (`RuntimeGeneration=Dynamic` in `DefaultEngine.ini`).
 
-## Current state (as of 2026-11-25)
+## Current state (as of 2026-11-26)
 
 C++ and all project blueprints compile. In PIE (standalone, server) both level containers fill
 their inventories (`LogTypicalShooter: ... placed N of N manifest items`). The inventory screen has
@@ -305,5 +318,8 @@ Shooting works in PIE: the player fires at three `ATargetDummy` on `Lvl_FirstPer
 Verify blueprints headlessly with:
 `UnrealEditor-Cmd.exe <uproject> -run=CompileAllBlueprints -unattended -nopause -NullRHI -stdout`
 
-Game design (roguelike arena loop) has not been started. Enemies are in progress on `feature/enemies`
-(`Docs/Features/Enemies.md`); the template NPC AI was removed.
+Enemies work in PIE: `EnemyWaveSpawner_Back` on `Lvl_FirstPerson` sends waves of `BP_Enemy` (2 / 3 / 4) that keep
+800–1600 cm from the player and shoot when they see him; covered by `TypicalShooter.Enemies.Flow`. The template NPC AI
+was removed; unused template content is listed in `Docs/ContentCleanup.md`.
+
+Game design (roguelike arena loop) has not been started.
