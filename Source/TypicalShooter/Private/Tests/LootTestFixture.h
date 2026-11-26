@@ -46,6 +46,8 @@ namespace LootTestFixture
 	{
 		return Manifest.GetFragmentOfType<FPowerGrid_ItemFragment>();
 	}
+	/** A pointer into a temporary manifest would dangle: keep the manifest in a local first. */
+	const FPowerGrid_ItemFragment* PowerGridOf(FInventoryItemManifest&&) = delete;
 
 	/** Open faces of the generated item; INDEX_NONE if it has no power grid fragment. */
 	inline int32 OpenFacesOf(const FInventoryItemManifest& Manifest)
@@ -58,6 +60,7 @@ namespace LootTestFixture
 	{
 		return Manifest.GetFragmentOfType<FLootOrigin_ItemFragment>();
 	}
+	const FLootOrigin_ItemFragment* OriginOf(FInventoryItemManifest&&) = delete;
 }
 
 #endif

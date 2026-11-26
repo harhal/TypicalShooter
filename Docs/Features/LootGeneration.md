@@ -63,7 +63,7 @@
 - [x] 2. `ULootItemTemplate` (тип, фиксированные фрагменты, формы с весами, поворот) + `LootGenerator::Generate`
   + `FLootOrigin_ItemFragment`, детерминизм по seed — тест: `TypicalShooter.Loot.Generator.Shape`,
   `.Determinism`
-- [ ] 3. Числа энергосети источника / приёмника из диапазонов с уровнем — тест: `TypicalShooter.Loot.Generator.PowerParams`
+- [x] 3. Числа энергосети источника / приёмника из диапазонов с уровнем — тест: `TypicalShooter.Loot.Generator.PowerParams`
 - [ ] 4. `ULootRarity` + `ULootModifier`: выбор по слотам (тег, тир строго, веса, без повторов, пропуск без
   кандидата) → `FPowerEffects_ItemFragment` — тест: `TypicalShooter.Loot.Generator.Modifiers`
 - [ ] 5. `FInfo_ItemFragment`: имя, описание с плейсхолдерами + строки модификаторов, иконка по редкости —
@@ -90,7 +90,12 @@
 - [`LootRandom.h`](../../Source/TypicalShooter/Public/Loot/LootRandom.h): `PickWeightedIndex` — выбор по весам
   (веса ≤ 0 не выигрывают), общий для форм, пулов и таблиц.
 - [`LootItemTemplate.h`](../../Source/TypicalShooter/Public/Loot/LootItemTemplate.h): `ULootItemTemplate` —
-  `ItemType`, `FaceShapes` (`FLootFaceShape`: маска + вес; пусто = все грани), `bRandomRotation`, `FixedFragments`.
+  `ItemType`, `FaceShapes` (`FLootFaceShape`: маска + вес; пусто = все грани), `bRandomRotation`, `FixedFragments`,
+  `Source` / `Receiver` (видны по `ItemType`).
+- [`LootPowerParams.h`](../../Source/TypicalShooter/Public/Loot/LootPowerParams.h): `FLootSourceParams` (диапазоны
+  `Power`, `Capacity`, `CostPerUse`, `RechargeDelay`, фиксированный `AmmoType`), `FLootReceiverParams` (фиксированный
+  `Ability`, диапазон `RequiredPower`, `BaseStats` из `FLootAttackStatRange`). Каждый `Roll` даёт готовые
+  `FPowerSourceParams` / `FPowerReceiverParams`; коннектор оставляет их по умолчанию.
 - [`LootGenerator.h`](../../Source/TypicalShooter/Public/Loot/LootGenerator.h): `LootGenerator::Generate(Template,
   {Level, Seed})` → `FInventoryItemManifest` = фиксированные фрагменты + `FPowerGrid_ItemFragment` + фрагмент
   происхождения. Весь рандом — из `FRandomStream(Seed)`. **Случайный поворот** применяется к самой маске
@@ -107,8 +112,12 @@
   неотрицательность, детерминизм по seed, множитель уровня и clamp.
 - `TypicalShooter.Loot.Random.PickWeighted`, `TypicalShooter.Loot.Generator.*` (`LootGeneratorTest.cpp`, общие
   хелперы — `LootTestFixture.h`): форма по весам и поворот, фиксированные фрагменты, детерминизм, происхождение.
+- `TypicalShooter.Loot.Generator.PowerParams.*` (`LootPowerParamsTest.cpp`): числа источника / приёмника с уровнем,
+  коннектор не трогает их.
 
 ## Ограничения и грабли
+- В тестах держите сгенерированный манифест в локальной переменной: указатель на фрагмент временного манифеста
+  висит (у хелперов `PowerGridOf` / `OriginOf` перегрузка для rvalue удалена).
 
 ## Открытые задачи
 - [ ] Дроп с врагов / награда за волну через `ULootTable`.

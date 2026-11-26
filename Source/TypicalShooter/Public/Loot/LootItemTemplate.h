@@ -5,6 +5,7 @@
 #include "CoreMinimal.h"
 #include "Engine/DataAsset.h"
 #include "ItemFragment.h"
+#include "Loot/LootPowerParams.h"
 #include "PowerGrid/HexFaces.h"
 #include "PowerGrid/PowerGridFragment.h"
 #include "StructUtils/InstancedStruct.h"
@@ -40,6 +41,12 @@ public:
 	/** Rotate the picked shape by a random multiple of 60 degrees. */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Power Grid")
 	bool bRandomRotation = true;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Power Grid", meta = (EditCondition = "ItemType == EPowerItemType::Source", EditConditionHides))
+	FLootSourceParams Source;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Power Grid", meta = (EditCondition = "ItemType == EPowerItemType::Receiver", EditConditionHides))
+	FLootReceiverParams Receiver;
 
 	/** Copied into every generated item as is. */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Item", meta = (ExcludeBaseStruct))

@@ -20,11 +20,19 @@ namespace LootGeneratorPrivate
 		return Template.bRandomRotation ? HexFaces::RotateMask(Mask, Stream.RandRange(0, HexFaces::Num - 1)) : Mask;
 	}
 
-	FPowerGrid_ItemFragment MakePowerGrid(const ULootItemTemplate& Template, FRandomStream& Stream)
+	FPowerGrid_ItemFragment MakePowerGrid(const ULootItemTemplate& Template, FRandomStream& Stream, const float LevelMultiplier)
 	{
 		FPowerGrid_ItemFragment PowerGrid;
 		PowerGrid.ItemType = Template.ItemType;
 		PowerGrid.OpenFaces = RollOpenFaces(Template, Stream);
+		if (Template.ItemType == EPowerItemType::Source)
+		{
+			PowerGrid.Source = Template.Source.Roll(Stream, LevelMultiplier);
+		}
+		else if (Template.ItemType == EPowerItemType::Receiver)
+		{
+			PowerGrid.Receiver = Template.Receiver.Roll(Stream, LevelMultiplier);
+		}
 		return PowerGrid;
 	}
 
@@ -42,10 +50,11 @@ FInventoryItemManifest LootGenerator::Generate(const ULootItemTemplate& Template
 {
 	using namespace LootGeneratorPrivate;
 	FRandomStream Stream(Params.Seed);
+	const float LevelMultiplier = GetDefault<ULootSettings>()->GetLevelMultiplier(Params.Level);
 
 	FInventoryItemManifest Manifest;
 	Manifest.Fragments = Template.FixedFragments;
-	Manifest.Fragments.Add(TInstancedStruct<FItemFragment>::Make<FPowerGrid_ItemFragment>(MakePowerGrid(Template, Stream)));
+	Manifest.Fragments.Add(TInstancedStruct<FItemFragment>::Make<FPowerGrid_ItemFragment>(MakePowerGrid(Template, Stream, LevelMultiplier)));
 	Manifest.Fragments.Add(TInstancedStruct<FItemFragment>::Make<FLootOrigin_ItemFragment>(MakeOrigin(Template, Params)));
 	return Manifest;
 }

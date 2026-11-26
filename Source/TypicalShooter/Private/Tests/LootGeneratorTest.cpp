@@ -113,7 +113,8 @@ bool FLootGeneratorOriginTest::RunTest(const FString& Parameters)
 	using namespace LootTestFixture;
 	const ULootItemTemplate* Template = MakeTemplate(EPowerItemType::Connector, {}, false);
 
-	const FLootOrigin_ItemFragment* Origin = OriginOf(LootGenerator::Generate(*Template, {250, 77}));
+	const FInventoryItemManifest Manifest = LootGenerator::Generate(*Template, {250, 77});
+	const FLootOrigin_ItemFragment* Origin = OriginOf(Manifest);
 	if (!TestNotNull(TEXT("Generated item has an origin fragment"), Origin))
 	{
 		return false;
