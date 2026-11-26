@@ -5,6 +5,7 @@
 
 #include "CoreMinimal.h"
 #include "AIController.h"
+#include "Enemies/Coordination/EnemyRole.h"
 #include "Math/RandomStream.h"
 #include "EnemyAIController.generated.h"
 
@@ -73,6 +74,12 @@ public:
 	/** Last chosen stand point. */
 	UFUNCTION(BlueprintPure, Category = "Enemy AI")
 	FVector GetStandPoint() const { return StandPoint; }
+
+	/** Role the director gave this enemy; false when it is not coordinated (no target). */
+	bool GetCoordinatedRole(EEnemyRole& OutRole) const;
+
+	/** Active StateTree states, root first (debugging, tests). */
+	TArray<FName> GetActiveStateNames() const;
 
 	/** The director lets this enemy attack now (attack token of its group). */
 	UFUNCTION(BlueprintPure, Category = "Enemy AI")

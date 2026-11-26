@@ -24,5 +24,9 @@ public:
 #if WITH_EDITOR
 	/** Replaces the tree's editor data with the enemy behaviour and compiles it. Returns false on compile errors. */
 	static bool BuildTree(UStateTree& Tree);
+
+private:
+	/** Pressure / Flank / Cover (enter condition: the director's role) and Free under Combat, with sibling transitions. */
+	static void AddRoleStates(class UStateTreeState& Combat);
 #endif
 };

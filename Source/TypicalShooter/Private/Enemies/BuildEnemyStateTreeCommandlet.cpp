@@ -5,6 +5,7 @@
 #if WITH_EDITOR
 #include "AssetRegistry/AssetRegistryModule.h"
 #include "Components/StateTreeAIComponentSchema.h"
+#include "Enemies/EnemyStateTreeConditions.h"
 #include "Enemies/EnemyStateTreeTasks.h"
 #include "Misc/PackageName.h"
 #include "StateTree.h"
@@ -17,6 +18,60 @@
 #include "UObject/Package.h"
 #include "UObject/SavePackage.h"
 
+namespace BuildEnemyStateTree
+{
+	struct FRoleState
+	{
+		EEnemyRole Role;
+		const TCHAR* Name;
+	};
+
+	constexpr FRoleState RoleStates[] = {
+		{EEnemyRole::Pressure, TEXT("Pressure")},
+		{EEnemyRole::Flank, TEXT("Flank")},
+		{EEnemyRole::Cover, TEXT("Cover")},
+	};
+
+	void AddGoToRole(UStateTreeState& From, const UStateTreeState& To, const EEnemyRole Role)
+	{
+		FStateTreeTransition& Transition = From.AddTransition(EStateTreeTransitionTrigger::OnTick, EStateTreeTransitionType::GotoState, &To);
+		Transition.AddConditionWithOuter<FEnemyHasRoleCondition>(&From).GetInstanceData().Role = Role;
+	}
+}
+
+void UBuildEnemyStateTreeCommandlet::AddRoleStates(UStateTreeState& Combat)
+{
+	using namespace BuildEnemyStateTree;
+	TArray<UStateTreeState*> ByRole;
+	for (const FRoleState& RoleState : RoleStates)
+	{
+		UStateTreeState& State = Combat.AddChildState(RoleState.Name);
+		State.AddEnterCondition<FEnemyHasRoleCondition>().GetInstanceData().Role = RoleState.Role;
+		State.AddTask<FEnemyKeepDistanceTask>(); // band and sector come from the role (director)
+		ByRole.Add(&State);
+	}
+	// Not coordinated (no target): the task's own band, last so it is the fallback.
+	UStateTreeState& Free = Combat.AddChildState(TEXT("Free"));
+	Free.AddTask<FEnemyKeepDistanceTask>();
+
+	for (int32 From = 0; From < ByRole.Num(); ++From)
+	{
+		for (int32 To = 0; To < ByRole.Num(); ++To)
+		{
+			if (To != From)
+			{
+				AddGoToRole(*ByRole[From], *ByRole[To], RoleStates[To].Role);
+			}
+		}
+		FStateTreeTransition& ToFree = ByRole[From]->AddTransition(EStateTreeTransitionTrigger::OnTick, EStateTreeTransitionType::GotoState, &Free);
+		ToFree.AddConditionWithOuter<FEnemyNotCoordinatedCondition>(ByRole[From]);
+	}
+	for (int32 To = 0; To < ByRole.Num(); ++To)
+	{
+		AddGoToRole(Free, *ByRole[To], RoleStates[To].Role);
+	}
+}
+
 bool UBuildEnemyStateTreeCommandlet::BuildTree(UStateTree& Tree)
 {
 	const TSubclassOf<UStateTreeSchema> SchemaClass = UStateTreeAIComponentSchema::StaticClass();
@@ -27,10 +82,12 @@ bool UBuildEnemyStateTreeCommandlet::BuildTree(UStateTree& Tree)
 	EditorData->EditorSchema = NewObject<UStateTreeEditorSchema>(EditorData, EditorModule.GetEditorSchemaClass(SchemaClass.Get()), NAME_None, RF_Transactional);
 	Tree.EditorData = EditorData;
 
+	// Combat tracks and shoots; its children only position the enemy, one per role the director gives (plus Free when it
+	// coordinates nothing). Transitions go between siblings, so Combat (and the shoot task's token) is not restarted.
 	UStateTreeState& Combat = EditorData->AddRootState().AddChildState(TEXT("Combat"));
 	Combat.AddTask<FEnemyTrackTargetTask>();
 	Combat.AddTask<FEnemyShootTask>();
-	Combat.AddTask<FEnemyKeepDistanceTask>();
+	AddRoleStates(Combat);
 
 	FStateTreeCompilerLog Log;
 	const bool bCompiled = UStateTreeEditingSubsystem::CompileStateTree(&Tree, Log);

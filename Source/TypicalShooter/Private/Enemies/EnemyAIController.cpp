@@ -108,6 +108,22 @@ void AEnemyAIController::MoveToStandPoint(const FEnemyStandSettings& Settings)
 	}
 }
 
+bool AEnemyAIController::GetCoordinatedRole(EEnemyRole& OutRole) const
+{
+	const UEnemyDirectorSubsystem* Director = GetWorld()->GetSubsystem<UEnemyDirectorSubsystem>();
+	const FEnemyAssignment* Assignment = Director && GetEnemy() ? Director->GetAssignment(GetEnemy()) : nullptr;
+	if (Assignment)
+	{
+		OutRole = Assignment->Role;
+	}
+	return Assignment != nullptr;
+}
+
+TArray<FName> AEnemyAIController::GetActiveStateNames() const
+{
+	return StateTreeAI->GetActiveStateNames();
+}
+
 bool AEnemyAIController::HasAttackToken() const
 {
 	const UEnemyDirectorSubsystem* Director = GetWorld()->GetSubsystem<UEnemyDirectorSubsystem>();
@@ -116,7 +132,18 @@ bool AEnemyAIController::HasAttackToken() const
 
 void AEnemyAIController::ReleaseAttackToken()
 {
-	if (UEnemyDirectorSubsystem* Director = GetWorld()->GetSubsystem<UEnemyDirectorSubsystem>())
+	// The StateTree stops (and the shoot task exits) also while garbage collection destroys this controller and its
+	// world: the director is gone then, and so are the tokens.
+	if (IsUnreachable() || HasAnyFlags(RF_BeginDestroyed | RF_FinishDestroyed))
+	{
+		return;
+	}
+	const UWorld* World = GetWorld();
+	if (!World || World->bIsTearingDown)
+	{
+		return;
+	}
+	if (UEnemyDirectorSubsystem* Director = World->GetSubsystem<UEnemyDirectorSubsystem>())
 	{
 		Director->ReleaseAttackToken(GetEnemy());
 	}

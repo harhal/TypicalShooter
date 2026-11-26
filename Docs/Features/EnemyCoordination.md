@@ -112,7 +112,7 @@
 - [x] 7. Враг и контроллер: `AllowedRoles`, `RoleBandOverrides`, огонь только с токеном, позиция по роли и сектору, отдача
   токена при выходе из боя и смерти (R4, R8, R10, R18) — тест: `TypicalShooter.Enemies.Controller.FiresOnlyWithToken`,
   `.RoleBand`, `.RoleBandOverride`; поведение роли — `TypicalShooter.Enemies.Coordination.RoleStand.*`
-- [ ] 8. StateTree: условие `Enemy: Has Role`, состояния ролей, перегенерация `ST_Enemy` (R15) — тест:
+- [x] 8. StateTree: условие `Enemy: Has Role`, состояния ролей, перегенерация `ST_Enemy` (R15) — тест:
   `TypicalShooter.Enemies.Behavior.TreeCompiles`, `.RoleStates`
 - [ ] 9. Отладочная отрисовка (R17) — ручная проверка в PIE (описать в доке), плюс тест, что при выключенной переменной
   отрисовки нет: `TypicalShooter.Enemies.Coordination.DebugDrawOff`
@@ -210,7 +210,24 @@
   - `UpdatePosition` после базового запроса вызывает `ApplyCoordination`: роль, токен, полоса и сектор от директора.
     Без назначения (нет цели) остаются полоса из `FEnemyStandSettings` и сторона самого врага;
   - `ReleaseAttackToken()` вызывается из `StopCombat` и при выходе из задачи `Enemy: Shoot When Visible` (R6, выход из боя).
-    Смерть отдаёт токен через `Unregister`.
+    Смерть отдаёт токен через `Unregister`. Пока контроллер или мир разрушаются (сборка мусора, конец PIE), директора уже
+    нет, и `ReleaseAttackToken` ничего не делает.
+  - `GetCoordinatedRole(OutRole)` — роль от директора (false без координации); `GetActiveStateNames()` — активные
+    состояния StateTree (отладка, тесты).
+- StateTree `ST_Enemy` (генерирует `UBuildEnemyStateTreeCommandlet::BuildTree` / `AddRoleStates`):
+  ```
+  Root
+  └─ Combat            Track Target, Shoot When Visible (с токеном)
+     ├─ Pressure       вход: Enemy: Has Role(Pressure); Keep Distance
+     ├─ Flank          вход: Enemy: Has Role(Flank);    Keep Distance
+     ├─ Cover          вход: Enemy: Has Role(Cover);    Keep Distance
+     └─ Free           без условия (нет координации);   Keep Distance (полоса из параметров задачи)
+  ```
+  Из каждого состояния роли по тику есть переход к каждому другому состоянию роли с условием `Has Role(его роль)` и в
+  `Free` с условием `Enemy: Not Coordinated`; из `Free` — в каждое состояние роли. Переходы идут между соседями, поэтому
+  Combat не перезапускается и задача стрельбы не отдаёт токен при смене роли. Полосу и сектор Keep Distance всё равно
+  берёт из `ApplyCoordination`, а состояния ролей — это место для поведения, которое будет у ролей своим.
+  Условия лежат в [EnemyStateTreeConditions.h](../../Source/TypicalShooter/Public/Enemies/EnemyStateTreeConditions.h).
 
 ## Настройка контента
 Project Settings → Game → **Enemy Coordination**:
@@ -270,6 +287,12 @@ Project Settings → Game → **Enemy Coordination**:
 `TypicalShooter.Enemies.Controller.FiresOnlyWithToken` (двое видят игрока, стреляет один; `StopCombat` отдаёт токен, и он
 переходит ко второму), `.RoleBand` (враг только с `Cover` получает эту роль и встаёт на середину её полосы),
 `.RoleBandOverride` (враг ближнего боя: полоса 0–150 → точка в 75 см от игрока; без переопределения — полоса проекта).
+
+[EnemiesBehaviorRoleStatesTest.cpp](../../Source/TypicalShooter/Private/Tests/EnemiesBehaviorRoleStatesTest.cpp):
+`TypicalShooter.Enemies.Behavior.RoleStates` — сгенерированное дерево в мире без PIE. Без игрока активно `Free`, с игроком —
+`Pressure` под `Combat`. После `AllowedRoles = {Cover}` дерево переходит в `Cover`, и враг сохраняет токен (то есть Combat не
+перезапущен; если направить переходы в сам `Combat`, тест падает). `TypicalShooter.Enemies.Behavior.TreeCompiles` теперь
+ждёт 6 состояний.
 
 Обновлены под роли: `TypicalShooter.Enemies.Controller.KeepsDistance` (одиночка — давящий с токеном, полоса 500–900) и
 `TypicalShooter.Enemies.Flow` (полоса своей роли ±150; отход — до ближнего края полосы роли − 150).

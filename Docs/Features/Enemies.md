@@ -132,7 +132,9 @@
   Все бегут бесконечно — кладутся в одно состояние и работают параллельно.
 - Дерево `/Game/Enemies/AI/ST_Enemy` (схема StateTree AI Component) собирается из кода:
   [`UBuildEnemyStateTreeCommandlet`](../../Source/TypicalShooter/Public/Enemies/BuildEnemyStateTreeCommandlet.h) —
-  Root → Combat {Track Target, Shoot When Visible, Keep Distance}; контекст задач привязывается автоматически по типу.
+  Root → Combat {Track Target, Shoot When Visible} → по состоянию на роль (`Pressure` / `Flank` / `Cover`, условие
+  `Enemy: Has Role`) и `Free`, в каждом Keep Distance (схема — в [EnemyCoordination.md](EnemyCoordination.md)); контекст
+  задач и условий привязывается автоматически по типу.
 - Волны — [`AEnemyWaveSpawner`](../../Source/TypicalShooter/Public/Enemies/EnemyWaveSpawner.h) (сервер): `Waves` (список
   `FEnemyWaveEntry` = класс × количество; по умолчанию 2, 3, 4 `AEnemyCharacter`), первая волна через `FirstWaveDelay`,
   следующая — через `WaveDelay` после гибели (или уничтожения) последнего врага текущей, после последней — снова первая.
