@@ -64,7 +64,8 @@
 - [x] 1. Удалить шаблонные NPC-классы и зависимые ассеты, составить список кандидатов на удаление (R13) —
   проверка: сборка, все тесты, `CompileAllBlueprints`
 - [x] 2. Здоровье игрока и бессмертие (R1, R2) — тест: `TypicalShooter.Enemies.Health.*`, `.PlayerHealth.CharacterIsImmortal`
-- [ ] 3. Здоровье в HUD (R3) — тест: `TypicalShooter.Enemies.UI.HealthText` + виджет в `BP_HUD`
+- [x] 3. Текст здоровья и виджет `UHealthCounterWidget` (R3) — тест: `TypicalShooter.Enemies.UI.HealthText`
+  (сам виджет в `BP_HUD` ставится в итерации 11 — нужен открытый редактор)
 - [ ] 4. `AEnemyCharacter`: здоровье, урон, атака с базовыми параметрами (R4, R5) — тест: `TypicalShooter.Enemies.Character.*`
 - [ ] 5. Смерть врага (R6) — тест: `TypicalShooter.Enemies.Character.Dies*`
 - [ ] 6. Огонь только при линии видимости (R9) — тест: `TypicalShooter.Enemies.Combat.*`
@@ -72,7 +73,7 @@
 - [ ] 8. `UEnemyDirectorSubsystem`: регистрация, поиск цели (R7, R11) — тест: `TypicalShooter.Enemies.Director.*`
 - [ ] 9. `AEnemyAIController` + задачи StateTree (цель, держать дистанцию, стрелять) (R8–R10) — тест: `TypicalShooter.Enemies.Tasks.*`
 - [ ] 10. `AEnemyWaveSpawner` (R12) — тест: `TypicalShooter.Enemies.Spawner.*`
-- [ ] 11. Контент: `BP_Enemy`, `BP_EnemyAIController`, `ST_Enemy`, навмеш и спавнер на `Lvl_FirstPerson` (R14) —
+- [ ] 11. Контент: `HealthCounter` в `BP_HUD`, `BP_Enemy`, `BP_EnemyAIController`, `ST_Enemy`, навмеш и спавнер на `Lvl_FirstPerson` (R14) —
   тест: `TypicalShooter.Enemies.Flow` (PIE: волна появляется, враги держат дистанцию и ранят игрока, игрок их
   убивает, приходит следующая волна)
 
@@ -84,6 +85,9 @@
   бессмертен, R2), иначе остаётся на нуле (враг умирает по событию).
 - Игрок (`ATypicalShooterCharacter`): `UHealthAttributeSet` + `UHealthComponent` (`bRefillWhenDepleted`) +
   `UGasDamageReceiverComponent`.
+- HUD — [`UHealthCounterWidget`](../../Source/TypicalShooter/Public/UI/Widget/HealthCounterWidget.h) (как счётчик
+  патронов): каждый кадр текст [`HealthDisplay::GetHealthText`](../../Source/TypicalShooter/Public/Shooting/HealthDisplay.h)
+  по ASC пешки владельца — «Health: 73 / 100».
 
 ## Настройка контента
 Будет заполнено по ходу итераций.
@@ -92,6 +96,7 @@
 [EnemiesHealthTest.cpp](../../Source/TypicalShooter/Private/Tests/EnemiesHealthTest.cpp) (мир без PIE):
 `TypicalShooter.Enemies.Health.StartsFull`, `.RefillsWhenDepleted`, `.StaysDepleted`,
 `TypicalShooter.Enemies.PlayerHealth.CharacterIsImmortal` (компоненты на CDO персонажа).
+[EnemiesHealthDisplayTest.cpp](../../Source/TypicalShooter/Private/Tests/EnemiesHealthDisplayTest.cpp): `TypicalShooter.Enemies.UI.HealthText`.
 
 ## Ограничения и грабли
 
