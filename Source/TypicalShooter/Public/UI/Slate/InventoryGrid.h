@@ -97,6 +97,8 @@ public:
 
 	/** Slot of the item view at Location, invalid if the cell is empty. */
 	FGuid GetSlotAt(const FHhAxialCoord& Location) const;
+	/** Item view at Location, null if the cell is empty. */
+	TSharedPtr<const SInventoryGridItem> GetItemViewAt(const FHhAxialCoord& Location) const;
 
 	/** Cell under a point in this widget's local space (the grid is centred in LocalSize). */
 	FHhAxialCoord GetCoordAtLocalPosition(const FVector2D& LocalPosition, const FVector2D& LocalSize) const;

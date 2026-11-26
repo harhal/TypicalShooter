@@ -63,6 +63,7 @@ void UInventoryItem_Presenter::UpdateView() const
 	FText Description;
 	int32 Count = 0;
 	FItemPowerInfo PowerInfo;
+	TOptional<FItemRarityDisplay> Rarity;
 
 	if (IsValid(Model.GetObject()))
 	{
@@ -70,6 +71,7 @@ void UInventoryItem_Presenter::UpdateView() const
 		Name = Model->GetItemName();
 		Description = Model->GetItemDescription();
 		Count = Model->GetItemCount();
+		Rarity = Model->GetItemRarity();
 	}
 	if (const UInventoryItem* Item = Cast<UInventoryItem>(Model.GetObject()); IsValid(Item))
 	{
@@ -81,4 +83,5 @@ void UInventoryItem_Presenter::UpdateView() const
 	PinnedView->SetDescription(Description);
 	PinnedView->SetCount(Count);
 	PinnedView->SetPowerInfo(PowerInfo);
+	PinnedView->SetRarity(Rarity);
 }

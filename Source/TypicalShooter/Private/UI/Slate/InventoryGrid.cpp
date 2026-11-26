@@ -194,6 +194,12 @@ void SInventoryGrid::ClearInventoryItems()
 	SelectedSlot.Invalidate();
 }
 
+TSharedPtr<const SInventoryGridItem> SInventoryGrid::GetItemViewAt(const FHhAxialCoord& Location) const
+{
+	const TSharedRef<SInventoryGridItem>* ItemWidget = ItemWidgets.Find(GetSlotAt(Location));
+	return ItemWidget ? TSharedPtr<const SInventoryGridItem>(*ItemWidget) : nullptr;
+}
+
 TOptional<FHhAxialCoord> SInventoryGrid::GetSlotLocation(const FGuid& SlotGuid) const
 {
 	const TSharedRef<SInventoryGridItem>* ItemWidget = ItemWidgets.Find(SlotGuid);

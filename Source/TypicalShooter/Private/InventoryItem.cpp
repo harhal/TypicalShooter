@@ -4,6 +4,8 @@
 #include "InventoryItem.h"
 #include "Engine/Texture2D.h"
 #include "InventoryComponent.h"
+#include "Loot/LootOriginFragment.h"
+#include "Loot/LootRarity.h"
 #include "Net/UnrealNetwork.h"
 
 void UInventoryItem::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
@@ -94,4 +96,15 @@ int32 UInventoryItem::GetItemCount() const
 {
 	// Stacking is not implemented yet: every item is a single unit.
 	return 1;
+}
+
+TOptional<FItemRarityDisplay> UInventoryItem::GetItemRarity() const
+{
+	const FInventoryItemManifest* Manifest = GetItemManifest();
+	const FLootOrigin_ItemFragment* Origin = Manifest ? Manifest->GetFragmentOfType<FLootOrigin_ItemFragment>() : nullptr;
+	if (!Origin || !Origin->Rarity)
+	{
+		return {};
+	}
+	return FItemRarityDisplay{Origin->Rarity->DisplayName, Origin->Rarity->Color};
 }

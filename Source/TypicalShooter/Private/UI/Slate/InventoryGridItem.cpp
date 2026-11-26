@@ -3,6 +3,7 @@
 
 #include "UI/Slate/InventoryGridItem.h"
 
+#include "Rendering/DrawElements.h"
 #include "SlateOptMacros.h"
 #include "Styling/CoreStyle.h"
 #include "Widgets/Images/SImage.h"
@@ -69,4 +70,41 @@ void SInventoryGridItem::SetDescription(const FText& InDescription)
 void SInventoryGridItem::SetCount(int32 InCount)
 {
 	Count = InCount;
+}
+
+void SInventoryGridItem::SetRarity(const TOptional<FItemRarityDisplay>& InRarity)
+{
+	FrameColor = InRarity ? TOptional<FLinearColor>(InRarity->Color) : TOptional<FLinearColor>();
+	Invalidate(EInvalidateWidgetReason::Paint);
+}
+
+namespace InventoryGridItemPaint
+{
+	constexpr float FrameThickness = 2.f;
+
+	/** Closed outline of the pointy-top hex inscribed in Size, inset by Inset. */
+	TArray<FVector2D> HexOutline(const FVector2D& Size, const float Inset)
+	{
+		const FVector2D Center = Size * 0.5f;
+		const float Radius = FMath::Min(Size.Y * 0.5f, Size.X / UE_SQRT_3) - Inset;
+		TArray<FVector2D> Points;
+		for (int32 Corner = 0; Corner <= 6; ++Corner)
+		{
+			const float Angle = FMath::DegreesToRadians(60.f * Corner - 30.f);
+			Points.Add(Center + Radius * FVector2D(FMath::Cos(Angle), FMath::Sin(Angle)));
+		}
+		return Points;
+	}
+}
+
+int32 SInventoryGridItem::OnPaint(const FPaintArgs& Args, const FGeometry& AllottedGeometry, const FSlateRect& MyCullingRect,
+	FSlateWindowElementList& OutDrawElements, const int32 LayerId, const FWidgetStyle& InWidgetStyle, const bool bParentEnabled) const
+{
+	if (FrameColor)
+	{
+		using namespace InventoryGridItemPaint;
+		FSlateDrawElement::MakeLines(OutDrawElements, LayerId, AllottedGeometry.ToPaintGeometry(),
+			HexOutline(AllottedGeometry.GetLocalSize(), FrameThickness), ESlateDrawEffect::None, *FrameColor, true, FrameThickness);
+	}
+	return SCompoundWidget::OnPaint(Args, AllottedGeometry, MyCullingRect, OutDrawElements, LayerId + 1, InWidgetStyle, bParentEnabled);
 }

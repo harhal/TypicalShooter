@@ -4,6 +4,7 @@
 
 #include "CoreMinimal.h"
 #include "Styling/SlateBrush.h"
+#include "UI/InventoryItem/ItemRarityDisplay.h"
 #include "UObject/Interface.h"
 #include "InventoryItem_Model.generated.h"
 
@@ -22,4 +23,6 @@ public:
 	virtual FText GetItemName() const = 0;
 	virtual FText GetItemDescription() const = 0;
 	virtual int32 GetItemCount() const = 0;
+	/** Unset for items without rarity (hand-made ones). */
+	virtual TOptional<FItemRarityDisplay> GetItemRarity() const = 0;
 };

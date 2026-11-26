@@ -4,6 +4,7 @@
 
 #include "CoreMinimal.h"
 #include "Styling/SlateBrush.h"
+#include "UI/InventoryItem/ItemRarityDisplay.h"
 
 struct FItemPowerInfo;
 
@@ -18,4 +19,6 @@ public:
 	virtual void SetCount(int32 Count) = 0;
 	/** Power grid role, power and effect steps of the item (power grid R16; empty = none). */
 	virtual void SetPowerInfo(const FItemPowerInfo& Info) = 0;
+	/** Unset = the item has no rarity (LootGeneration R10). */
+	virtual void SetRarity(const TOptional<FItemRarityDisplay>& Rarity) = 0;
 };

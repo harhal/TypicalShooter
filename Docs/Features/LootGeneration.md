@@ -75,7 +75,7 @@
   `TypicalShooter.Loot.Table.*`
 - [x] 7. `AItemsContainer`: `LootTable` / `LootLevel` / `LootSeed`, заполнение после ручного манифеста — тест:
   `TypicalShooter.Loot.Container.Fill`
-- [ ] 8. UI: цвет редкости в сетке и инфо-панели — тест: `TypicalShooter.Loot.UI.RarityColor`
+- [x] 8. UI: цвет редкости в сетке и инфо-панели — тест: `TypicalShooter.Loot.UI.Rarity*`
 - [ ] 9. UI: процедурная подложка с выходами + иконка по центру — тест: `TypicalShooter.Loot.UI.Underlay`
   (+ скриншот из `PowerGrid.Flow` для визуальной проверки)
 - [ ] 10. Контент: 2–3 редкости, несколько модификаторов, шаблоны источника / коннектора / приёмника, лут-таблица;
@@ -131,6 +131,9 @@
   (0 = случайный). `BeginPlay` (сервер): `PlaceManifestItems` (ручные, как раньше), затем `PlaceLootItems` (бросок
   таблицы в первые свободные клетки). Лог: `placed N loot items from <таблица> (level L, seed S)`; переполнение —
   Warning `did not fit`.
+- UI редкости: `IInventoryItem_Model::GetItemRarity` (`UInventoryItem` читает фрагмент происхождения) →
+  `IInventoryItem_View::SetRarity` (`UI/InventoryItem/ItemRarityDisplay.h`): `SInventoryGridItem` — гекс-рамка цветом
+  редкости (`GetFrameColor`), `SInventoryItemInfo` — имя цветом редкости + строка с её названием.
 
 ## Настройка контента
 - Project Settings → Game → Loot: кривая множителя уровня.
@@ -151,6 +154,8 @@
   веса редкостей от уровня.
 - `TypicalShooter.Loot.Container.*` (`LootContainerTest.cpp`, голый мир с `BeginPlay`): ручные + табличные предметы,
   детерминизм по seed, без таблицы, переполнение сетки, seed 0.
+- `TypicalShooter.Loot.UI.Rarity*` (`LootRarityUITest.cpp`, презентеры + Slate без окна): модель, рамка в сетке,
+  инфо-панель.
 
 ## Ограничения и грабли
 - В тестах держите сгенерированный манифест в локальной переменной: указатель на фрагмент временного манифеста

@@ -29,10 +29,18 @@ public:
 	virtual void SetDescription(const FText& InDescription) override;
 	virtual void SetCount(int32 InCount) override;
 	virtual void SetPowerInfo(const FItemPowerInfo& Info) override {}
+	virtual void SetRarity(const TOptional<FItemRarityDisplay>& InRarity) override;
 
 	const FSlateBrush& GetIconBrush() const { return IconBrush; }
+	/** Color of the hex frame around the item; unset = no frame. */
+	TOptional<FLinearColor> GetFrameColor() const { return FrameColor; }
+
+	virtual int32 OnPaint(const FPaintArgs& Args, const FGeometry& AllottedGeometry, const FSlateRect& MyCullingRect,
+		FSlateWindowElementList& OutDrawElements, int32 LayerId, const FWidgetStyle& InWidgetStyle, bool bParentEnabled) const override;
 
 private:
+	TOptional<FLinearColor> FrameColor;
+
 	/** SImage keeps a pointer to the brush, so the brush must live as long as the widget. */
 	FSlateBrush IconBrush;
 	int32 Count = 0;
