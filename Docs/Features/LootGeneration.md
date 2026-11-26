@@ -71,7 +71,7 @@
   `TypicalShooter.Loot.Generator.Modifiers`
 - [x] 5. `FInfo_ItemFragment`: имя, описание с плейсхолдерами + строки модификаторов, иконка по редкости —
   тест: `TypicalShooter.Loot.Generator.Info`
-- [ ] 6. `ULootTable`: количество, шаблоны по весам, редкость по весам-кривым от уровня — тест:
+- [x] 6. `ULootTable`: количество, шаблоны по весам, редкость по весам-кривым от уровня — тест:
   `TypicalShooter.Loot.Table.*`
 - [ ] 7. `AItemsContainer`: `LootTable` / `LootLevel` / `LootSeed`, заполнение после ручного манифеста — тест:
   `TypicalShooter.Loot.Container.Fill`
@@ -122,10 +122,15 @@
   (`HexFaces::RotateMask`), а не к `UInventoryItem::Rotation`: поворот — состояние экземпляра, в манифесте его нет.
 - [`LootOriginFragment.h`](../../Source/TypicalShooter/Public/Loot/LootOriginFragment.h): `FLootOrigin_ItemFragment`
   — шаблон, уровень (после clamp), seed, редкость, модификаторы в порядке слотов.
+- [`LootTable.h`](../../Source/TypicalShooter/Public/Loot/LootTable.h): `ULootTable` — `ItemCount` (диапазон, может
+  масштабироваться от уровня), `Templates` (`FLootTemplateEntry`: шаблон + вес), `Rarities` (`FLootRarityEntry`:
+  редкость + кривая веса от уровня; пустая кривая = вес 1; пустой список = предметы без редкости).
+  `Roll(Level, Seed)`: на каждый предмет — шаблон и редкость по весам, свой seed из потока таблицы → `Generate`.
+  Нет ни одного шаблона с весом — пустой результат.
 
 ## Настройка контента
 - Project Settings → Game → Loot: кривая множителя уровня.
-- Data Assets классов `LootItemTemplate`, `LootModifier`, `LootRarity`.
+- Data Assets классов `LootItemTemplate`, `LootModifier`, `LootRarity`, `LootTable`.
 
 ## Тесты
 - `TypicalShooter.Loot.Range.*` (`Private/Tests/LootRangeTest.cpp`, без мира): границы, масштабирование и округление,
@@ -137,6 +142,8 @@
 - `TypicalShooter.Loot.Modifiers.*`, `TypicalShooter.Loot.Generator.Modifiers` (`LootModifiersTest.cpp`): тег / тир
   слота, без повторов, пропуск слота, бросок шага, сортировка, происхождение.
 - `TypicalShooter.Loot.Generator.Info.*` (`LootInfoTest.cpp`): плейсхолдеры, строки модификаторов, иконка по редкости.
+- `TypicalShooter.Loot.Table.*` (`LootTableTest.cpp`): количество, детерминизм и seed на предмет, веса шаблонов,
+  веса редкостей от уровня.
 
 ## Ограничения и грабли
 - В тестах держите сгенерированный манифест в локальной переменной: указатель на фрагмент временного манифеста
