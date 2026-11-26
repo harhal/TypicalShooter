@@ -20,7 +20,7 @@
 - R4. `AEnemyCharacter` (ACharacter): свой ASC, здоровье, GAS-получатель урона, набор атрибутов атаки, дуло
   `Muzzle`. Снаряды игрока его ранят.
 - R5. Атака врага — та же `UAttackGameplayAbility` (основной слот) со снарядами; базовые параметры задаются
-  в классе врага (урон, скорость снаряда, очередь, интервалы, разброс) и по умолчанию слабее игрока. Боеприпасы
+  в классе врага (`AttackStats`: урон, скорость снаряда, очередь, интервалы) и по умолчанию слабее игрока. Боеприпасы
   и энергосеть врагу не нужны.
 - R6. При нуле здоровья враг умирает: перестаёт стрелять и двигаться, сообщает о смерти (делегат / BP-событие)
   и исчезает.
@@ -66,7 +66,7 @@
 - [x] 2. Здоровье игрока и бессмертие (R1, R2) — тест: `TypicalShooter.Enemies.Health.*`, `.PlayerHealth.CharacterIsImmortal`
 - [x] 3. Текст здоровья и виджет `UHealthCounterWidget` (R3) — тест: `TypicalShooter.Enemies.UI.HealthText`
   (сам виджет в `BP_HUD` ставится в итерации 11 — нужен открытый редактор)
-- [ ] 4. `AEnemyCharacter`: здоровье, урон, атака с базовыми параметрами (R4, R5) — тест: `TypicalShooter.Enemies.Character.*`
+- [x] 4. `AEnemyCharacter`: здоровье, урон, атака с базовыми параметрами (R4, R5) — тест: `TypicalShooter.Enemies.Character.*`
 - [ ] 5. Смерть врага (R6) — тест: `TypicalShooter.Enemies.Character.Dies*`
 - [ ] 6. Огонь только при линии видимости (R9) — тест: `TypicalShooter.Enemies.Combat.*`
 - [ ] 7. Выбор точки в полосе дистанций (R8) — тест: `TypicalShooter.Enemies.Positioning.*`
@@ -88,6 +88,12 @@
 - HUD — [`UHealthCounterWidget`](../../Source/TypicalShooter/Public/UI/Widget/HealthCounterWidget.h) (как счётчик
   патронов): каждый кадр текст [`HealthDisplay::GetHealthText`](../../Source/TypicalShooter/Public/Shooting/HealthDisplay.h)
   по ASC пешки владельца — «Health: 73 / 100».
+- Враг — [`AEnemyCharacter`](../../Source/TypicalShooter/Public/Enemies/EnemyCharacter.h): `UTS_GAS` (Minimal) +
+  `UHealthAttributeSet` + `UAttackAttributeSet`, `UHealthComponent` (60, без восстановления), `UGasDamageReceiverComponent`,
+  дуло `Muzzle` у капсулы (50 вперёд, 50 вверх). На сервере в `BeginPlay` выставляет базу основного слота из `AttackStats`
+  (по умолчанию: очередь 3 × 0.15 с, пауза 1.5 с, 2500 см/с, 4 физ., конец огня 5000) и выдаёт `AttackAbility`
+  (`UPrimaryAttackAbility`) с InputID `PrimaryAttack`. `SetFiring(true/false)` — «зажать / отпустить» атаку
+  (`AbilityLocalInputPressed/Released`): пока зажато, абилка повторяет очереди.
 
 ## Настройка контента
 Будет заполнено по ходу итераций.
@@ -97,6 +103,9 @@
 `TypicalShooter.Enemies.Health.StartsFull`, `.RefillsWhenDepleted`, `.StaysDepleted`,
 `TypicalShooter.Enemies.PlayerHealth.CharacterIsImmortal` (компоненты на CDO персонажа).
 [EnemiesHealthDisplayTest.cpp](../../Source/TypicalShooter/Private/Tests/EnemiesHealthDisplayTest.cpp): `TypicalShooter.Enemies.UI.HealthText`.
+[EnemiesCharacterTest.cpp](../../Source/TypicalShooter/Private/Tests/EnemiesCharacterTest.cpp) (мир с полом, фикстура
+[EnemiesTestFixture.h](../../Source/TypicalShooter/Private/Tests/EnemiesTestFixture.h)): `TypicalShooter.Enemies.Character.Defaults`,
+`.TakesDamage`, `.FiresWhileFiring` (очереди по манекену, после отпускания новых снарядов нет).
 
 ## Ограничения и грабли
 
