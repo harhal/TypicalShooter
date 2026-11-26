@@ -1,6 +1,8 @@
 #include "Enemies/EnemyAIController.h"
 
 #include "Components/StateTreeAIComponent.h"
+#include "Enemies/Coordination/EnemyCoordinationSettings.h"
+#include "Enemies/Coordination/EnemyRoleStand.h"
 #include "Enemies/EnemyCharacter.h"
 #include "Enemies/EnemyDirectorSubsystem.h"
 #include "Enemies/EnemyPositioning.h"
@@ -37,7 +39,8 @@ void AEnemyAIController::UpdateFire()
 {
 	if (AEnemyCharacter* Enemy = GetEnemy())
 	{
-		Enemy->UpdateFiring(Target);
+		// The group's attack token first: an enemy without it holds fire even when it sees the target.
+		Enemy->SetFiring(HasAttackToken() && Enemy->CanAttack(Target));
 	}
 }
 
@@ -63,6 +66,7 @@ bool AEnemyAIController::UpdatePosition(const FEnemyStandSettings& Settings)
 	Query.JitterDegrees = Settings.JitterDegrees;
 	Query.FlankDegrees = Settings.FlankDegrees;
 	Query.bHasLineOfSight = Enemy->CanShootAt(Target);
+	ApplyCoordination(Query);
 	LastStandChoiceTime = Now;
 	if (!EnemyPositioning::ChooseReachableStandPoint(Query, Random, [this](FVector& Point) { return ProjectToNavigation(Point); }, StandPoint))
 	{
@@ -104,8 +108,42 @@ void AEnemyAIController::MoveToStandPoint(const FEnemyStandSettings& Settings)
 	}
 }
 
+bool AEnemyAIController::HasAttackToken() const
+{
+	const UEnemyDirectorSubsystem* Director = GetWorld()->GetSubsystem<UEnemyDirectorSubsystem>();
+	return Director && Director->HasAttackToken(GetEnemy());
+}
+
+void AEnemyAIController::ReleaseAttackToken()
+{
+	if (UEnemyDirectorSubsystem* Director = GetWorld()->GetSubsystem<UEnemyDirectorSubsystem>())
+	{
+		Director->ReleaseAttackToken(GetEnemy());
+	}
+}
+
+void AEnemyAIController::ApplyCoordination(FEnemyStandQuery& Query) const
+{
+	const UEnemyDirectorSubsystem* Director = GetWorld()->GetSubsystem<UEnemyDirectorSubsystem>();
+	const AEnemyCharacter* Enemy = GetEnemy();
+	const FEnemyAssignment* Assignment = Director && Enemy ? Director->GetAssignment(Enemy) : nullptr;
+	if (!Assignment)
+	{
+		return; // not coordinated: the task's own band, the enemy's own side
+	}
+	EnemyRoleStand::FInput Input;
+	Input.Role = Assignment->Role;
+	Input.bHasToken = Director->HasAttackToken(Enemy);
+	Input.Band = Enemy->GetRoleBand(Assignment->Role);
+	Input.SectorYaw = Assignment->SectorYaw;
+	Input.SectorHalfWidth = Assignment->SectorHalfWidth;
+	Input.MinSeparation = GetDefault<UEnemyCoordinationSettings>()->Sectors.MinSeparation;
+	EnemyRoleStand::Apply(Query, Input);
+}
+
 void AEnemyAIController::StopCombat()
 {
+	ReleaseAttackToken();
 	if (AEnemyCharacter* Enemy = GetEnemy())
 	{
 		Enemy->SetFiring(false);

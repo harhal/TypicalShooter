@@ -29,6 +29,8 @@ namespace EnemiesFlowTest
 		TWeakObjectPtr<APawn> Player;
 		TWeakObjectPtr<AEnemyWaveSpawner> Spawner;
 		TWeakObjectPtr<AEnemyCharacter> Watched;
+		/** How far the watched enemy must back off: its role band's near edge minus a tolerance. */
+		float RetreatDistance = 0.f;
 		double StepStarted = 0.0;
 		bool bFailed = false;
 		int32 WavesBeforeKill = 0;
@@ -67,12 +69,22 @@ namespace EnemiesFlowTest
 			return Health && (Health->GetHealth() < Health->GetMaxHealth() || Health->GetDefeats() > 0);
 		}
 
-		bool AnyEnemyInBand(const float Min, const float Max) const
+		/** The band of the role the director gave Enemy (the class's override or the project's). */
+		FEnemyDistanceBand RoleBandOf(const AEnemyCharacter* Enemy) const
+		{
+			const UEnemyDirectorSubsystem* Director = World.IsValid() ? World->GetSubsystem<UEnemyDirectorSubsystem>() : nullptr;
+			const FEnemyAssignment* Assignment = Director ? Director->GetAssignment(Enemy) : nullptr;
+			return Assignment ? Enemy->GetRoleBand(Assignment->Role) : FEnemyDistanceBand();
+		}
+
+		/** Some enemy stands within its own role's band, +- Tolerance. */
+		bool AnyEnemyInOwnBand(const float Tolerance) const
 		{
 			for (const AEnemyCharacter* Enemy : Enemies())
 			{
+				const FEnemyDistanceBand Band = RoleBandOf(Enemy);
 				const double Distance = FVector::Dist2D(Enemy->GetActorLocation(), Player->GetActorLocation());
-				if (Distance >= Min && Distance <= Max)
+				if (Distance >= Band.Min - Tolerance && Distance <= Band.Max + Tolerance)
 				{
 					return true;
 				}
@@ -147,8 +159,8 @@ bool FEnemiesFlowTest::RunTest(const FString& Parameters)
 	WaitUntil(this, State, TEXT("PIE has the player pawn and a wave spawner"), 15.0, [State]() { return State->TryResolve(); });
 	WaitUntil(this, State, TEXT("The first wave spawned"), 15.0, [State]() { return State->Enemies().Num() > 0; });
 	WaitUntil(this, State, TEXT("The enemies' StateTree tracks the player"), 5.0, [State]() { return State->AllEnemiesTrackPlayer(); });
-	WaitUntil(this, State, TEXT("An enemy keeps within the distance band (800-1600, +-150)"), 20.0,
-		[State]() { return State->AnyEnemyInBand(650.f, 1750.f); });
+	WaitUntil(this, State, TEXT("An enemy keeps within its role's distance band (+-150)"), 20.0,
+		[State]() { return State->AnyEnemyInOwnBand(150.f); });
 	WaitUntil(this, State, TEXT("Enemies hurt the player"), 20.0, [State]() { return State->PlayerHurt(); });
 	WaitUntil(this, State, TEXT("The player is teleported 300 cm from an enemy"), 1.0, [State]()
 	{
@@ -158,10 +170,11 @@ bool FEnemiesFlowTest::RunTest(const FString& Parameters)
 			return false;
 		}
 		State->Watched = Live[0];
+		State->RetreatDistance = State->RoleBandOf(Live[0]).Min - 150.f;
 		const FVector Near = Live[0]->GetActorLocation() + FVector(300.f, 0.f, 0.f);
 		return State->Player->TeleportTo(Near, State->Player->GetActorRotation());
 	});
-	WaitUntil(this, State, TEXT("The enemy backs off into the distance band over the navmesh"), 15.0, [this, State]()
+	WaitUntil(this, State, TEXT("The enemy backs off into its role's distance band over the navmesh"), 15.0, [this, State]()
 	{
 		static double LastReport = 0.0;
 		if (State->Watched.IsValid() && FPlatformTime::Seconds() - LastReport > 2.0)
@@ -178,7 +191,7 @@ bool FEnemiesFlowTest::RunTest(const FString& Parameters)
 				Controller ? static_cast<int32>(Controller->GetMoveStatus()) : -1));
 		}
 		return State->Watched.IsValid()
-			&& FVector::Dist2D(State->Watched->GetActorLocation(), State->Player->GetActorLocation()) >= 650.0;
+			&& FVector::Dist2D(State->Watched->GetActorLocation(), State->Player->GetActorLocation()) >= State->RetreatDistance;
 	});
 	WaitUntil(this, State, TEXT("The whole wave is killed"), 1.0, [State]()
 	{

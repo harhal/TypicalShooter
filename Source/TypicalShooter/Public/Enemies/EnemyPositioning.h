@@ -21,6 +21,8 @@ struct FEnemyStandQuery
 	TOptional<float> SectorYaw;
 	/** Half width of that sector: the enemy stays while inside it, and the stand point jitters within it. */
 	float SectorHalfWidth = 180.f;
+	/** false: the enemy may stay anywhere in the band (the sector only steers where it goes when it has to move). */
+	bool bSectorRequiredToStay = true;
 	/** Neighbouring sectors' stand points keep at least this far apart (jitter is narrowed for it). */
 	float MinSeparation = 0.f;
 };

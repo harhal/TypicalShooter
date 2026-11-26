@@ -41,10 +41,11 @@ EStateTreeRunStatus FEnemyShootTask::Tick(FStateTreeExecutionContext& Context, c
 
 void FEnemyShootTask::ExitState(FStateTreeExecutionContext& Context, const FStateTreeTransitionResult& Transition) const
 {
-	const AEnemyAIController* Controller = EnemyStateTreeTasks::GetController<FInstanceDataType>(Context, *this);
+	AEnemyAIController* Controller = EnemyStateTreeTasks::GetController<FInstanceDataType>(Context, *this);
 	if (AEnemyCharacter* Enemy = Controller ? Cast<AEnemyCharacter>(Controller->GetPawn()) : nullptr)
 	{
 		Enemy->SetFiring(false);
+		Controller->ReleaseAttackToken(); // leaving combat frees the token for the group (R6)
 	}
 }
 

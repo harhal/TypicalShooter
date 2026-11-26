@@ -31,7 +31,8 @@ namespace EnemyPositioning::Private
 	bool ShouldStay(const FEnemyStandQuery& Query)
 	{
 		const float Distance = FVector::Dist2D(Query.Self, Query.Target);
-		return Query.bHasLineOfSight && Distance >= Query.MinDistance && Distance <= Query.MaxDistance && IsInsideSector(Query);
+		return Query.bHasLineOfSight && Distance >= Query.MinDistance && Distance <= Query.MaxDistance
+			&& (!Query.bSectorRequiredToStay || IsInsideSector(Query));
 	}
 
 	float StandRadius(const FEnemyStandQuery& Query)

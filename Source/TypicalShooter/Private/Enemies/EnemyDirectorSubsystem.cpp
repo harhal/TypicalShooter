@@ -188,8 +188,9 @@ void UEnemyDirectorSubsystem::UpdateGroup(FGroup& Group)
 	{
 		FEnemyGroupMemberInput& Input = Inputs.AddDefaulted_GetRef();
 		Input.Id = Member->GetUniqueID();
+		Input.AllowedRoles = Member->GetAllowedRoleMask();
 		Input.Location = Member->GetActorLocation();
-		Input.bCanAttack = Member->CanShootAt(Target);
+		Input.bCanAttack = Member->CanAttack(Target);
 	}
 	Group.Coordinator.Update(GetWorld()->GetTimeSeconds(), Target->GetActorLocation(), Target->GetViewRotation().Yaw, Inputs,
 		*GetDefault<UEnemyCoordinationSettings>());

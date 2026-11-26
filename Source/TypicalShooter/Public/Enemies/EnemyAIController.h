@@ -74,7 +74,15 @@ public:
 	UFUNCTION(BlueprintPure, Category = "Enemy AI")
 	FVector GetStandPoint() const { return StandPoint; }
 
-	/** Stop firing, moving and looking at the target. */
+	/** The director lets this enemy attack now (attack token of its group). */
+	UFUNCTION(BlueprintPure, Category = "Enemy AI")
+	bool HasAttackToken() const;
+
+	/** Give the attack token back (leaving combat); the director hands it to someone else. */
+	UFUNCTION(BlueprintCallable, Category = "Enemy AI")
+	void ReleaseAttackToken();
+
+	/** Stop firing, moving and looking at the target; gives the attack token back. */
 	UFUNCTION(BlueprintCallable, Category = "Enemy AI")
 	void StopCombat();
 
@@ -85,6 +93,8 @@ protected:
 private:
 	AEnemyCharacter* GetEnemy() const;
 	void MoveToStandPoint(const FEnemyStandSettings& Settings);
+	/** Role band, waiting behaviour and sector from the director, when it coordinates this enemy. */
+	void ApplyCoordination(struct FEnemyStandQuery& Query) const;
 	/** Snaps Point onto the navmesh; false if it is off the navmesh (outside the arena, inside a wall). */
 	bool ProjectToNavigation(FVector& Point) const;
 

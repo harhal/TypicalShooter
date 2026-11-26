@@ -120,9 +120,12 @@
   `AIControllerClass`, `AutoPossessAI = PlacedInWorldOrSpawned`): `UStateTreeAIComponent` без автозапуска; при захвате
   пешки ставит в него `Behavior` (ассет StateTree) и запускает, при отпускании — останавливает. Шаги поведения:
   `UpdateTarget` (цель от директора + `SetFocus` — враг поворачивается и целится в центр цели), `UpdateFire`
-  (`UpdateFiring(Target)`), `UpdatePosition(FEnemyStandSettings)` (когда стоит или прошло `RepathInterval` — выбирает
-  точку `ChooseReachableStandPoint` (проекция на навмеш, без навданных — любая) с видимостью от `CanShootAt` и идёт туда `MoveToLocation` по навмешу; без навданных — по
-  прямой; дошёл до полосы по дороге — останавливается), `StopCombat`.
+  (стреляет, только если держит токен атаки группы и `CanAttack(Target)`), `UpdatePosition(FEnemyStandSettings)` (когда
+  стоит или прошло `RepathInterval` — выбирает точку `ChooseReachableStandPoint` (проекция на навмеш, без навданных —
+  любая) с видимостью от `CanShootAt` и идёт туда `MoveToLocation` по навмешу; без навданных — по прямой; дошёл до полосы
+  по дороге — останавливается). Если директор координирует врага, полоса берётся из роли, а точка — из сектора
+  (`EnemyRoleStand::Apply`); `Min/MaxDistance` из `FEnemyStandSettings` работают только без координации. `StopCombat`
+  отдаёт токен. Подробности — [EnemyCoordination.md](EnemyCoordination.md).
 - Задачи StateTree — [EnemyStateTreeTasks.h](../../Source/TypicalShooter/Public/Enemies/EnemyStateTreeTasks.h) (категория
   «Enemy», контекст — `AIController`): `Enemy: Track Target`, `Enemy: Shoot When Visible` (на выходе отпускает атаку),
   `Enemy: Keep Distance` (параметры `FEnemyStandSettings`: полоса 800–1600, разброс 20° / 60°, на выходе останавливается).
@@ -184,8 +187,9 @@ HUD: `BP_HUD` → `HealthCounter` (`UHealthCounterWidget`), левый нижн�
 `.NextWaveWhenAllDead` (и повтор списка), `.UsesSpawnPoints`, `.DisabledByConsoleVariable`.
 [EnemiesBehaviorTreeTest.cpp](../../Source/TypicalShooter/Private/Tests/EnemiesBehaviorTreeTest.cpp): `TypicalShooter.Enemies.Behavior.TreeCompiles`.
 [EnemiesFlowTest.cpp](../../Source/TypicalShooter/Private/Tests/EnemiesFlowTest.cpp) — PIE `TypicalShooter.Enemies.Flow` на
-`Lvl_FirstPerson`: первая волна, дерево ведёт игрока, враг в полосе дистанций, игрок ранен, игрок телепортируется в 3 м от
-врага у стены — враг отходит по навмешу (≥ 6.5 м), волна убита — приходит следующая. Пишет в лог состояние навмеша и
+`Lvl_FirstPerson`: первая волна, дерево ведёт игрока, враг в полосе дистанций своей роли (±150), игрок ранен, игрок
+телепортируется в 3 м от врага у стены — враг отходит по навмешу (до ближнего края полосы своей роли − 150), волна убита —
+приходит следующая. Пишет в лог состояние навмеша и
 движения отходящего врага. Остальные PIE-тесты выключают волны (`EnemyWavesTestGuard`).
 
 Видео: [RecordingEnemyKillTest.cpp](../../Source/TypicalShooter/Private/Tests/RecordingEnemyKillTest.cpp) —

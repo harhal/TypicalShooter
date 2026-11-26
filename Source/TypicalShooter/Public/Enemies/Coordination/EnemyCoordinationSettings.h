@@ -5,6 +5,7 @@
 #include "CoreMinimal.h"
 #include "Engine/DeveloperSettings.h"
 #include "Enemies/Coordination/EnemyRole.h"
+#include "Enemies/Coordination/EnemyRoleStand.h"
 #include "Enemies/Coordination/EnemySectors.h"
 #include "Enemies/Coordination/EnemyTokenCount.h"
 #include "Enemies/Coordination/EnemyTokenPool.h"
@@ -36,6 +37,10 @@ public:
 	/** Wanted share of each role in a target group. */
 	UPROPERTY(Config, EditAnywhere, Category = "Roles")
 	FEnemyRoleWeights RoleWeights;
+
+	/** Distance band of each role (an enemy class may override them: AEnemyCharacter::RoleBandOverrides). */
+	UPROPERTY(Config, EditAnywhere, Category = "Roles")
+	FEnemyRoleBands RoleBands;
 
 	/** Sectors around the target; flankers stay out of its view. */
 	UPROPERTY(Config, EditAnywhere, Category = "Sectors", meta = (ShowOnlyInnerProperties))

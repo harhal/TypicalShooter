@@ -109,9 +109,9 @@
 - [x] 6. Директор: группы по цели, периодический пересчёт (tickable subsystem), API роли / сектора / токена (R1, R2) —
   тест: `TypicalShooter.Enemies.Director.GroupsTwoTargets`, `.GroupsSpreadAndShareTokens`, `.RecomputeOnDeath`,
   `.FollowsTargetChange`
-- [ ] 7. Враг и контроллер: `AllowedRoles`, `RoleBandOverrides`, огонь только с токеном, позиция по роли и сектору, отдача
+- [x] 7. Враг и контроллер: `AllowedRoles`, `RoleBandOverrides`, огонь только с токеном, позиция по роли и сектору, отдача
   токена при выходе из боя и смерти (R4, R8, R10, R18) — тест: `TypicalShooter.Enemies.Controller.FiresOnlyWithToken`,
-  `.RoleBand`, `.RoleBandOverride`
+  `.RoleBand`, `.RoleBandOverride`; поведение роли — `TypicalShooter.Enemies.Coordination.RoleStand.*`
 - [ ] 8. StateTree: условие `Enemy: Has Role`, состояния ролей, перегенерация `ST_Enemy` (R15) — тест:
   `TypicalShooter.Enemies.Behavior.TreeCompiles`, `.RoleStates`
 - [ ] 9. Отладочная отрисовка (R17) — ручная проверка в PIE (описать в доке), плюс тест, что при выключенной переменной
@@ -193,19 +193,40 @@
   - API: `GetAssignment(Enemy)` → `FEnemyAssignment` (роль, сектор, `Target`; null без цели), `HasAttackToken`,
     `ReleaseAttackToken`, `GetGroupTargets`, `GetGroupMembers(Target)`. `GetEnemies()` больше не возвращает мёртвых
     (между `Die` и уничтожением актора).
-
-Задуманное устройство (дальнейшие итерации):
-- `AEnemyAIController`: `UpdateFire` спрашивает токен у директора; `UpdatePosition` берёт полосу роли и угол сектора.
+- Поведение роли — [`EnemyRoleStand::Apply`](../../Source/TypicalShooter/Public/Enemies/Coordination/EnemyRoleStand.h)
+  (`FEnemyDistanceBand`, `FEnemyRoleBands`). Переводит {роль, есть ли токен, полоса роли, сектор, `MinSeparation`} в
+  `FEnemyStandQuery`:
+  - давящий без токена держится в ближней половине полосы (`MaxDistance` = середина), то есть подходит;
+  - прикрывающий без токена получает `bSectorRequiredToStay = false`: стоит в любом месте полосы, пока видит цель, а в
+    сектор идёт, только если всё равно пришлось двигаться;
+  - фланкёр и все с токеном держат свою полосу и свой сектор.
+- Враг — [`AEnemyCharacter`](../../Source/TypicalShooter/Public/Enemies/EnemyCharacter.h) (роли в `EnemyCharacterRoles.cpp`):
+  - `AllowedRoles` (по умолчанию все три) → `GetAllowedRoleMask()` для директора;
+  - `RoleBandOverrides` (роль → полоса) → `GetRoleBand(Role)`: переопределение класса, иначе полоса из настроек;
+  - виртуальный `CanAttack(Target)` (по умолчанию `CanShootAt`): по нему директор решает, кому можно дать токен. Боец
+    ближнего боя или камикадзе переопределит его своей дальностью (R18).
+- Контроллер — [`AEnemyAIController`](../../Source/TypicalShooter/Public/Enemies/EnemyAIController.h):
+  - `UpdateFire` = `SetFiring(HasAttackToken() && CanAttack(Target))`;
+  - `UpdatePosition` после базового запроса вызывает `ApplyCoordination`: роль, токен, полоса и сектор от директора.
+    Без назначения (нет цели) остаются полоса из `FEnemyStandSettings` и сторона самого врага;
+  - `ReleaseAttackToken()` вызывается из `StopCombat` и при выходе из задачи `Enemy: Shoot When Visible` (R6, выход из боя).
+    Смерть отдаёт токен через `Unregister`.
 
 ## Настройка контента
 Project Settings → Game → **Enemy Coordination**:
 - **Groups:** `Update Interval` (0.5 с).
 - **Tokens:** `Token Fraction` (0.4), `Min Tokens` (1), `Max Tokens` (3); `Token Rotation` — `Token Hold Time` (3 с),
   `Lost Sight Grace` (0.5 с), `Token Cooldown` (1.5 с).
-- **Roles:** `Role Weights` — `Pressure` 2, `Flank` 1, `Cover` 1.
+- **Roles:** `Role Weights` — `Pressure` 2, `Flank` 1, `Cover` 1; `Role Bands` — `Pressure` 500–900, `Flank` 700–1200,
+  `Cover` 1400–2000.
 - **Sectors:** `Flank View Half Angle` (60°), `Flank Reaim Degrees` (30°), `Min Separation` (250 см).
 
-Дальше сюда добавятся параметры ролей, секторов и ротации токенов, а также `AllowedRoles` / `RoleBandOverrides` в `BP_Enemy`.
+Класс врага (`BP_Enemy` и будущие типы), категория **Enemy | Coordination**:
+- `Allowed Roles` — какие роли можно выдавать. Пустой список = любые.
+- `Role Band Overrides` — свои полосы по ролям. Например, ближний бой: `Pressure` 0–150, `Flank` 0–200.
+
+Ближний бой и камикадзе в C++ переопределяют `CanAttack` (своя дальность атаки) и решают, что делать с токеном (удар,
+рывок). Координатор для них не меняется.
 
 ## Тесты
 [EnemiesCoordinationTokenCountTest.cpp](../../Source/TypicalShooter/Private/Tests/EnemiesCoordinationTokenCountTest.cpp):
@@ -240,6 +261,18 @@ Project Settings → Game → **Enemy Coordination**:
 `GetTokenCount(4)`; отданный токен уходит другому при следующем пересчёте), `.RecomputeOnDeath` (убит держатель токена:
 группа, роли, токены и ширина секторов пересчитаны сразу), `.FollowsTargetChange` (ближе появился другой игрок — враг уходит
 в его группу на следующем тике, а не через `UpdateInterval`).
+
+[EnemiesCoordinationRoleStandTest.cpp](../../Source/TypicalShooter/Private/Tests/EnemiesCoordinationRoleStandTest.cpp):
+`TypicalShooter.Enemies.Coordination.RoleStand.PressureClosesInWithoutToken`, `.CoverHoldsWhileVisible` (вне сектора, но в
+полосе и с видимостью — стоит), `.FlankGoesToSector` (плюс полосы по умолчанию).
+
+[EnemiesControllerCoordinationTest.cpp](../../Source/TypicalShooter/Private/Tests/EnemiesControllerCoordinationTest.cpp):
+`TypicalShooter.Enemies.Controller.FiresOnlyWithToken` (двое видят игрока, стреляет один; `StopCombat` отдаёт токен, и он
+переходит ко второму), `.RoleBand` (враг только с `Cover` получает эту роль и встаёт на середину её полосы),
+`.RoleBandOverride` (враг ближнего боя: полоса 0–150 → точка в 75 см от игрока; без переопределения — полоса проекта).
+
+Обновлены под роли: `TypicalShooter.Enemies.Controller.KeepsDistance` (одиночка — давящий с токеном, полоса 500–900) и
+`TypicalShooter.Enemies.Flow` (полоса своей роли ±150; отход — до ближнего края полосы роли − 150).
 
 ## Ограничения и грабли
 
