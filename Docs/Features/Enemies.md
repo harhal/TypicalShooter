@@ -74,6 +74,8 @@
 - [x] 9. `AEnemyAIController` + задачи StateTree (цель, держать дистанцию, стрелять) (R8–R10) — тест:
   `TypicalShooter.Enemies.Controller.*` (логика задач); сами задачи в дереве — PIE-тест итерации 11
 - [x] 10. `AEnemyWaveSpawner` (R12) — тест: `TypicalShooter.Enemies.Spawner.*`
+- [x] 11a. `ST_Enemy` генерируется из кода коммандлетом `BuildEnemyStateTree` (в MCP StateTree-ассеты только читаются)
+  — тест: `TypicalShooter.Enemies.Behavior.TreeCompiles`
 - [ ] 11. Контент: `HealthCounter` в `BP_HUD`, `BP_Enemy`, `BP_EnemyAIController`, `ST_Enemy`, навмеш и спавнер на `Lvl_FirstPerson` (R14) —
   тест: `TypicalShooter.Enemies.Flow` (PIE: волна появляется, враги держат дистанцию и ранят игрока, игрок их
   убивает, приходит следующая волна)
@@ -121,6 +123,9 @@
   «Enemy», контекст — `AIController`): `Enemy: Track Target`, `Enemy: Shoot When Visible` (на выходе отпускает атаку),
   `Enemy: Keep Distance` (параметры `FEnemyStandSettings`: полоса 800–1600, разброс 20° / 60°, на выходе останавливается).
   Все бегут бесконечно — кладутся в одно состояние и работают параллельно.
+- Дерево `/Game/Enemies/AI/ST_Enemy` (схема StateTree AI Component) собирается из кода:
+  [`UBuildEnemyStateTreeCommandlet`](../../Source/TypicalShooter/Public/Enemies/BuildEnemyStateTreeCommandlet.h) —
+  Root → Combat {Track Target, Shoot When Visible, Keep Distance}; контекст задач привязывается автоматически по типу.
 - Волны — [`AEnemyWaveSpawner`](../../Source/TypicalShooter/Public/Enemies/EnemyWaveSpawner.h) (сервер): `Waves` (список
   `FEnemyWaveEntry` = класс × количество; по умолчанию 2, 3, 4 `AEnemyCharacter`), первая волна через `FirstWaveDelay`,
   следующая — через `WaveDelay` после гибели (или уничтожения) последнего врага текущей, после последней — снова первая.
@@ -128,6 +133,9 @@
   полвысоты капсулы, случайный поворот). `OnWaveStarted(WaveIndex)`, `GetWaveIndex` / `GetWavesStarted` / `GetAliveCount`.
 
 ## Настройка контента
+Дерево поведения меняем в коде (`BuildTree`) и перегенерируем (редактор закрыт):
+`UnrealEditor-Cmd.exe <uproject> -run=BuildEnemyStateTree -unattended -nopause -NullRHI`.
+Правки дерева руками в редакторе затрутся при следующей генерации.
 Будет заполнено по ходу итераций.
 
 ## Тесты
@@ -151,6 +159,7 @@
 `.KeepsDistance` (слишком близко → отходит в полосу и там стоит).
 [EnemiesSpawnerTest.cpp](../../Source/TypicalShooter/Private/Tests/EnemiesSpawnerTest.cpp): `TypicalShooter.Enemies.Spawner.FirstWaveAfterDelay`,
 `.NextWaveWhenAllDead` (и повтор списка), `.UsesSpawnPoints`.
+[EnemiesBehaviorTreeTest.cpp](../../Source/TypicalShooter/Private/Tests/EnemiesBehaviorTreeTest.cpp): `TypicalShooter.Enemies.Behavior.TreeCompiles`.
 
 ## Ограничения и грабли
 - В «голом» тестовом мире нет навигационной системы: `MoveToLocation` не стартует даже по прямой. Тесты движения

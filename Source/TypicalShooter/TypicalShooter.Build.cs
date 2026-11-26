@@ -35,6 +35,7 @@ public class TypicalShooter : ModuleRules
 		if (Target.bBuildEditor)
 		{
 			PrivateDependencyModuleNames.Add("UnrealEd"); // PIE latent commands in automation tests
+			PrivateDependencyModuleNames.AddRange(new string[] { "StateTreeEditorModule", "PropertyBindingUtils" }); // BuildEnemyStateTree commandlet
 		}
 
 		PublicIncludePaths.AddRange(new string[] {
