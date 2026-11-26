@@ -80,6 +80,48 @@ bool FLootModifiersNoRepeatTest::RunTest(const FString& Parameters)
 	return true;
 }
 
+namespace LootModifiersTest
+{
+	/** Counts "no modifier for slot" warnings while alive. */
+	struct FSkipWarningCounter : FOutputDevice
+	{
+		int32 Count = 0;
+
+		FSkipWarningCounter() { GLog->AddOutputDevice(this); }
+		virtual ~FSkipWarningCounter() override { GLog->RemoveOutputDevice(this); }
+
+		virtual void Serialize(const TCHAR* Text, ELogVerbosity::Type Verbosity, const FName& Category) override
+		{
+			Count += FCString::Strstr(Text, TEXT("has no modifier for slot")) != nullptr;
+		}
+
+		int32 Flushed() { GLog->Flush(); return Count; }
+	};
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FLootModifiersEmptyPoolTest, "TypicalShooter.Loot.Modifiers.EmptyPoolIsQuiet", LootTestFixture::Flags)
+bool FLootModifiersEmptyPoolTest::RunTest(const FString& Parameters)
+{
+	using namespace LootModifiersTest;
+	const ULootRarity* Rarity = MakeRarity({{1, LootTags::Loot_Modifier_Attack}, {2, LootTags::Loot_Modifier_Attack}});
+	const ULootItemTemplate* NoPool = MakeTemplate(EPowerItemType::Connector, {}, false);
+	{
+		FSkipWarningCounter Counter;
+		FRandomStream Stream(1);
+		TestEqual(TEXT("Empty pool gives no modifiers"), LootModifierPicker::Pick(NoPool->ModifierPool, Rarity, Stream).Num(), 0);
+		TestEqual(TEXT("A template without modifiers is not a content error: no warning"), Counter.Flushed(), 0);
+	}
+
+	AddExpectedMessage(TEXT("has no modifier for slot"), EAutomationExpectedMessageFlags::Contains, 1);
+	ULootItemTemplate* TierOneOnly = MakeTemplate(EPowerItemType::Connector, {}, false);
+	AddToPool(*TierOneOnly, MakeModifier(1, LootTags::Loot_Modifier_Attack));
+	FSkipWarningCounter Counter;
+	FRandomStream Stream(1);
+	TestEqual(TEXT("Only the tier 1 slot is filled"), LootModifierPicker::Pick(TierOneOnly->ModifierPool, Rarity, Stream).Num(), 1);
+	TestEqual(TEXT("A pool without a fitting modifier still warns"), Counter.Flushed(), 1);
+	return true;
+}
+
 IMPLEMENT_SIMPLE_AUTOMATION_TEST(FLootModifiersRollTest, "TypicalShooter.Loot.Modifiers.RollStep", LootTestFixture::Flags)
 bool FLootModifiersRollTest::RunTest(const FString& Parameters)
 {

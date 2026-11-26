@@ -29,9 +29,9 @@ namespace LootModifierPickerPrivate
 TArray<const ULootModifier*> LootModifierPicker::Pick(TConstArrayView<FLootModifierEntry> Pool, const ULootRarity* Rarity, FRandomStream& Stream)
 {
 	TArray<const ULootModifier*> Picked;
-	if (!Rarity)
+	if (!Rarity || Pool.IsEmpty())
 	{
-		return Picked;
+		return Picked; // A template without a pool never gets modifiers: not a content error.
 	}
 	for (const FLootModifierSlot& Slot : Rarity->Slots)
 	{

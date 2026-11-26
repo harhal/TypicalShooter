@@ -1,6 +1,7 @@
 # Генерация лута: шаблоны предметов
 
-**Статус:** 🟡 в работе (`feature/loot-generation`) — требования согласованы.
+**Статус:** ✅ готово на ветке `feature/loot-generation`: шаблоны, редкости, модификаторы, лут-таблицы, контейнеры,
+UI редкости и подложки; тестовый лут в контейнере на `Lvl_FirstPerson`. Мультиплеер не проверен.
 
 ## Что это
 Дизайнер описывает не конкретный предмет, а **шаблон** («какой бывает такой предмет»): тип в энергосети, возможные
@@ -27,7 +28,7 @@
 - R4. **Редкость** (`ULootRarity`): имя, цвет, массив слотов модификаторов `{Tier, Tag}`. Для каждого слота
   генератор выбирает из пула шаблона модификатор с тегом, совпадающим с тегом слота (иерархически, `MatchesTag`),
   и **тиром строго равным** тиру слота; выбор по весам пула, один модификатор не выпадает дважды на предмете.
-  Нет кандидата — слот пропускается (Warning в лог). Шаги в итоговом `FPowerEffects_ItemFragment` отсортированы
+  Нет кандидата — слот пропускается (Warning в лог; у шаблона с пустым пулом — молча: модификаторов у него не бывает). Шаги в итоговом `FPowerEffects_ItemFragment` отсортированы
   по `Threshold`.
 - R5. **Лут-таблица** (`ULootTable`): диапазон количества предметов, взвешенный список шаблонов (повторы разрешены),
   список редкостей с весом-кривой от уровня. Бросок таблицы для уровня L даёт N манифестов.
@@ -108,7 +109,8 @@
   `Slots` (`FLootModifierSlot`: `Tier`, `Tag`; пустой тег = любой).
 - [`LootModifierPicker.h`](../../Source/TypicalShooter/Public/Loot/LootModifierPicker.h): по слоту — кандидаты пула с
   тиром == тиру слота и тегом, совпадающим с тегом слота (`MatchesTag`, иерархически), ещё не взятые; выбор по весам.
-  Нет кандидата — Warning `Loot: rarity ... has no modifier for slot`, слот пропускается.
+  Нет кандидата — Warning `Loot: rarity ... has no modifier for slot`, слот пропускается; пустой пул — без
+  предупреждения.
 - [`LootPowerParams.h`](../../Source/TypicalShooter/Public/Loot/LootPowerParams.h): `FLootSourceParams` (диапазоны
   `Power`, `Capacity`, `CostPerUse`, `RechargeDelay`, фиксированный `AmmoType`), `FLootReceiverParams` (фиксированный
   `Ability`, диапазон `RequiredPower`, `BaseStats` из `FLootAttackStatRange`). Каждый `Roll` даёт готовые
@@ -165,7 +167,7 @@
 - `TypicalShooter.Loot.Generator.PowerParams.*` (`LootPowerParamsTest.cpp`): числа источника / приёмника с уровнем,
   коннектор не трогает их.
 - `TypicalShooter.Loot.Modifiers.*`, `TypicalShooter.Loot.Generator.Modifiers` (`LootModifiersTest.cpp`): тег / тир
-  слота, без повторов, пропуск слота, бросок шага, сортировка, происхождение.
+  слота, без повторов, пропуск слота (пустой пул — без предупреждения), бросок шага, сортировка, происхождение.
 - `TypicalShooter.Loot.Generator.Info.*` (`LootInfoTest.cpp`): плейсхолдеры, строки модификаторов, иконка по редкости.
 - `TypicalShooter.Loot.Table.*` (`LootTableTest.cpp`): количество, детерминизм и seed на предмет, веса шаблонов,
   веса редкостей от уровня.
