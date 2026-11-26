@@ -15,6 +15,7 @@ public class TypicalShooter : ModuleRules
 			"InputCore",
 			"EnhancedInput",
 			"AIModule",
+			"NavigationSystem",
 			"StateTreeModule",
 			"GameplayStateTreeModule",
 			"UMG",
@@ -35,6 +36,7 @@ public class TypicalShooter : ModuleRules
 		if (Target.bBuildEditor)
 		{
 			PrivateDependencyModuleNames.Add("UnrealEd"); // PIE latent commands in automation tests
+			PrivateDependencyModuleNames.AddRange(new string[] { "StateTreeEditorModule", "PropertyBindingUtils" }); // BuildEnemyStateTree commandlet
 		}
 
 		PublicIncludePaths.AddRange(new string[] {
@@ -42,7 +44,6 @@ public class TypicalShooter : ModuleRules
 			"TypicalShooter/Variant_Horror",
 			"TypicalShooter/Variant_Horror/UI",
 			"TypicalShooter/Variant_Shooter",
-			"TypicalShooter/Variant_Shooter/AI",
 			"TypicalShooter/Variant_Shooter/UI",
 			"TypicalShooter/Variant_Shooter/Weapons"
 		});

@@ -21,6 +21,7 @@
 #include "InventoryComponent.h"
 #include "ItemsContainer.h"
 #include "Tests/AutomationEditorCommon.h"
+#include "Tests/EnemyWavesTestGuard.h"
 #include "Engine/LocalPlayer.h"
 #include "InventoryItem.h"
 #include "TypicalShooterPlayerController.h"
@@ -151,6 +152,7 @@ bool FInventoryUIFlowTest::RunTest(const FString& Parameters)
 	};
 
 	// 0. Start PIE and wait (up to 15 s) for the controller, pawn, HUD and a container.
+	EnemyWavesTestGuard::DisableEnemyWaves();
 	ADD_LATENT_AUTOMATION_COMMAND(FStartPIECommand(false));
 	ADD_LATENT_AUTOMATION_COMMAND(FFunctionLatentCommand([this, State]()
 	{
@@ -429,6 +431,7 @@ bool FInventoryUIFlowTest::RunTest(const FString& Parameters)
 	}, 0.2f);
 
 	ADD_LATENT_AUTOMATION_COMMAND(FEndPlayMapCommand());
+	EnemyWavesTestGuard::RestoreEnemyWaves();
 	return true;
 }
 

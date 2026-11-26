@@ -19,6 +19,7 @@
 #include "Shooting/ShotProjectile.h"
 #include "Shooting/TargetDummy.h"
 #include "Tests/AutomationEditorCommon.h"
+#include "Tests/EnemyWavesTestGuard.h"
 #include "TypicalShooterPlayerController.h"
 
 namespace ShootingFlowTest
@@ -125,6 +126,7 @@ bool FShootingFlowTest::RunTest(const FString& Parameters)
 		Step([State]() { State->SavedDamage = State->Damage(); State->SavedProjectiles = State->Projectiles; }, 0.0f);
 	};
 
+	EnemyWavesTestGuard::DisableEnemyWaves();
 	ADD_LATENT_AUTOMATION_COMMAND(FStartPIECommand(false));
 	ADD_LATENT_AUTOMATION_COMMAND(FFunctionLatentCommand([this, State]()
 	{
@@ -199,6 +201,7 @@ bool FShootingFlowTest::RunTest(const FString& Parameters)
 	}, 0.4f);
 
 	ADD_LATENT_AUTOMATION_COMMAND(FEndPlayMapCommand());
+	EnemyWavesTestGuard::RestoreEnemyWaves();
 	return true;
 }
 

@@ -22,6 +22,7 @@
 #include "PowerGrid/DefaultLoadout.h"
 #include "PowerGrid/PowerGridComponent.h"
 #include "Tests/AutomationEditorCommon.h"
+#include "Tests/EnemyWavesTestGuard.h"
 #include "TypicalShooterPlayerController.h"
 #include "UI/Slate/InventoryGrid.h"
 #include "UI/Widget/InventoryGridWidget.h"
@@ -100,6 +101,7 @@ bool FPowerGridFlowTest::RunTest(const FString& Parameters)
 		}, Delay));
 	};
 
+	EnemyWavesTestGuard::DisableEnemyWaves();
 	ADD_LATENT_AUTOMATION_COMMAND(FStartPIECommand(false));
 	ADD_LATENT_AUTOMATION_COMMAND(FFunctionLatentCommand([this, State]()
 	{
@@ -209,6 +211,7 @@ bool FPowerGridFlowTest::RunTest(const FString& Parameters)
 	Step([]() {}, 1.f); // let the screenshot be taken
 
 	ADD_LATENT_AUTOMATION_COMMAND(FEndPlayMapCommand());
+	EnemyWavesTestGuard::RestoreEnemyWaves();
 	return true;
 }
 
