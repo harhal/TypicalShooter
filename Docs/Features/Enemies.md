@@ -223,7 +223,7 @@ HUD: `BP_HUD` → `HealthCounter` (`UHealthCounterWidget`), левый нижн�
   останавливает обычная коллизия капсул.
 
 ## Открытые задачи
-- [ ] Координация группы через `UEnemyDirectorSubsystem` — в работе: [EnemyCoordination.md](EnemyCoordination.md).
+- [x] Координация группы через `UEnemyDirectorSubsystem` — роли, сектора, токены атаки: [EnemyCoordination.md](EnemyCoordination.md).
 - [ ] Смерть игрока (сейчас бессмертен).
 - [ ] Анимации стрельбы / смерти, звук, VFX; оружие в руках у манекена.
 - [ ] Разные типы врагов (свои `AttackStats`, паттерны, полосы дистанций).
