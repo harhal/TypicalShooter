@@ -1,5 +1,5 @@
-// Geometry and labels of the power grid drawn over SInventoryGrid (power grid R16): open faces as short strokes along
-// the hex edges, links between cell centres, receiver slot marks and power / clip labels.
+// Geometry and labels of the power grid drawn in SInventoryGrid (power grid R16): open faces as underlay spokes of the
+// item cells, links between cell centres, receiver slot marks and power / clip labels.
 
 #pragma once
 
@@ -16,9 +16,6 @@ namespace PowerGridOverlay
 
 	/** Centre of Coord in a grid widget of LocalSize whose (0,0) cell sits in the middle (like SHhGridPanel). */
 	TYPICALSHOOTER_API FVector2D GetCellCenter(const FHhAxialCoord& Coord, float HexSize, const FVector2D& LocalSize);
-
-	/** Stroke marking an open Face of the pointy-top hex at Center: along that edge, slightly inside the cell. */
-	TYPICALSHOOTER_API TPair<FVector2D, FVector2D> GetFaceSegment(const FVector2D& Center, float HexSize, EHexFace Face);
 
 	/** Spoke of the item underlay (LootGeneration R11): from Center to the middle of Face's edge. */
 	TYPICALSHOOTER_API TPair<FVector2D, FVector2D> GetFaceSpoke(const FVector2D& Center, float HexSize, EHexFace Face);
