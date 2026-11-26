@@ -3,8 +3,25 @@
 #include "Components/CapsuleComponent.h"
 #include "Enemies/EnemyCharacter.h"
 #include "Engine/World.h"
+#include "HAL/IConsoleManager.h"
 #include "TimerManager.h"
 #include "TypicalShooter.h"
+
+namespace EnemyWaveSpawnerCVars
+{
+	static TAutoConsoleVariable<bool> CVarWavesEnabled(TEXT("TypicalShooter.Enemies.Waves"), true,
+		TEXT("Enemy wave spawners start their waves when they begin play (0 = no waves; for tests and debugging)."));
+}
+
+bool AEnemyWaveSpawner::AreWavesEnabled()
+{
+	return EnemyWaveSpawnerCVars::CVarWavesEnabled.GetValueOnGameThread();
+}
+
+void AEnemyWaveSpawner::SetWavesEnabled(const bool bEnabled)
+{
+	EnemyWaveSpawnerCVars::CVarWavesEnabled->Set(bEnabled, ECVF_SetByCode);
+}
 
 AEnemyWaveSpawner::AEnemyWaveSpawner()
 {
@@ -22,7 +39,11 @@ AEnemyWaveSpawner::AEnemyWaveSpawner()
 void AEnemyWaveSpawner::BeginPlay()
 {
 	Super::BeginPlay();
-	if (HasAuthority() && Waves.Num() > 0)
+	if (!AreWavesEnabled())
+	{
+		UE_LOG(LogTypicalShooter, Log, TEXT("%s: waves disabled (TypicalShooter.Enemies.Waves 0)"), *GetName());
+	}
+	else if (HasAuthority() && Waves.Num() > 0)
 	{
 		ScheduleNextWave(FirstWaveDelay);
 	}

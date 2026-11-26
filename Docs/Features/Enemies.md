@@ -133,6 +133,8 @@
   следующая — через `WaveDelay` после гибели (или уничтожения) последнего врага текущей, после последней — снова первая.
   Точки появления — `SpawnPoints` по очереди или случайная точка в круге `SpawnRadius` вокруг спавнера (над точкой на
   полвысоты капсулы, случайный поворот). `OnWaveStarted(WaveIndex)`, `GetWaveIndex` / `GetWavesStarted` / `GetAliveCount`.
+  Консольная переменная `TypicalShooter.Enemies.Waves 0` — спавнеры, начавшие игру, волн не запускают (отладка; PIE-тесты
+  не про врагов выключают волны через [EnemyWavesTestGuard.h](../../Source/TypicalShooter/Private/Tests/EnemyWavesTestGuard.h)).
 
 ## Настройка контента
 Дерево поведения меняем в коде (`BuildTree`) и перегенерируем (редактор закрыт):
@@ -160,7 +162,7 @@
  без навмеша — `EnemiesTest::AddNavigation`): `TypicalShooter.Enemies.Controller.PossessesSpawnedEnemy`, `.TracksAndShootsTarget`,
 `.KeepsDistance` (слишком близко → отходит в полосу и там стоит).
 [EnemiesSpawnerTest.cpp](../../Source/TypicalShooter/Private/Tests/EnemiesSpawnerTest.cpp): `TypicalShooter.Enemies.Spawner.FirstWaveAfterDelay`,
-`.NextWaveWhenAllDead` (и повтор списка), `.UsesSpawnPoints`.
+`.NextWaveWhenAllDead` (и повтор списка), `.UsesSpawnPoints`, `.DisabledByConsoleVariable`.
 [EnemiesBehaviorTreeTest.cpp](../../Source/TypicalShooter/Private/Tests/EnemiesBehaviorTreeTest.cpp): `TypicalShooter.Enemies.Behavior.TreeCompiles`.
 
 ## Ограничения и грабли

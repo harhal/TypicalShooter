@@ -104,6 +104,21 @@ bool FEnemiesSpawnerNextWaveTest::RunTest(const FString& Parameters)
 	return true;
 }
 
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FEnemiesSpawnerDisabledTest, "TypicalShooter.Enemies.Spawner.DisabledByConsoleVariable", ShootingTest::Flags)
+bool FEnemiesSpawnerDisabledTest::RunTest(const FString& Parameters)
+{
+	using namespace EnemiesSpawnerTest;
+	const ShootingTest::FWorldFixture F(true);
+	EnemiesTest::SpawnFloor(F);
+	AEnemyWaveSpawner::SetWavesEnabled(false);
+	SpawnSpawner(F, { 2 });
+	AEnemyWaveSpawner::SetWavesEnabled(true);
+	F.Tick(2.f);
+	TestEqual(TEXT("A spawner that began play with waves disabled spawns nothing"), Enemies(F).Num(), 0);
+	TestTrue(TEXT("Enabled again"), AEnemyWaveSpawner::AreWavesEnabled());
+	return true;
+}
+
 IMPLEMENT_SIMPLE_AUTOMATION_TEST(FEnemiesSpawnerPointsTest, "TypicalShooter.Enemies.Spawner.UsesSpawnPoints", ShootingTest::Flags)
 bool FEnemiesSpawnerPointsTest::RunTest(const FString& Parameters)
 {

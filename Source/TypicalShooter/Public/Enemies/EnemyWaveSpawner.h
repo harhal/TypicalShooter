@@ -71,6 +71,10 @@ public:
 	UFUNCTION(BlueprintPure, Category = "Waves")
 	int32 GetAliveCount() const { return Alive.Num(); }
 
+	/** Console variable TypicalShooter.Enemies.Waves: 0 = spawners that begin play start no waves (tests, debugging). */
+	static bool AreWavesEnabled();
+	static void SetWavesEnabled(bool bEnabled);
+
 protected:
 	virtual void BeginPlay() override;
 
