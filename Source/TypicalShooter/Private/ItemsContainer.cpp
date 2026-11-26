@@ -6,6 +6,7 @@
 #include "HhGridFunctions.h"
 #include "Components/SphereComponent.h"
 #include "InventoryComponent.h"
+#include "Loot/LootTable.h"
 #include "PowerGrid/PowerGridComponent.h"
 #include "Net/UnrealNetwork.h"
 #include "TypicalShooter.h"
@@ -33,7 +34,38 @@ void AItemsContainer::BeginPlay()
 	{
 		return;
 	}
-	
+	PlaceManifestItems();
+	PlaceLootItems();
+}
+
+void AItemsContainer::PlaceLootItems()
+{
+	if (!LootTable)
+	{
+		return;
+	}
+	const int32 Seed = LootSeed != 0 ? LootSeed : FMath::Rand();
+	const TArray<FInventoryItemManifest> Loot = LootTable->Roll(LootLevel, Seed);
+	int32 Placed = 0;
+	for (const FInventoryItemManifest& Manifest : Loot)
+	{
+		const TOptional<FHhAxialCoord> Location = InventoryComponent->FindFreeLocation();
+		if (!Location || !InventoryComponent->AddItem(Manifest, *Location))
+		{
+			break;
+		}
+		++Placed;
+	}
+	if (Placed < Loot.Num())
+	{
+		UE_LOG(LogTypicalShooter, Warning, TEXT("%s: %d of %d loot items did not fit"), *GetName(), Loot.Num() - Placed, Loot.Num());
+	}
+	UE_LOG(LogTypicalShooter, Log, TEXT("%s: placed %d loot items from %s (level %d, seed %d)"),
+		*GetName(), Placed, *GetNameSafe(LootTable), LootLevel, Seed);
+}
+
+void AItemsContainer::PlaceManifestItems()
+{
 	int32 ItemIdx = 0;
 	for (const FInstancedStruct& ItemManifest : ItemsManifest)
 	{

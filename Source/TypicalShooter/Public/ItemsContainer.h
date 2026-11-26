@@ -10,6 +10,7 @@
 #include "ItemsContainer.generated.h"
 
 class UInventoryComponent;
+class ULootTable;
 class UPowerGridComponent;
 class USphereComponent;
 
@@ -56,4 +57,19 @@ public:
 	
 	UPROPERTY(EditAnywhere, meta = (BaseStruct = "/Script/TypicalShooter.InventoryItemManifest"), Replicated)
 	TArray<FInstancedStruct> ItemsManifest;
+
+	/** Random items added on the server after ItemsManifest (LootGeneration R9); none = only ItemsManifest. */
+	UPROPERTY(EditAnywhere, Category = "Loot")
+	TObjectPtr<const ULootTable> LootTable;
+
+	UPROPERTY(EditAnywhere, Category = "Loot", meta = (ClampMin = 1, ClampMax = 100))
+	int32 LootLevel = 1;
+
+	/** 0 = a new random seed every time. */
+	UPROPERTY(EditAnywhere, Category = "Loot")
+	int32 LootSeed = 0;
+
+private:
+	void PlaceManifestItems();
+	void PlaceLootItems();
 };

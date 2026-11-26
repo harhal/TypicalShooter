@@ -15,6 +15,9 @@
 - В `BeginPlay` на сервере каждый непустой манифест превращается в предмет и кладётся по гекс-спирали
   (`UHhGridFunctions::MakeHexAxialCoordFromSpiral(i)`: центр, затем кольца). Пустые элементы массива пропускаются.
   Лог: `LogTypicalShooter: <имя>: placed N of M manifest items`.
+- Случайный лут ([LootGeneration.md](LootGeneration.md)): если задан `LootTable`, после ручного манифеста на сервере
+  кладутся предметы `LootTable->Roll(LootLevel, LootSeed)` в первые свободные клетки (`FindFreeLocation`); `LootSeed = 0`
+  — каждый раз новый seed. Не поместившиеся — Warning `... loot items did not fit`.
 - Реализует `IPlayerInteractive` (тип взаимодействия `Open`) и `IItemsContainer_Model`, пробрасывая
   модель в свой `InventoryComponent` — поэтому UI может принимать сам контейнер как модель.
 
@@ -24,10 +27,10 @@
 
 ## Тесты
 Косвенно — `TypicalShooter.Inventory.UIFlow` (открытие контейнера, в сетке видны все предметы).
+`TypicalShooter.Loot.Container.*` — наполнение из лут-таблицы.
 
 ## Открытые задачи
 - [ ] Забирать/класть предметы (зависит от drag & drop и RPC).
-- [ ] Лут-таблицы / случайное наполнение вместо фиксированного манифеста.
 
 ---
-_Сверено с кодом: 2026-11-24_
+_Сверено с кодом: 2026-11-26_

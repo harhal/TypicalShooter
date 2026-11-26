@@ -73,7 +73,7 @@
   тест: `TypicalShooter.Loot.Generator.Info`
 - [x] 6. `ULootTable`: количество, шаблоны по весам, редкость по весам-кривым от уровня — тест:
   `TypicalShooter.Loot.Table.*`
-- [ ] 7. `AItemsContainer`: `LootTable` / `LootLevel` / `LootSeed`, заполнение после ручного манифеста — тест:
+- [x] 7. `AItemsContainer`: `LootTable` / `LootLevel` / `LootSeed`, заполнение после ручного манифеста — тест:
   `TypicalShooter.Loot.Container.Fill`
 - [ ] 8. UI: цвет редкости в сетке и инфо-панели — тест: `TypicalShooter.Loot.UI.RarityColor`
 - [ ] 9. UI: процедурная подложка с выходами + иконка по центру — тест: `TypicalShooter.Loot.UI.Underlay`
@@ -127,10 +127,15 @@
   редкость + кривая веса от уровня; пустая кривая = вес 1; пустой список = предметы без редкости).
   `Roll(Level, Seed)`: на каждый предмет — шаблон и редкость по весам, свой seed из потока таблицы → `Generate`.
   Нет ни одного шаблона с весом — пустой результат.
+- [`AItemsContainer`](../../Source/TypicalShooter/Public/ItemsContainer.h): `LootTable`, `LootLevel`, `LootSeed`
+  (0 = случайный). `BeginPlay` (сервер): `PlaceManifestItems` (ручные, как раньше), затем `PlaceLootItems` (бросок
+  таблицы в первые свободные клетки). Лог: `placed N loot items from <таблица> (level L, seed S)`; переполнение —
+  Warning `did not fit`.
 
 ## Настройка контента
 - Project Settings → Game → Loot: кривая множителя уровня.
 - Data Assets классов `LootItemTemplate`, `LootModifier`, `LootRarity`, `LootTable`.
+- Экземпляр `BP_ItemsContainer` на уровне: категория Loot — `LootTable`, `LootLevel`, `LootSeed`.
 
 ## Тесты
 - `TypicalShooter.Loot.Range.*` (`Private/Tests/LootRangeTest.cpp`, без мира): границы, масштабирование и округление,
@@ -144,6 +149,8 @@
 - `TypicalShooter.Loot.Generator.Info.*` (`LootInfoTest.cpp`): плейсхолдеры, строки модификаторов, иконка по редкости.
 - `TypicalShooter.Loot.Table.*` (`LootTableTest.cpp`): количество, детерминизм и seed на предмет, веса шаблонов,
   веса редкостей от уровня.
+- `TypicalShooter.Loot.Container.*` (`LootContainerTest.cpp`, голый мир с `BeginPlay`): ручные + табличные предметы,
+  детерминизм по seed, без таблицы, переполнение сетки, seed 0.
 
 ## Ограничения и грабли
 - В тестах держите сгенерированный манифест в локальной переменной: указатель на фрагмент временного манифеста
