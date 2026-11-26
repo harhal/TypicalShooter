@@ -69,7 +69,7 @@
 - [x] 4б. Уровень GE модификатора = уровень предмета: поле уровня в `FPowerThresholdEffect`, его учитывает
   `UPowerEffectsComponent` (затрагивает энергосеть, поэтому отдельный шаг) — тест: `TypicalShooter.PowerGrid.Effects.*`,
   `TypicalShooter.Loot.Generator.Modifiers`
-- [ ] 5. `FInfo_ItemFragment`: имя, описание с плейсхолдерами + строки модификаторов, иконка по редкости —
+- [x] 5. `FInfo_ItemFragment`: имя, описание с плейсхолдерами + строки модификаторов, иконка по редкости —
   тест: `TypicalShooter.Loot.Generator.Info`
 - [ ] 6. `ULootTable`: количество, шаблоны по весам, редкость по весам-кривым от уровня — тест:
   `TypicalShooter.Loot.Table.*`
@@ -94,7 +94,13 @@
   (веса ≤ 0 не выигрывают), общий для форм, пулов и таблиц.
 - [`LootItemTemplate.h`](../../Source/TypicalShooter/Public/Loot/LootItemTemplate.h): `ULootItemTemplate` —
   `ItemType`, `FaceShapes` (`FLootFaceShape`: маска + вес; пусто = все грани), `bRandomRotation`, `FixedFragments`,
-  `Source` / `Receiver` (видны по `ItemType`), `ModifierPool` (`FLootModifierEntry`: модификатор + вес).
+  `Source` / `Receiver` (видны по `ItemType`), `ModifierPool` (`FLootModifierEntry`: модификатор + вес),
+  `DisplayName`, `DescriptionFormat`, `IconsByRarity` + `DefaultIcon`.
+- [`LootItemText.h`](../../Source/TypicalShooter/Public/Loot/LootItemText.h): `LootItemText::MakeInfo` собирает
+  `FInfo_ItemFragment`: имя шаблона; описание = `DescriptionFormat` с `{Power}`, `{Capacity}`, `{CostPerUse}`,
+  `{RechargeDelay}`, `{RequiredPower}`, `{Level}`, `{Rarity}` + по строке `DescriptionLine` на модификатор
+  (`{Threshold}`, `{Bonus0}`, `{Bonus1}` …) в порядке порогов, через `\n`; дробные — до 2 знаков; иконка — по
+  редкости, иначе `DefaultIcon`.
 - [`LootModifier.h`](../../Source/TypicalShooter/Public/Loot/LootModifier.h): `ULootModifier` — `Tier`, `Tag`
   (`Loot.Modifier.*`, нативные теги в `LootTags.h`), диапазон `Threshold`, `AttackBonuses`, `CharacterEffect`,
   `DescriptionLine`; `Roll` → один `FPowerThresholdEffect`.
@@ -108,7 +114,8 @@
   `Ability`, диапазон `RequiredPower`, `BaseStats` из `FLootAttackStatRange`). Каждый `Roll` даёт готовые
   `FPowerSourceParams` / `FPowerReceiverParams`; коннектор оставляет их по умолчанию.
 - [`LootGenerator.h`](../../Source/TypicalShooter/Public/Loot/LootGenerator.h): `LootGenerator::Generate(Template,
-  {Level, Seed, Rarity})` → `FInventoryItemManifest` = фиксированные фрагменты + `FPowerGrid_ItemFragment` +
+  {Level, Seed, Rarity})` → `FInventoryItemManifest` = фиксированные фрагменты + `FInfo_ItemFragment` +
+  `FPowerGrid_ItemFragment` +
   `FPowerEffects_ItemFragment` (только если выпали модификаторы; шаги отсортированы по `Threshold`, у каждого
   `CharacterEffectLevel` = уровень предмета — с ним `UPowerEffectsComponent` применяет GE) + фрагмент
   происхождения. Весь рандом — из `FRandomStream(Seed)`. **Случайный поворот** применяется к самой маске
@@ -129,10 +136,13 @@
   коннектор не трогает их.
 - `TypicalShooter.Loot.Modifiers.*`, `TypicalShooter.Loot.Generator.Modifiers` (`LootModifiersTest.cpp`): тег / тир
   слота, без повторов, пропуск слота, бросок шага, сортировка, происхождение.
+- `TypicalShooter.Loot.Generator.Info.*` (`LootInfoTest.cpp`): плейсхолдеры, строки модификаторов, иконка по редкости.
 
 ## Ограничения и грабли
 - В тестах держите сгенерированный манифест в локальной переменной: указатель на фрагмент временного манифеста
   висит (у хелперов `PowerGridOf` / `OriginOf` перегрузка для rvalue удалена).
+- Не кладите `FInfo_ItemFragment` в `FixedFragments` шаблона: инфо генерируется, а `GetFragmentOfType` вернёт первый
+  (фиксированный).
 
 ## Открытые задачи
 - [ ] Дроп с врагов / награда за волну через `ULootTable`.

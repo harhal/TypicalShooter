@@ -1,6 +1,7 @@
 #include "Loot/LootGenerator.h"
 
 #include "Loot/LootItemTemplate.h"
+#include "Loot/LootItemText.h"
 #include "Loot/LootModifier.h"
 #include "Loot/LootModifierPicker.h"
 #include "Loot/LootOriginFragment.h"
@@ -38,16 +39,33 @@ namespace LootGeneratorPrivate
 		return PowerGrid;
 	}
 
-	FPowerEffects_ItemFragment MakeEffects(TConstArrayView<const ULootModifier*> Modifiers, FRandomStream& Stream, const float LevelMultiplier, const int32 Level)
+	/** Rolled steps sorted by threshold; character effects get the item level. */
+	TArray<FLootRolledModifier> RollModifiers(TConstArrayView<const ULootModifier*> Modifiers, FRandomStream& Stream, const float LevelMultiplier, const int32 Level)
 	{
-		FPowerEffects_ItemFragment Effects;
+		TArray<FLootRolledModifier> Rolled;
 		for (const ULootModifier* Modifier : Modifiers)
 		{
-			FPowerThresholdEffect& Step = Effects.Effects.Add_GetRef(Modifier->Roll(Stream, LevelMultiplier));
-			Step.CharacterEffectLevel = Level;
+			FLootRolledModifier& Entry = Rolled.Add_GetRef({Modifier, Modifier->Roll(Stream, LevelMultiplier)});
+			Entry.Step.CharacterEffectLevel = Level;
 		}
-		Effects.Effects.StableSort([](const FPowerThresholdEffect& A, const FPowerThresholdEffect& B) { return A.Threshold < B.Threshold; });
+		Rolled.StableSort([](const FLootRolledModifier& A, const FLootRolledModifier& B) { return A.Step.Threshold < B.Step.Threshold; });
+		return Rolled;
+	}
+
+	FPowerEffects_ItemFragment MakeEffects(TConstArrayView<FLootRolledModifier> Rolled)
+	{
+		FPowerEffects_ItemFragment Effects;
+		for (const FLootRolledModifier& Entry : Rolled)
+		{
+			Effects.Effects.Add(Entry.Step);
+		}
 		return Effects;
+	}
+
+	template<typename T>
+	void AddFragment(FInventoryItemManifest& Manifest, const T& Fragment)
+	{
+		Manifest.Fragments.Add(TInstancedStruct<FItemFragment>::Make<T>(Fragment));
 	}
 
 	FLootOrigin_ItemFragment MakeOrigin(const ULootItemTemplate& Template, const FLootGenerationParams& Params, TConstArrayView<const ULootModifier*> Modifiers)
@@ -66,16 +84,21 @@ FInventoryItemManifest LootGenerator::Generate(const ULootItemTemplate& Template
 {
 	using namespace LootGeneratorPrivate;
 	FRandomStream Stream(Params.Seed);
-	const float LevelMultiplier = GetDefault<ULootSettings>()->GetLevelMultiplier(Params.Level);
+	const int32 Level = ULootSettings::ClampLevel(Params.Level);
+	const float LevelMultiplier = GetDefault<ULootSettings>()->GetLevelMultiplier(Level);
+
+	const FPowerGrid_ItemFragment PowerGrid = MakePowerGrid(Template, Stream, LevelMultiplier);
+	const TArray<const ULootModifier*> Modifiers = LootModifierPicker::Pick(Template.ModifierPool, Params.Rarity, Stream);
+	const TArray<FLootRolledModifier> Rolled = RollModifiers(Modifiers, Stream, LevelMultiplier, Level);
 
 	FInventoryItemManifest Manifest;
 	Manifest.Fragments = Template.FixedFragments;
-	Manifest.Fragments.Add(TInstancedStruct<FItemFragment>::Make<FPowerGrid_ItemFragment>(MakePowerGrid(Template, Stream, LevelMultiplier)));
-	const TArray<const ULootModifier*> Modifiers = LootModifierPicker::Pick(Template.ModifierPool, Params.Rarity, Stream);
-	if (!Modifiers.IsEmpty())
+	AddFragment(Manifest, LootItemText::MakeInfo(Template, PowerGrid, Rolled, Level, Params.Rarity));
+	AddFragment(Manifest, PowerGrid);
+	if (!Rolled.IsEmpty())
 	{
-		Manifest.Fragments.Add(TInstancedStruct<FItemFragment>::Make<FPowerEffects_ItemFragment>(MakeEffects(Modifiers, Stream, LevelMultiplier, ULootSettings::ClampLevel(Params.Level))));
+		AddFragment(Manifest, MakeEffects(Rolled));
 	}
-	Manifest.Fragments.Add(TInstancedStruct<FItemFragment>::Make<FLootOrigin_ItemFragment>(MakeOrigin(Template, Params, Modifiers)));
+	AddFragment(Manifest, MakeOrigin(Template, Params, Modifiers));
 	return Manifest;
 }

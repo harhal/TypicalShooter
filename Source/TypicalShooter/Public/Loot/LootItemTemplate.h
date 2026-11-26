@@ -12,6 +12,8 @@
 #include "LootItemTemplate.generated.h"
 
 class ULootModifier;
+class ULootRarity;
+class UTexture2D;
 
 /** One possible arrangement of open faces, picked by weight. */
 USTRUCT(BlueprintType)
@@ -67,7 +69,23 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Modifiers")
 	TArray<FLootModifierEntry> ModifierPool;
 
-	/** Copied into every generated item as is. */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Text")
+	FText DisplayName;
+
+	/** Placeholders: {Power}, {Capacity}, {CostPerUse}, {RechargeDelay}, {RequiredPower}, {Level}, {Rarity}.
+	 *  Description lines of the picked modifiers follow on separate lines. */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Text", meta = (MultiLine = true))
+	FText DescriptionFormat;
+
+	/** Icon drawn in the cell centre for items of a rarity. */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Text")
+	TMap<TObjectPtr<const ULootRarity>, TObjectPtr<UTexture2D>> IconsByRarity;
+
+	/** Icon when there is no rarity or it is not in IconsByRarity. */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Text")
+	TObjectPtr<UTexture2D> DefaultIcon = nullptr;
+
+	/** Copied into every generated item as is (don't put an info fragment here: it is generated). */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Item", meta = (ExcludeBaseStruct))
 	TArray<TInstancedStruct<FItemFragment>> FixedFragments;
 };
