@@ -28,7 +28,7 @@
   камикадзе к цели. Враг атакует, только если держит токен и его атака возможна (у стрелка — `CanShootAt(Target)`).
   Без токена он не атакует, даже когда видит цель.
 - R5. Токен выдаётся только врагу, который видит цель. Если желающих больше, чем свободных токенов, порядок такой:
-  сначала по приоритету роли (`RolePriority`: давящий > фланкёр > прикрывающий), затем тот, кто дольше ждёт,
+  сначала по приоритету роли (фиксированный порядок: давящий > фланкёр > прикрывающий), затем тот, кто дольше ждёт,
   затем ближайший к цели.
 - R6. Ротация: враг держит токен не дольше `TokenHoldTime` (по умолчанию 3 с). Раньше он отдаёт токен, если
   потерял видимость дольше `LostSightGrace` (0.5 с), умер или вышел из боя (выход из состояния StateTree). Отдав
@@ -101,8 +101,9 @@
 - [x] 3. Раздача секторов, чистая функция (равномерно, ближайший свободный, фланкёры вне конуса взгляда, гистерезис)
   (R12, R13) — тест: `TypicalShooter.Enemies.Coordination.Sectors.*` (`.EvenSpread`, `.NearestFree`, `.FlankersOutOfView`,
   `.ReaimHysteresis`)
-- [ ] 4. Раздача токенов, чистая логика со временем (приоритет, удержание, кулдаун, потеря видимости) (R5, R6) — тест:
-  `TypicalShooter.Enemies.Coordination.Tokens.*`
+- [x] 4. Раздача токенов, чистая логика со временем (приоритет, удержание, кулдаун, потеря видимости) (R5, R6) — тест:
+  `TypicalShooter.Enemies.Coordination.Tokens.*` (`.OnlyVisible`, `.Priority`, `.RotationAfterHoldTime`, `.LostSightGrace`,
+  `.CooldownAfterRelease`)
 - [ ] 5. Точка в заданном секторе и полосе роли (`FEnemyStandQuery` + угол сектора), разнесение точек (R11, R14) — тест:
   `TypicalShooter.Enemies.Positioning.SectorAngle*`, `.Separation`
 - [ ] 6. Директор: группы по цели, периодический пересчёт (tickable subsystem), API роли / сектора / токена (R1, R2) —
@@ -151,6 +152,19 @@
   - `SectorHalfWidth(N)` = 180 / N — в его пределах враг разбросает точку (итерация 5).
   - `ShouldReaimFlank(Опорный, Текущий, Порог)` — гистерезис. Директор хранит опорный взгляд цели и передаёт его в
     `Assign` как `ViewYaw`, а обновляет его, только когда взгляд ушёл дальше порога.
+- Токены во времени — [`FEnemyTokenPool`](../../Source/TypicalShooter/Public/Enemies/Coordination/EnemyTokenPool.h), по
+  одному на группу. `Update(Now, Candidates {Id, Role, bSeesTarget, Distance}, TokenCount, Settings)` проходит четыре шага:
+  1. Синхронизация. Кто пропал из списка, уходит вместе со своим токеном. Новичок «ждёт» с момента появления.
+     Отслеживается, с какого момента враг не видит цель.
+  2. Возврат. Держатель отдаёт токен, если не видит цель дольше `LostSightGrace`, или если держит его дольше
+     `TokenHoldTime` и есть другой претендент (видит цель и не держит токен).
+  3. Лишние токены (группа уменьшилась) отдают держатели с самым низким приоритетом.
+  4. Раздача свободных токенов претендентам. Порядок: роль (Pressure, Flank, Cover), время ожидания, дистанция, Id.
+     Враги вне кулдауна (`TokenCooldown` после возврата) идут раньше. Враг на кулдауне получает токен, только если других
+     претендентов нет.
+
+  `Release(Id, Now)` — немедленный возврат (выход из боя, смерть). Отдавший токен «ждёт» с момента возврата. Поэтому при
+  ротации токен уходит тому, кто ждал дольше, а не обратно ближайшему.
 
 Задуманное устройство (дальнейшие итерации):
 - Чистая логика без мира (тестируется без PIE): `FEnemyTokenPool` (токены со временем), `EnemyPositioning` (угол сектора).
@@ -161,7 +175,8 @@
 
 ## Настройка контента
 Project Settings → Game → **Enemy Coordination**:
-- **Tokens:** `Token Fraction` (0.4), `Min Tokens` (1), `Max Tokens` (3).
+- **Tokens:** `Token Fraction` (0.4), `Min Tokens` (1), `Max Tokens` (3); `Token Rotation` — `Token Hold Time` (3 с),
+  `Lost Sight Grace` (0.5 с), `Token Cooldown` (1.5 с).
 - **Roles:** `Role Weights` — `Pressure` 2, `Flank` 1, `Cover` 1.
 - **Sectors:** `Flank View Half Angle` (60°), `Flank Reaim Degrees` (30°).
 
@@ -183,6 +198,11 @@ Project Settings → Game → **Enemy Coordination**:
 `TypicalShooter.Enemies.Coordination.Sectors.EvenSpread` (куча расходится на четверти), `.NearestFree` (ровная группа
 стоит, почти ровная сдвигается меньше чем на 25°), `.FlankersOutOfView` (фланкёр перед игроком уходит из конуса; одиночный —
 за спину; двое из трёх — оба вне конуса), `.ReaimHysteresis` (порог, переход через ±180°, `YawAround`, умолчания).
+
+[EnemiesCoordinationTokensTest.cpp](../../Source/TypicalShooter/Private/Tests/EnemiesCoordinationTokensTest.cpp):
+`TypicalShooter.Enemies.Coordination.Tokens.OnlyVisible` (плюс сокращение числа токенов и уход держателя), `.Priority`,
+`.RotationAfterHoldTime` (ротация по времени ожидания; одиночка держит токен дольше лимита), `.LostSightGrace`,
+`.CooldownAfterRelease` (прикрывающий получает токен раньше давящего на кулдауне; одиночку кулдаун не блокирует; умолчания).
 
 ## Ограничения и грабли
 

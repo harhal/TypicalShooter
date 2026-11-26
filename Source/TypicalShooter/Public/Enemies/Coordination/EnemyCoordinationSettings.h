@@ -7,6 +7,7 @@
 #include "Enemies/Coordination/EnemyRole.h"
 #include "Enemies/Coordination/EnemySectors.h"
 #include "Enemies/Coordination/EnemyTokenCount.h"
+#include "Enemies/Coordination/EnemyTokenPool.h"
 #include "EnemyCoordinationSettings.generated.h"
 
 UCLASS(Config = Game, DefaultConfig, meta = (DisplayName = "Enemy Coordination"))
@@ -23,6 +24,10 @@ public:
 	/** How many enemies of one target group may attack at once. */
 	UPROPERTY(Config, EditAnywhere, Category = "Tokens", meta = (ShowOnlyInnerProperties))
 	FEnemyTokenCountSettings Tokens;
+
+	/** How long a token is held and when it passes on. */
+	UPROPERTY(Config, EditAnywhere, Category = "Tokens")
+	FEnemyTokenRotationSettings TokenRotation;
 
 	/** Wanted share of each role in a target group. */
 	UPROPERTY(Config, EditAnywhere, Category = "Roles")
