@@ -61,6 +61,14 @@
   больше чем на `FlankReaimDegrees` (30°) от последнего пересчёта (гистерезис).
 - R14. Две выданные точки разных врагов не оказываются ближе `MinSeparation` (по умолчанию 250 см) друг к другу, если
   в полосе есть место. Это следствие секторов, которое проверяется тестом.
+- R19. (Добавлено после проверки в PIE.) Если точка врага лежит дальше чем `ArcStepDegrees` (45°) вокруг цели, враг идёт
+  к ней не напрямую, а по дуге. Каждая промежуточная точка лежит на 45° дальше по короткой стороне, на текущей
+  дистанции врага, прижатой к полосе его роли. Через игрока и ближе края своей полосы враг не пробегает.
+- R20. (Добавлено после проверки в PIE.) Сектор фланкёра не шире зоны вне взгляда цели:
+  полуширина ≤ 180° − `FlankViewHalfAngle`. Иначе одинокий фланкёр с сектором на весь круг стоял бы прямо перед игроком.
+- R21. (Добавлено после проверки в PIE.) Враг вне поля зрения цели (дальше `FlankViewHalfAngle` от её взгляда) получает
+  токен реже. Он держит токен `OutOfViewHoldScale` × `TokenHoldTime` (по умолчанию 0.5), а его кулдаун — в
+  `OutOfViewCooldownScale` раз длиннее (по умолчанию 3). Если других претендентов нет, токен он всё равно получает.
 
 **StateTree**
 - R15. Combat в `ST_Enemy` получает дочерние состояния `Pressure`, `Flank` и `Cover`. Активное состояние выбирается
@@ -124,6 +132,13 @@
   отдельными коммитами (см. [Enemies.md](Enemies.md)): враги не умели обходить друг друга (включено RVO,
   `Enemies.Movement.AvoidsStandingAlly`), а точка у стены давала врагу вклиниться в геометрию (проверка места под капсулу,
   `Enemies.Controller.StandPointClearOfWalls`).
+
+После проверки в PIE (2026-11-26): фланкёр пробегал сквозь игрока, а враги вне поля зрения получали токен так же часто,
+как остальные.
+- [x] 11. Обход по дуге в полосе роли (R19) — тест: `TypicalShooter.Enemies.Positioning.Arc*`,
+  `TypicalShooter.Enemies.Controller.CirclesAroundTarget`
+- [ ] 12. Сектор фланкёра ограничен зоной вне взгляда (R20) — тест: `TypicalShooter.Enemies.Director.LoneFlankerLeavesView`
+- [ ] 13. Токены реже вне поля зрения (R21) — тест: `TypicalShooter.Enemies.Coordination.Tokens.OutOfView*`
 
 ## Как устроено
 Код координации лежит в `Source/TypicalShooter/{Public,Private}/Enemies/Coordination/`.
@@ -214,6 +229,11 @@
   - `UpdateFire` = `SetFiring(HasAttackToken() && CanAttack(Target))`;
   - `UpdatePosition` после базового запроса вызывает `ApplyCoordination`: роль, токен, полоса и сектор от директора.
     Без назначения (нет цели) остаются полоса из `FEnemyStandSettings` и сторона самого врага;
+  - обход по дуге (R19). Выбрав точку, враг идёт к `ChooseMoveGoal`: это `EnemyPositioning::NextArcWaypoint`
+    (`FEnemyArcQuery`) с шагом `FEnemyStandSettings::ArcStepDegrees`, а если промежуточная точка не проходит
+    `AcceptStandPoint` — с половинным шагом; не подошёл и он — точка стояния напрямую. Текущая цель движения —
+    `GetMoveGoal()`. Подходя к промежуточной точке (ближе `AcceptanceRadius` + 150), враг сразу выбирает следующую и не
+    останавливается;
   - `ReleaseAttackToken()` вызывается из `StopCombat` и при выходе из задачи `Enemy: Shoot When Visible` (R6, выход из боя).
     Смерть отдаёт токен через `Unregister`. Пока контроллер или мир разрушаются (сборка мусора, конец PIE), директора уже
     нет, и `ReleaseAttackToken` ничего не делает.
@@ -237,7 +257,8 @@
   Консольная переменная `TypicalShooter.Enemies.Debug.Coordination`. Пока она включена, директор в конце каждого тика
   рисует один кадр (сервер): белый конус взгляда цели (±`FlankViewHalfAngle`); луч сектора каждого врага от цели длиной до
   дальнего края его полосы, в цвете роли (давящий — красный, фланкёр — оранжевый, прикрывающий — голубой); толстую линию от
-  врага к его точке стояния; над врагом — роль и `[TOKEN]` у держателя (жёлтым).
+  врага к его точке стояния; при обходе по дуге — тонкую белую линию и шарик на текущей промежуточной точке; над врагом —
+  роль и `[TOKEN]` у держателя (жёлтым).
 
 ## Настройка контента
 Project Settings → Game → **Enemy Coordination**:
@@ -292,6 +313,13 @@ Project Settings → Game → **Enemy Coordination**:
 `GetTokenCount(4)`; отданный токен уходит другому при следующем пересчёте), `.RecomputeOnDeath` (убит держатель токена:
 группа, роли, токены и ширина секторов пересчитаны сразу), `.FollowsTargetChange` (ближе появился другой игрок — враг уходит
 в его группу на следующем тике, а не через `UpdateInterval`).
+
+[EnemiesPositioningArcTest.cpp](../../Source/TypicalShooter/Private/Tests/EnemiesPositioningArcTest.cpp):
+`TypicalShooter.Enemies.Positioning.ArcGoesStraightWhenClose`, `.ArcGoesAroundTarget` (из-за спины к лицу цели — шагами по
+45° на дистанции полосы, не ближе 0.85 × внутреннего края, не больше 5 шагов), `.ArcTakesShorterSide` (короткая сторона;
+слишком близко — дуга по внутреннему краю). `TypicalShooter.Enemies.Controller.CirclesAroundTarget` (в
+EnemiesControllerCoordinationTest.cpp): фланкёр перед игроком уходит из его поля зрения и ни разу не подходит ближе края
+своей полосы − 150 (до исправления проходил в 210 см от игрока).
 
 [EnemiesCoordinationRoleStandTest.cpp](../../Source/TypicalShooter/Private/Tests/EnemiesCoordinationRoleStandTest.cpp):
 `TypicalShooter.Enemies.Coordination.RoleStand.PressureClosesInWithoutToken`, `.CoverHoldsWhileVisible` (вне сектора, но в

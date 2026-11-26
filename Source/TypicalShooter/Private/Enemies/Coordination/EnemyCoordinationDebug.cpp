@@ -52,6 +52,12 @@ namespace EnemyCoordinationDebugImpl
 		if (const AEnemyAIController* Controller = Cast<AEnemyAIController>(Enemy.GetController()))
 		{
 			DrawDebugLine(&World, Enemy.GetActorLocation(), Controller->GetStandPoint(), Color, false, -1.f, 0, 2.f);
+			if (!Controller->GetMoveGoal().Equals(Controller->GetStandPoint(), 1.f))
+			{
+				// Going around the target: the current arc waypoint.
+				DrawDebugLine(&World, Enemy.GetActorLocation(), Controller->GetMoveGoal(), FColor::White);
+				DrawDebugSphere(&World, Controller->GetMoveGoal(), 20.f, 6, FColor::White);
+			}
 		}
 		const bool bToken = Director.HasAttackToken(&Enemy);
 		const FString Label = FString::Printf(TEXT("%s%s"), *UEnum::GetDisplayValueAsText(Assignment->Role).ToString(), bToken ? TEXT(" [TOKEN]") : TEXT(""));

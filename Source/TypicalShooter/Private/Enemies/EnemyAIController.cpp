@@ -55,7 +55,10 @@ bool AEnemyAIController::UpdatePosition(const FEnemyStandSettings& Settings)
 	}
 	const double Now = GetWorld()->GetTimeSeconds();
 	const bool bMoving = GetMoveStatus() == EPathFollowingStatus::Moving;
-	if (bMoving && Now - LastStandChoiceTime < Settings.RepathInterval)
+	// An arc waypoint is only a step on the way: pick the next one before arriving, so the enemy keeps running.
+	const bool bNearWaypoint = !MoveGoal.Equals(StandPoint, 1.f)
+		&& FVector::Dist2D(Enemy->GetActorLocation(), MoveGoal) < Settings.AcceptanceRadius + 150.f;
+	if (bMoving && !bNearWaypoint && Now - LastStandChoiceTime < Settings.RepathInterval)
 	{
 		return false;
 	}
@@ -78,8 +81,31 @@ bool AEnemyAIController::UpdatePosition(const FEnemyStandSettings& Settings)
 		}
 		return false;
 	}
+	MoveGoal = ChooseMoveGoal(Query, Settings);
 	MoveToStandPoint(Settings);
 	return true;
+}
+
+FVector AEnemyAIController::ChooseMoveGoal(const FEnemyStandQuery& Query, const FEnemyStandSettings& Settings) const
+{
+	// Around the target along the band rather than through it: the next arc waypoint (a smaller step if that one has no
+	// room), the stand point itself when it is close around the target or no waypoint fits.
+	FEnemyArcQuery Arc;
+	Arc.Self = Query.Self;
+	Arc.Target = Query.Target;
+	Arc.Goal = StandPoint;
+	Arc.MinDistance = Query.MinDistance;
+	Arc.MaxDistance = Query.MaxDistance;
+	for (const float Step : {Settings.ArcStepDegrees, 0.5f * Settings.ArcStepDegrees})
+	{
+		Arc.MaxStepDegrees = Step;
+		FVector Waypoint = EnemyPositioning::NextArcWaypoint(Arc);
+		if (Waypoint.Equals(StandPoint, 1.f) || AcceptStandPoint(Waypoint))
+		{
+			return Waypoint;
+		}
+	}
+	return StandPoint;
 }
 
 bool AEnemyAIController::AcceptStandPoint(FVector& Point) const
@@ -131,12 +157,12 @@ void AEnemyAIController::MoveToStandPoint(const FEnemyStandSettings& Settings)
 {
 	// Navmesh path when there is one; straight line otherwise (no navigation data, tests).
 	const EPathFollowingRequestResult::Type Result =
-		MoveToLocation(StandPoint, Settings.AcceptanceRadius, true, true, true, true);
+		MoveToLocation(MoveGoal, Settings.AcceptanceRadius, true, true, true, true);
 	if (Result == EPathFollowingRequestResult::Failed)
 	{
-		const EPathFollowingRequestResult::Type Straight = MoveToLocation(StandPoint, Settings.AcceptanceRadius, true, false, false, true);
+		const EPathFollowingRequestResult::Type Straight = MoveToLocation(MoveGoal, Settings.AcceptanceRadius, true, false, false, true);
 		UE_LOG(LogTypicalShooter, Verbose, TEXT("%s: no navmesh path to %s, straight move: %d"), *GetNameSafe(GetPawn()),
-			*StandPoint.ToCompactString(), int32(Straight));
+			*MoveGoal.ToCompactString(), int32(Straight));
 	}
 }
 

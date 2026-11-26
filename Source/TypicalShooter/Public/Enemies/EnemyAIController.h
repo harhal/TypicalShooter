@@ -36,6 +36,10 @@ struct TYPICALSHOOTER_API FEnemyStandSettings
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Movement", meta = (ClampMin = 0))
 	float AcceptanceRadius = 100.f;
 
+	/** A stand point further around the target than this is reached via arc waypoints within the band, degrees. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Movement", meta = (ClampMin = 5, ClampMax = 180))
+	float ArcStepDegrees = 45.f;
+
 	/** While moving, the stand point is chosen again after this many seconds (the target moves too). */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Movement", meta = (ClampMin = 0.1))
 	float RepathInterval = 1.5f;
@@ -75,6 +79,10 @@ public:
 	UFUNCTION(BlueprintPure, Category = "Enemy AI")
 	FVector GetStandPoint() const { return StandPoint; }
 
+	/** Where the enemy is walking right now: the stand point, or an arc waypoint around the target on the way to it. */
+	UFUNCTION(BlueprintPure, Category = "Enemy AI")
+	FVector GetMoveGoal() const { return MoveGoal; }
+
 	/** Role the director gave this enemy; false when it is not coordinated (no target). */
 	bool GetCoordinatedRole(EEnemyRole& OutRole) const;
 
@@ -100,6 +108,7 @@ protected:
 private:
 	AEnemyCharacter* GetEnemy() const;
 	void MoveToStandPoint(const FEnemyStandSettings& Settings);
+	FVector ChooseMoveGoal(const struct FEnemyStandQuery& Query, const FEnemyStandSettings& Settings) const;
 	/** Role band, waiting behaviour and sector from the director, when it coordinates this enemy. */
 	void ApplyCoordination(struct FEnemyStandQuery& Query) const;
 	/** Stand point filter: on the navmesh (snapped onto it) and with room for the capsule next to level geometry. */
@@ -114,6 +123,7 @@ private:
 	TObjectPtr<AActor> Target;
 
 	FVector StandPoint = FVector::ZeroVector;
+	FVector MoveGoal = FVector::ZeroVector;
 	double LastStandChoiceTime = -1.0;
 	FRandomStream Random;
 };

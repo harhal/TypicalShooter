@@ -103,3 +103,21 @@ bool EnemyPositioning::ChooseReachableStandPoint(const FEnemyStandQuery& Query, 
 	}
 	return false;
 }
+
+FVector EnemyPositioning::NextArcWaypoint(const FEnemyArcQuery& Query)
+{
+	const FVector FromTarget = Query.Self - Query.Target;
+	const FVector GoalFromTarget = Query.Goal - Query.Target;
+	const float SelfYaw = FMath::RadiansToDegrees(FMath::Atan2(FromTarget.Y, FromTarget.X));
+	const float GoalYaw = FMath::RadiansToDegrees(FMath::Atan2(GoalFromTarget.Y, GoalFromTarget.X));
+	const float Turn = FMath::FindDeltaAngleDegrees(SelfYaw, GoalYaw);
+	if (FMath::Abs(Turn) <= Query.MaxStepDegrees)
+	{
+		return Query.Goal;
+	}
+	const float Radius = FMath::Clamp(float(FromTarget.Size2D()), Query.MinDistance, FMath::Max(Query.MinDistance, Query.MaxDistance));
+	const float Yaw = SelfYaw + FMath::Sign(Turn) * Query.MaxStepDegrees;
+	FVector Waypoint = Query.Target + FVector(Radius, 0.f, 0.f).RotateAngleAxis(Yaw, FVector::UpVector);
+	Waypoint.Z = Query.Self.Z;
+	return Waypoint;
+}

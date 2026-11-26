@@ -111,6 +111,46 @@ bool FEnemiesControllerRoleBandTest::RunTest(const FString& Parameters)
 	return true;
 }
 
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FEnemiesControllerArcTest, "TypicalShooter.Enemies.Controller.CirclesAroundTarget", ShootingTest::Flags)
+bool FEnemiesControllerArcTest::RunTest(const FString& Parameters)
+{
+	using namespace EnemiesControllerCoordinationTest;
+	const ShootingTest::FWorldFixture F(true);
+	Prepare(F);
+	// The player looks along -X, at both enemies; the flanker has to get behind him (+X side).
+	ACharacter* Player = SpawnPlayer(F, FVector::ZeroVector);
+	Cast<APlayerController>(Player->GetController())->SetControlRotation(FRotator(0.f, 180.f, 0.f));
+	AEnemyCharacter* Presser = SpawnConfigured(F, FVector(-700.f, -300.f, 0.f), [](AEnemyCharacter& E) { E.AllowedRoles = {EEnemyRole::Pressure}; });
+	AEnemyCharacter* Flanker = SpawnConfigured(F, FVector(-950.f, 250.f, 0.f), [](AEnemyCharacter& E) { E.AllowedRoles = {EEnemyRole::Flank}; });
+	F.Tick(0.2f);
+	AEnemyAIController* Controller = ControllerOf(Flanker);
+	if (!TestNotNull(TEXT("AI controller"), Controller) || !TestNotNull(TEXT("Presser controller"), ControllerOf(Presser)))
+	{
+		return false;
+	}
+
+	const UEnemyDirectorSubsystem* Director = F.World->GetSubsystem<UEnemyDirectorSubsystem>();
+	const FEnemyDistanceBand Band = Flanker->GetRoleBand(EEnemyRole::Flank);
+	float Closest = UE_BIG_NUMBER;
+	for (int32 Frame = 0; Frame < 60 * 10; ++Frame)
+	{
+		Controller->UpdateTarget();
+		Controller->UpdatePosition(FEnemyStandSettings());
+		F.Tick(1.f / 60.f);
+		Closest = FMath::Min(Closest, float(FVector::Dist2D(Flanker->GetActorLocation(), Player->GetActorLocation())));
+	}
+	const FEnemyAssignment* Assignment = Director->GetAssignment(Flanker);
+	const FVector Offset = Flanker->GetActorLocation() - Player->GetActorLocation();
+	const float Yaw = FMath::RadiansToDegrees(FMath::Atan2(Offset.Y, Offset.X));
+	TestTrue(TEXT("Flanker role"), Assignment && Assignment->Role == EEnemyRole::Flank);
+	const float ViewHalf = GetDefault<UEnemyCoordinationSettings>()->Sectors.FlankViewHalfAngle;
+	TestTrue(FString::Printf(TEXT("Got out of the player's view cone (yaw %.0f, he looks along 180, cone +-%.0f)"), Yaw, ViewHalf),
+		FMath::Abs(FMath::FindDeltaAngleDegrees(Yaw, 180.f)) > ViewHalf);
+	TestTrue(FString::Printf(TEXT("Went around, never closer than the band allows (closest %.0f, band from %.0f)"), Closest, Band.Min),
+		Closest >= Band.Min - 150.f);
+	return true;
+}
+
 IMPLEMENT_SIMPLE_AUTOMATION_TEST(FEnemiesControllerBandOverrideTest, "TypicalShooter.Enemies.Controller.RoleBandOverride", ShootingTest::Flags)
 bool FEnemiesControllerBandOverrideTest::RunTest(const FString& Parameters)
 {

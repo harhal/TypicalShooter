@@ -27,8 +27,28 @@ struct FEnemyStandQuery
 	float MinSeparation = 0.f;
 };
 
+/** Moving to Goal around Target without crossing it. */
+struct FEnemyArcQuery
+{
+	FVector Self = FVector::ZeroVector;
+	FVector Target = FVector::ZeroVector;
+	FVector Goal = FVector::ZeroVector;
+	/** Distance band the arc keeps to: the enemy's current distance, clamped into it. */
+	float MinDistance = 800.f;
+	float MaxDistance = 1600.f;
+	/** Largest turn around the target per waypoint. */
+	float MaxStepDegrees = 45.f;
+};
+
 namespace EnemyPositioning
 {
+	/**
+	 * Where to walk next on the way to Goal. Goal itself when it is within MaxStepDegrees around the target (as seen from
+	 * the target); otherwise a waypoint MaxStepDegrees further around the target the shorter way, at the enemy's current
+	 * distance clamped into the band and at its own height - so the enemy circles the target instead of crossing it.
+	 */
+	TYPICALSHOOTER_API FVector NextArcWaypoint(const FEnemyArcQuery& Query);
+
 	/**
 	 * false: stay (horizontally within the band and the target is visible).
 	 * true: OutPoint = where to go: the middle of the band (or its near edge without line of sight), on the enemy's side of
