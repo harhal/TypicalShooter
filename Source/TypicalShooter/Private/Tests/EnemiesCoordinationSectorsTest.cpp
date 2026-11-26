@@ -120,6 +120,7 @@ bool FEnemiesCoordinationSectorsReaimTest::RunTest(const FString& Parameters)
 	const FEnemySectorSettings& Project = GetDefault<UEnemyCoordinationSettings>()->Sectors;
 	TestEqual(TEXT("Default flank view half angle"), Project.FlankViewHalfAngle, 60.f);
 	TestEqual(TEXT("Default flank reaim"), Project.FlankReaimDegrees, 30.f);
+	TestEqual(TEXT("Default min separation"), Project.MinSeparation, 250.f);
 	return true;
 }
 

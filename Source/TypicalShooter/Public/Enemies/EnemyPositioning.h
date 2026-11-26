@@ -17,6 +17,12 @@ struct FEnemyStandQuery
 	/** Random turn around the target when approaching without line of sight (to find another angle). */
 	float FlankDegrees = 60.f;
 	bool bHasLineOfSight = true;
+	/** Yaw around the target the coordinator gave this enemy; unset = stand on the enemy's own side. */
+	TOptional<float> SectorYaw;
+	/** Half width of that sector: the enemy stays while inside it, and the stand point jitters within it. */
+	float SectorHalfWidth = 180.f;
+	/** Neighbouring sectors' stand points keep at least this far apart (jitter is narrowed for it). */
+	float MinSeparation = 0.f;
 };
 
 namespace EnemyPositioning

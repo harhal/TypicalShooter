@@ -104,8 +104,8 @@
 - [x] 4. Раздача токенов, чистая логика со временем (приоритет, удержание, кулдаун, потеря видимости) (R5, R6) — тест:
   `TypicalShooter.Enemies.Coordination.Tokens.*` (`.OnlyVisible`, `.Priority`, `.RotationAfterHoldTime`, `.LostSightGrace`,
   `.CooldownAfterRelease`)
-- [ ] 5. Точка в заданном секторе и полосе роли (`FEnemyStandQuery` + угол сектора), разнесение точек (R11, R14) — тест:
-  `TypicalShooter.Enemies.Positioning.SectorAngle*`, `.Separation`
+- [x] 5. Точка в заданном секторе и полосе роли (`FEnemyStandQuery` + угол сектора), разнесение точек (R11, R14) — тест:
+  `TypicalShooter.Enemies.Positioning.SectorAngleMovesIntoSector`, `.SectorAngleStaysInside`, `.Separation`
 - [ ] 6. Директор: группы по цели, периодический пересчёт (tickable subsystem), API роли / сектора / токена (R1, R2) —
   тест: `TypicalShooter.Enemies.Director.Groups*`, `.TwoTargets`, `.RecomputeOnDeath`
 - [ ] 7. Враг и контроллер: `AllowedRoles`, `RoleBandOverrides`, огонь только с токеном, позиция по роли и сектору, отдача
@@ -165,6 +165,17 @@
 
   `Release(Id, Now)` — немедленный возврат (выход из боя, смерть). Отдавший токен «ждёт» с момента возврата. Поэтому при
   ротации токен уходит тому, кто ждал дольше, а не обратно ближайшему.
+- Точка в секторе — [`EnemyPositioning`](../../Source/TypicalShooter/Public/Enemies/EnemyPositioning.h). У
+  `FEnemyStandQuery` появились необязательные `SectorYaw`, `SectorHalfWidth` и `MinSeparation`. Если сектор задан:
+  - враг стоит на месте, только если он в полосе, видит цель и находится внутри своего сектора;
+  - иначе точка строится от угла сектора (а не от стороны врага), на прежнем радиусе: середина полосы или ближний край
+    без видимости;
+  - поворот точки (разброс или фланговый заход) ограничен полушириной сектора минус половина угла, который
+    `MinSeparation` занимает на этом радиусе. Поэтому точки соседних секторов не ближе `MinSeparation`, пока сектора
+    достаточно широкие; в слишком узких секторах разброса нет;
+  - поиск достижимой точки (`ChooseReachableStandPoint`) поворачивает её дальше от угла сектора, как и раньше.
+
+  Без сектора поведение прежнее.
 
 Задуманное устройство (дальнейшие итерации):
 - Чистая логика без мира (тестируется без PIE): `FEnemyTokenPool` (токены со временем), `EnemyPositioning` (угол сектора).
@@ -178,7 +189,7 @@ Project Settings → Game → **Enemy Coordination**:
 - **Tokens:** `Token Fraction` (0.4), `Min Tokens` (1), `Max Tokens` (3); `Token Rotation` — `Token Hold Time` (3 с),
   `Lost Sight Grace` (0.5 с), `Token Cooldown` (1.5 с).
 - **Roles:** `Role Weights` — `Pressure` 2, `Flank` 1, `Cover` 1.
-- **Sectors:** `Flank View Half Angle` (60°), `Flank Reaim Degrees` (30°).
+- **Sectors:** `Flank View Half Angle` (60°), `Flank Reaim Degrees` (30°), `Min Separation` (250 см).
 
 Дальше сюда добавятся параметры ролей, секторов и ротации токенов, а также `AllowedRoles` / `RoleBandOverrides` в `BP_Enemy`.
 
@@ -203,6 +214,11 @@ Project Settings → Game → **Enemy Coordination**:
 `TypicalShooter.Enemies.Coordination.Tokens.OnlyVisible` (плюс сокращение числа токенов и уход держателя), `.Priority`,
 `.RotationAfterHoldTime` (ротация по времени ожидания; одиночка держит токен дольше лимита), `.LostSightGrace`,
 `.CooldownAfterRelease` (прикрывающий получает токен раньше давящего на кулдауне; одиночку кулдаун не блокирует; умолчания).
+
+[EnemiesPositioningSectorTest.cpp](../../Source/TypicalShooter/Private/Tests/EnemiesPositioningSectorTest.cpp):
+`TypicalShooter.Enemies.Positioning.SectorAngleMovesIntoSector` (враг в полосе, но вне сектора, переходит в сектор),
+`.SectorAngleStaysInside` (внутри стоит; слишком близко — двигается; без видимости — ближний край, заход в пределах сектора),
+`.Separation` (группы из 4, 6 и 12 врагов, 30 сидов: ближайшая пара точек ≥ 250 см).
 
 ## Ограничения и грабли
 

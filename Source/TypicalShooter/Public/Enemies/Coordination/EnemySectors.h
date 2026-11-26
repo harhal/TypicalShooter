@@ -20,6 +20,10 @@ struct TYPICALSHOOTER_API FEnemySectorSettings
 	/** Flank sectors follow the target's view only after it turned this far since the last time (hysteresis). */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Sectors", meta = (ClampMin = "0", ClampMax = "180"))
 	float FlankReaimDegrees = 30.f;
+
+	/** Stand points of neighbouring sectors keep at least this far apart, while the sectors are wide enough. */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Sectors", meta = (ClampMin = "0", Units = "cm"))
+	float MinSeparation = 250.f;
 };
 
 struct FEnemySectorMember
