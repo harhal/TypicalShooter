@@ -187,6 +187,14 @@ HUD: `BP_HUD` → `HealthCounter` (`UHealthCounterWidget`), левый нижн�
 врага у стены — враг отходит по навмешу (≥ 6.5 м), волна убита — приходит следующая. Пишет в лог состояние навмеша и
 движения отходящего врага. Остальные PIE-тесты выключают волны (`EnemyWavesTestGuard`).
 
+Видео: [RecordingEnemyKillTest.cpp](../../Source/TypicalShooter/Private/Tests/RecordingEnemyKillTest.cpp) —
+`TypicalShooterRecordings.EnemyKill` (вне наборов `TypicalShooter.`): PIE с фиксированным шагом 1/30 с, игрок
+разворачивается к ближайшему врагу первой волны и расстреливает его, каждый кадр — в `Saved/Recordings/EnemyKill/`.
+Запуск — только в редакторе с рендерингом (не `-NullRHI`), затем ffmpeg (кадр — всё окно редактора, вьюпорт вырезается
+`crop`; координаты зависят от раскладки окна):
+`UnrealEditor.exe <uproject> "-ExecCmds=Automation RunTests TypicalShooterRecordings.EnemyKill;Quit" -unattended -nopause`,
+`ffmpeg -framerate 30 -i Saved/Recordings/EnemyKill/frame_%04d.png -vf crop=1160:604:4:134 -c:v libx264 -pix_fmt yuv420p EnemyKill.mp4`.
+
 ## Ограничения и грабли
 - В «голом» тестовом мире нет навигационной системы: `MoveToLocation` не стартует даже по прямой. Тесты движения
   вызывают `EnemiesTest::AddNavigation` (система без навданных — прямые перемещения работают).
