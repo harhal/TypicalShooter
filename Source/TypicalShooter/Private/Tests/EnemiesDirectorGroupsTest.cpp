@@ -176,6 +176,34 @@ bool FEnemiesDirectorTargetChangeTest::RunTest(const FString& Parameters)
 	return true;
 }
 
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FEnemiesDirectorOutOfViewTokenTest, "TypicalShooter.Enemies.Director.OutOfViewHoldsTokenShorter", ShootingTest::Flags)
+bool FEnemiesDirectorOutOfViewTokenTest::RunTest(const FString& Parameters)
+{
+	using namespace EnemiesDirectorGroupsTest;
+	const ShootingTest::FWorldFixture F(true);
+	EnemiesTest::SpawnFloor(F);
+	SpawnPlayer(F, FVector::ZeroVector); // looks along +X
+	TArray<AEnemyCharacter*> Pair;
+	for (const FVector& Location : {FVector(-900.f, 0.f, 0.f), FVector(1000.f, 0.f, 0.f)}) // behind (nearer), in front
+	{
+		const FTransform Transform(FRotator::ZeroRotator, Location + FVector(0.f, 0.f, 100.f));
+		AEnemyCharacter* Enemy = F.World->SpawnActorDeferred<AEnemyCharacter>(AEnemyCharacter::StaticClass(), Transform, nullptr,
+			nullptr, ESpawnActorCollisionHandlingMethod::AlwaysSpawn);
+		Enemy->AllowedRoles = {EEnemyRole::Pressure};
+		Enemy->FinishSpawning(Transform);
+		Pair.Add(Enemy);
+	}
+	const UEnemyDirectorSubsystem* Director = F.World->GetSubsystem<UEnemyDirectorSubsystem>();
+	F.Tick(0.1f);
+	TestTrue(TEXT("The nearer one (behind the player) gets the single token"), Director->HasAttackToken(Pair[0]));
+
+	// In view it would hold 3 s; out of view half of that. Updates run every 0.5 s.
+	const FEnemyTokenRotationSettings& Rotation = GetDefault<UEnemyCoordinationSettings>()->TokenRotation;
+	F.Tick(Rotation.TokenHoldTime * Rotation.OutOfViewHoldScale + GetDefault<UEnemyCoordinationSettings>()->UpdateInterval + 0.1f);
+	TestTrue(TEXT("Out of the player's view it passes the token on early"), Director->HasAttackToken(Pair[1]));
+	return true;
+}
+
 IMPLEMENT_SIMPLE_AUTOMATION_TEST(FEnemiesDirectorLoneFlankerTest, "TypicalShooter.Enemies.Director.LoneFlankerLeavesView", ShootingTest::Flags)
 bool FEnemiesDirectorLoneFlankerTest::RunTest(const FString& Parameters)
 {

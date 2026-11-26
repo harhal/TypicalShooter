@@ -9,7 +9,7 @@ void FEnemyGroupCoordinator::Update(const float Now, const FVector& TargetLocati
 {
 	UpdateRoles(Members, Settings);
 	UpdateSectors(TargetLocation, TargetViewYaw, Members, Settings);
-	UpdateTokens(Now, TargetLocation, Members, Settings);
+	UpdateTokens(Now, TargetLocation, TargetViewYaw, Members, Settings);
 }
 
 void FEnemyGroupCoordinator::UpdateRoles(const TArray<FEnemyGroupMemberInput>& Members, const UEnemyCoordinationSettings& Settings)
@@ -61,13 +61,20 @@ void FEnemyGroupCoordinator::UpdateSectors(const FVector& TargetLocation, const 
 	}
 }
 
-void FEnemyGroupCoordinator::UpdateTokens(const float Now, const FVector& TargetLocation, const TArray<FEnemyGroupMemberInput>& Members,
-	const UEnemyCoordinationSettings& Settings)
+void FEnemyGroupCoordinator::UpdateTokens(const float Now, const FVector& TargetLocation, const float TargetViewYaw,
+	const TArray<FEnemyGroupMemberInput>& Members, const UEnemyCoordinationSettings& Settings)
 {
 	TArray<FEnemyTokenCandidate> Candidates;
 	for (const FEnemyGroupMemberInput& Member : Members)
 	{
-		Candidates.Add({Member.Id, Assignments[Member.Id].Role, Member.bCanAttack, float(FVector::Dist(TargetLocation, Member.Location))});
+		FEnemyTokenCandidate& Candidate = Candidates.AddDefaulted_GetRef();
+		Candidate.Id = Member.Id;
+		Candidate.Role = Assignments[Member.Id].Role;
+		Candidate.bSeesTarget = Member.bCanAttack;
+		Candidate.DistanceToTarget = float(FVector::Dist(TargetLocation, Member.Location));
+		// The target's current view (not the flank hysteresis reference): who it can see right now.
+		const float Yaw = EnemySectors::YawAround(TargetLocation, Member.Location);
+		Candidate.bInTargetView = FMath::Abs(FMath::FindDeltaAngleDegrees(Yaw, TargetViewYaw)) <= Settings.Sectors.FlankViewHalfAngle;
 	}
 	Tokens.Update(Now, Candidates, Settings.GetTokenCount(Members.Num()), Settings.TokenRotation);
 }

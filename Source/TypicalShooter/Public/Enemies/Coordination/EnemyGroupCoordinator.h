@@ -45,7 +45,7 @@ private:
 	void UpdateRoles(const TArray<FEnemyGroupMemberInput>& Members, const UEnemyCoordinationSettings& Settings);
 	void UpdateSectors(const FVector& TargetLocation, float TargetViewYaw, const TArray<FEnemyGroupMemberInput>& Members,
 		const UEnemyCoordinationSettings& Settings);
-	void UpdateTokens(float Now, const FVector& TargetLocation, const TArray<FEnemyGroupMemberInput>& Members,
+	void UpdateTokens(float Now, const FVector& TargetLocation, float TargetViewYaw, const TArray<FEnemyGroupMemberInput>& Members,
 		const UEnemyCoordinationSettings& Settings);
 
 	TMap<int32, FEnemyGroupAssignment> Assignments;

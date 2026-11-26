@@ -77,7 +77,8 @@ void FEnemyTokenPool::ReleaseExpired(const float Now, const FEnemyTokenRotationS
 			continue;
 		}
 		const bool bLostSight = State.LostSightSince.IsSet() && Now - State.LostSightSince.GetValue() >= Settings.LostSightGrace;
-		const bool bHeldLongEnough = Now - State.HoldStart >= Settings.TokenHoldTime;
+		const float HoldTime = Settings.TokenHoldTime * (State.Last.bInTargetView ? 1.f : Settings.OutOfViewHoldScale);
+		const bool bHeldLongEnough = Now - State.HoldStart >= HoldTime;
 		if (bLostSight || (bHeldLongEnough && HasOtherClaimant(Pair.Key)))
 		{
 			GiveBack(State, Now);
@@ -115,7 +116,9 @@ void FEnemyTokenPool::Grant(const float Now, const int32 TokenCount, const FEnem
 				continue;
 			}
 			// Enemies off cooldown go first; one on cooldown gets a token only when nobody else wants it.
-			const bool bFresh = Now >= State.ReleasedAt + Settings.TokenCooldown;
+			// Out of the target's view the cooldown is longer: attacks from the side / behind come less often.
+			const float Cooldown = Settings.TokenCooldown * (State.Last.bInTargetView ? 1.f : Settings.OutOfViewCooldownScale);
+			const bool bFresh = Now >= State.ReleasedAt + Cooldown;
 			if (!Best || (bFresh && !bBestFresh) || (bFresh == bBestFresh && IsBefore(State, *Best)))
 			{
 				Best = &Pair.Value;

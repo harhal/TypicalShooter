@@ -22,9 +22,23 @@ namespace EnemiesCoordinationTokensTest
 	}
 
 	FEnemyTokenCandidate Candidate(const int32 Id, const float Distance, const EEnemyRole Role = EEnemyRole::Pressure,
-		const bool bSees = true)
+		const bool bSees = true, const bool bInView = true)
 	{
-		return {Id, Role, bSees, Distance};
+		FEnemyTokenCandidate C;
+		C.Id = Id;
+		C.Role = Role;
+		C.bSeesTarget = bSees;
+		C.DistanceToTarget = Distance;
+		C.bInTargetView = bInView;
+		return C;
+	}
+
+	FEnemyTokenRotationSettings RotationWithView()
+	{
+		FEnemyTokenRotationSettings S = Rotation();
+		S.OutOfViewHoldScale = 0.5f;
+		S.OutOfViewCooldownScale = 3.f;
+		return S;
 	}
 
 	FString Holders(const FEnemyTokenPool& Pool)
@@ -138,6 +152,49 @@ bool FEnemiesCoordinationTokensCooldownTest::RunTest(const FString& Parameters)
 	TestEqual(TEXT("Default hold time"), Project.TokenHoldTime, 3.f);
 	TestEqual(TEXT("Default lost sight grace"), Project.LostSightGrace, 0.5f);
 	TestEqual(TEXT("Default cooldown"), Project.TokenCooldown, 1.5f);
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FEnemiesCoordinationTokensOutOfViewHoldTest, "TypicalShooter.Enemies.Coordination.Tokens.OutOfViewHoldsShorter",
+	EnemiesCoordinationTokensTest::Flags)
+bool FEnemiesCoordinationTokensOutOfViewHoldTest::RunTest(const FString& Parameters)
+{
+	using namespace EnemiesCoordinationTokensTest;
+	// Behind the player, nearer, so it gets the token first; the other one waits in front of him.
+	const TArray<FEnemyTokenCandidate> Group = {Candidate(1, 100.f, EEnemyRole::Pressure, true, false), Candidate(2, 500.f)};
+	FEnemyTokenPool Pool;
+	Pool.Update(0.f, Group, 1, RotationWithView());
+	TestEqual(TEXT("t=0: the nearer one (out of view)"), Holders(Pool), FString(TEXT("1")));
+	Pool.Update(1.4f, Group, 1, RotationWithView());
+	TestEqual(TEXT("t=1.4: still held"), Holders(Pool), FString(TEXT("1")));
+	Pool.Update(1.6f, Group, 1, RotationWithView());
+	TestEqual(TEXT("t=1.6: out of view it holds only half the hold time"), Holders(Pool), FString(TEXT("2")));
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FEnemiesCoordinationTokensOutOfViewCooldownTest, "TypicalShooter.Enemies.Coordination.Tokens.OutOfViewLongerCooldown",
+	EnemiesCoordinationTokensTest::Flags)
+bool FEnemiesCoordinationTokensOutOfViewCooldownTest::RunTest(const FString& Parameters)
+{
+	using namespace EnemiesCoordinationTokensTest;
+	for (const bool bPresserInView : {true, false})
+	{
+		// A pressure enemy (first in line by role) and two cover enemies in view; one token.
+		const TArray<FEnemyTokenCandidate> Group = {Candidate(1, 100.f, EEnemyRole::Pressure, true, bPresserInView),
+			Candidate(2, 900.f, EEnemyRole::Cover), Candidate(3, 1000.f, EEnemyRole::Cover)};
+		FEnemyTokenPool Pool;
+		Pool.Update(0.f, Group, 1, RotationWithView());
+		Pool.Release(1, 1.f);
+		Pool.Update(1.f, Group, 1, RotationWithView());
+		Pool.Release(2, 3.f); // the presser released 2 s ago: past the 1.5 s cooldown, not past 3 x 1.5 s
+		Pool.Update(3.f, Group, 1, RotationWithView());
+		TestEqual(bPresserInView ? TEXT("In view: the presser is back first") : TEXT("Out of view: still yields to a fresh enemy"),
+			Holders(Pool), FString(bPresserInView ? TEXT("1") : TEXT("3")));
+	}
+
+	const FEnemyTokenRotationSettings& Project = GetDefault<UEnemyCoordinationSettings>()->TokenRotation;
+	TestEqual(TEXT("Default out-of-view hold scale"), Project.OutOfViewHoldScale, 0.5f);
+	TestEqual(TEXT("Default out-of-view cooldown scale"), Project.OutOfViewCooldownScale, 3.f);
 	return true;
 }
 

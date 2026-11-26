@@ -23,6 +23,14 @@ struct TYPICALSHOOTER_API FEnemyTokenRotationSettings
 	/** After giving a token back an enemy yields to others for this long. */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Tokens", meta = (ClampMin = "0", Units = "s"))
 	float TokenCooldown = 1.5f;
+
+	/** An enemy outside the target's view (attacking from the side / behind) holds a token for this share of TokenHoldTime. */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Tokens", meta = (ClampMin = "0", ClampMax = "1"))
+	float OutOfViewHoldScale = 0.5f;
+
+	/** ... and its cooldown is this many times TokenCooldown, so it gets tokens less often. */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Tokens", meta = (ClampMin = "1"))
+	float OutOfViewCooldownScale = 3.f;
 };
 
 struct FEnemyTokenCandidate
@@ -31,6 +39,8 @@ struct FEnemyTokenCandidate
 	EEnemyRole Role = EEnemyRole::Pressure;
 	bool bSeesTarget = false;
 	float DistanceToTarget = 0.f;
+	/** The enemy is within the target's view cone. */
+	bool bInTargetView = true;
 };
 
 /**

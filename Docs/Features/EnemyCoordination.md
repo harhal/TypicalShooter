@@ -138,7 +138,8 @@
 - [x] 11. Обход по дуге в полосе роли (R19) — тест: `TypicalShooter.Enemies.Positioning.Arc*`,
   `TypicalShooter.Enemies.Controller.CirclesAroundTarget`
 - [x] 12. Сектор фланкёра ограничен зоной вне взгляда (R20) — тест: `TypicalShooter.Enemies.Director.LoneFlankerLeavesView`
-- [ ] 13. Токены реже вне поля зрения (R21) — тест: `TypicalShooter.Enemies.Coordination.Tokens.OutOfView*`
+- [x] 13. Токены реже вне поля зрения (R21) — тест: `TypicalShooter.Enemies.Coordination.Tokens.OutOfView*`,
+  `TypicalShooter.Enemies.Director.OutOfViewHoldsTokenShorter`
 
 ## Как устроено
 Код координации лежит в `Source/TypicalShooter/{Public,Private}/Enemies/Coordination/`.
@@ -183,6 +184,10 @@
   4. Раздача свободных токенов претендентам. Порядок: роль (Pressure, Flank, Cover), время ожидания, дистанция, Id.
      Враги вне кулдауна (`TokenCooldown` после возврата) идут раньше. Враг на кулдауне получает токен, только если других
      претендентов нет.
+
+  Вне поля зрения цели (`bInTargetView = false`) враг держит токен `OutOfViewHoldScale` × `TokenHoldTime`, а его кулдаун
+  длиннее в `OutOfViewCooldownScale` раз (R21). Видимость считает координатор группы: угол врага вокруг цели против
+  текущего взгляда цели, порог — `FlankViewHalfAngle`.
 
   `Release(Id, Now)` — немедленный возврат (выход из боя, смерть). Отдавший токен «ждёт» с момента возврата. Поэтому при
   ротации токен уходит тому, кто ждал дольше, а не обратно ближайшему.
@@ -265,7 +270,7 @@
 Project Settings → Game → **Enemy Coordination**:
 - **Groups:** `Update Interval` (0.5 с).
 - **Tokens:** `Token Fraction` (0.4), `Min Tokens` (1), `Max Tokens` (3); `Token Rotation` — `Token Hold Time` (3 с),
-  `Lost Sight Grace` (0.5 с), `Token Cooldown` (1.5 с).
+  `Lost Sight Grace` (0.5 с), `Token Cooldown` (1.5 с), `Out Of View Hold Scale` (0.5), `Out Of View Cooldown Scale` (3).
 - **Roles:** `Role Weights` — `Pressure` 2, `Flank` 1, `Cover` 1; `Role Bands` — `Pressure` 500–900, `Flank` 700–1200,
   `Cover` 1400–2000.
 - **Sectors:** `Flank View Half Angle` (60°), `Flank Reaim Degrees` (30°), `Min Separation` (250 см).
@@ -301,7 +306,11 @@ Project Settings → Game → **Enemy Coordination**:
 [EnemiesCoordinationTokensTest.cpp](../../Source/TypicalShooter/Private/Tests/EnemiesCoordinationTokensTest.cpp):
 `TypicalShooter.Enemies.Coordination.Tokens.OnlyVisible` (плюс сокращение числа токенов и уход держателя), `.Priority`,
 `.RotationAfterHoldTime` (ротация по времени ожидания; одиночка держит токен дольше лимита), `.LostSightGrace`,
-`.CooldownAfterRelease` (прикрывающий получает токен раньше давящего на кулдауне; одиночку кулдаун не блокирует; умолчания).
+`.CooldownAfterRelease` (прикрывающий получает токен раньше давящего на кулдауне; одиночку кулдаун не блокирует; умолчания),
+`.OutOfViewHoldsShorter` (вне поля зрения отдаёт токен через 1.5 с, а не через 3), `.OutOfViewLongerCooldown` (давящий
+вне поля зрения через 2 с после возврата ещё уступает свежему прикрывающему; тот же давящий в поле зрения — уже нет).
+`TypicalShooter.Enemies.Director.OutOfViewHoldsTokenShorter`: в мире — враг за спиной игрока отдаёт токен врагу перед ним
+после 1.5 с + пересчёт.
 
 [EnemiesPositioningSectorTest.cpp](../../Source/TypicalShooter/Private/Tests/EnemiesPositioningSectorTest.cpp):
 `TypicalShooter.Enemies.Positioning.SectorAngleMovesIntoSector` (враг в полосе, но вне сектора, переходит в сектор),
