@@ -21,6 +21,10 @@ public:
 	/** Attack tokens for a group of GroupSize enemies. */
 	int32 GetTokenCount(int32 GroupSize) const;
 
+	/** Groups are recomputed this often (and at once on register / death / target change). */
+	UPROPERTY(Config, EditAnywhere, Category = "Groups", meta = (ClampMin = "0.05", Units = "s"))
+	float UpdateInterval = 0.5f;
+
 	/** How many enemies of one target group may attack at once. */
 	UPROPERTY(Config, EditAnywhere, Category = "Tokens", meta = (ShowOnlyInnerProperties))
 	FEnemyTokenCountSettings Tokens;

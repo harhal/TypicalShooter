@@ -114,8 +114,8 @@
   сектор (`SectorYaw`), точка строится от него и не выходит за его пределы — см. [EnemyCoordination.md](EnemyCoordination.md).
 - Директор — [`UEnemyDirectorSubsystem`](../../Source/TypicalShooter/Public/Enemies/EnemyDirectorSubsystem.h)
   (`UWorldSubsystem`): враг регистрируется на сервере в `BeginPlay` и снимается при смерти и в `EndPlay`;
-  `GetEnemies()` — живые враги, `FindTargetFor(Enemy)` — ближайшая пешка игрока (по контроллерам игроков). Сюда же
-  ляжет координация группы.
+  `GetEnemies()` — живые враги, `FindTargetFor(Enemy)` — ближайшая пешка игрока (по контроллерам игроков). Он же
+  координирует группы врагов по цели (роли, сектора, токены атаки) — см. [EnemyCoordination.md](EnemyCoordination.md).
 - Контроллер — [`AEnemyAIController`](../../Source/TypicalShooter/Public/Enemies/EnemyAIController.h) (у врага
   `AIControllerClass`, `AutoPossessAI = PlacedInWorldOrSpawned`): `UStateTreeAIComponent` без автозапуска; при захвате
   пешки ставит в него `Behavior` (ассет StateTree) и запускает, при отпускании — останавливает. Шаги поведения:

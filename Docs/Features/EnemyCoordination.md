@@ -106,8 +106,9 @@
   `.CooldownAfterRelease`)
 - [x] 5. Точка в заданном секторе и полосе роли (`FEnemyStandQuery` + угол сектора), разнесение точек (R11, R14) — тест:
   `TypicalShooter.Enemies.Positioning.SectorAngleMovesIntoSector`, `.SectorAngleStaysInside`, `.Separation`
-- [ ] 6. Директор: группы по цели, периодический пересчёт (tickable subsystem), API роли / сектора / токена (R1, R2) —
-  тест: `TypicalShooter.Enemies.Director.Groups*`, `.TwoTargets`, `.RecomputeOnDeath`
+- [x] 6. Директор: группы по цели, периодический пересчёт (tickable subsystem), API роли / сектора / токена (R1, R2) —
+  тест: `TypicalShooter.Enemies.Director.GroupsTwoTargets`, `.GroupsSpreadAndShareTokens`, `.RecomputeOnDeath`,
+  `.FollowsTargetChange`
 - [ ] 7. Враг и контроллер: `AllowedRoles`, `RoleBandOverrides`, огонь только с токеном, позиция по роли и сектору, отдача
   токена при выходе из боя и смерти (R4, R8, R10, R18) — тест: `TypicalShooter.Enemies.Controller.FiresOnlyWithToken`,
   `.RoleBand`, `.RoleBandOverride`
@@ -176,16 +177,29 @@
   - поиск достижимой точки (`ChooseReachableStandPoint`) поворачивает её дальше от угла сектора, как и раньше.
 
   Без сектора поведение прежнее.
+- Одна группа — [`FEnemyGroupCoordinator`](../../Source/TypicalShooter/Public/Enemies/Coordination/EnemyGroupCoordinator.h)
+  (без мира). `Update(Now, место цели, взгляд цели, участники {Id, AllowedRoles, Location, bCanAttack}, Settings)` по
+  очереди считает роли (`EnemyRoles::Assign` с прошлыми ролями), сектора (`EnemySectors::Assign`; опорный взгляд для
+  фланга обновляется по `ShouldReaimFlank`) и токены (`FEnemyTokenPool`, число — `GetTokenCount(размер)`). Результат —
+  `Find(Id)` → {Role, SectorYaw, SectorHalfWidth}, плюс `HasToken` / `ReleaseToken`.
+- Директор — [`UEnemyDirectorSubsystem`](../../Source/TypicalShooter/Public/Enemies/EnemyDirectorSubsystem.h), теперь
+  `UTickableWorldSubsystem`.
+  - `Recompute()` группирует живых врагов по `FindTargetFor` и обновляет каждую группу. Координатор цели, у которой уже
+    была группа, переносится, поэтому токены, кулдауны и опорный взгляд не сбрасываются.
+  - Пересчёт идёт сразу при `Register` / `Unregister` (появление, смерть, `EndPlay`), на тике, если у какого-то врага
+    сменилась ближайшая цель, и раз в `UpdateInterval`.
+  - `Id` врага — `GetUniqueID()`, `bCanAttack` — `CanShootAt(Target)`, взгляд цели — `GetViewRotation().Yaw`.
+    `AllowedRoles` пока 0 (любая роль) — итерация 7.
+  - API: `GetAssignment(Enemy)` → `FEnemyAssignment` (роль, сектор, `Target`; null без цели), `HasAttackToken`,
+    `ReleaseAttackToken`, `GetGroupTargets`, `GetGroupMembers(Target)`. `GetEnemies()` больше не возвращает мёртвых
+    (между `Die` и уничтожением актора).
 
 Задуманное устройство (дальнейшие итерации):
-- Чистая логика без мира (тестируется без PIE): `FEnemyTokenPool` (токены со временем), `EnemyPositioning` (угол сектора).
-- `UEnemyDirectorSubsystem` становится `UTickableWorldSubsystem`: держит группы по цели (`FEnemyGroup`: участники, их роли,
-  сектора, токены), пересчитывает их раз в `UpdateInterval` и по событиям; отвечает контроллеру на вопросы о роли, угле
-  сектора и токене.
 - `AEnemyAIController`: `UpdateFire` спрашивает токен у директора; `UpdatePosition` берёт полосу роли и угол сектора.
 
 ## Настройка контента
 Project Settings → Game → **Enemy Coordination**:
+- **Groups:** `Update Interval` (0.5 с).
 - **Tokens:** `Token Fraction` (0.4), `Min Tokens` (1), `Max Tokens` (3); `Token Rotation` — `Token Hold Time` (3 с),
   `Lost Sight Grace` (0.5 с), `Token Cooldown` (1.5 с).
 - **Roles:** `Role Weights` — `Pressure` 2, `Flank` 1, `Cover` 1.
@@ -219,6 +233,13 @@ Project Settings → Game → **Enemy Coordination**:
 `TypicalShooter.Enemies.Positioning.SectorAngleMovesIntoSector` (враг в полосе, но вне сектора, переходит в сектор),
 `.SectorAngleStaysInside` (внутри стоит; слишком близко — двигается; без видимости — ближний край, заход в пределах сектора),
 `.Separation` (группы из 4, 6 и 12 врагов, 30 сидов: ближайшая пара точек ≥ 250 см).
+
+[EnemiesDirectorGroupsTest.cpp](../../Source/TypicalShooter/Private/Tests/EnemiesDirectorGroupsTest.cpp) (мир с полом,
+настоящие враги и игроки): `TypicalShooter.Enemies.Director.GroupsTwoTargets` (две группы, роли 1 : 1 : 1 и одиночка-давящий,
+у каждой группы свои токены), `.GroupsSpreadAndShareTokens` (куча из четырёх получает четверти; токенов —
+`GetTokenCount(4)`; отданный токен уходит другому при следующем пересчёте), `.RecomputeOnDeath` (убит держатель токена:
+группа, роли, токены и ширина секторов пересчитаны сразу), `.FollowsTargetChange` (ближе появился другой игрок — враг уходит
+в его группу на следующем тике, а не через `UpdateInterval`).
 
 ## Ограничения и грабли
 
