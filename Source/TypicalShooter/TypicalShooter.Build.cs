@@ -24,6 +24,7 @@ public class TypicalShooter : ModuleRules
 			"GameplayTags", 
 			"GameplayTasks",
 			"NetCore",
+			"DeveloperSettings",
 			"SlateCore", 
 			"HarhalHexagonalGrid"
 		});

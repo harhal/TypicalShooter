@@ -58,7 +58,7 @@
 **Открытые вопросы:** нет.
 
 ## План итераций
-- [ ] 1. `FLootIntRange` / `FLootFloatRange` + `ULootSettings` (кривая множителя) + бросок с масштабированием —
+- [x] 1. `FLootIntRange` / `FLootFloatRange` + `ULootSettings` (кривая множителя) + бросок с масштабированием —
   тест: `TypicalShooter.Loot.Range.*`
 - [ ] 2. `ULootItemTemplate` (тип, фиксированные фрагменты, формы с весами, поворот) + `LootGenerator::Generate`
   + `FLootOrigin_ItemFragment`, детерминизм по seed — тест: `TypicalShooter.Loot.Generator.Shape`,
@@ -79,13 +79,21 @@
   подключить к одному контейнеру на `Lvl_FirstPerson` — ручная проверка в PIE + `TypicalShooter.Inventory.UIFlow`
 
 ## Как устроено
-_Будет заполнено по ходу итераций._
+Код — в `Source/TypicalShooter/Public|Private/Loot/`.
+- [`LootRange.h`](../../Source/TypicalShooter/Public/Loot/LootRange.h): `FLootIntRange` / `FLootFloatRange`
+  (`Min`, `Max`, `bScalesWithLevel`). `Roll(Stream, LevelMultiplier)` — равномерно в [Min, Max] (порядок границ не
+  важен), при `bScalesWithLevel` умножается на множитель (целые округляются), не меньше 0. Все броски — через
+  переданный `FRandomStream`.
+- [`LootSettings.h`](../../Source/TypicalShooter/Public/Loot/LootSettings.h): `ULootSettings` (`UDeveloperSettings`,
+  `DefaultGame.ini`): кривая `LevelMultiplier` (по умолчанию линейная ×1 → ×5.95), `ClampLevel` (1…100),
+  `GetLevelMultiplier(Level)` (пустая кривая = 1).
 
 ## Настройка контента
-_Будет заполнено по ходу итераций._
+Project Settings → Game → Loot: кривая множителя уровня.
 
 ## Тесты
-_Будет заполнено по ходу итераций._
+- `TypicalShooter.Loot.Range.*` (`Private/Tests/LootRangeTest.cpp`, без мира): границы, масштабирование и округление,
+  неотрицательность, детерминизм по seed, множитель уровня и clamp.
 
 ## Ограничения и грабли
 
