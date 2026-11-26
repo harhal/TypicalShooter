@@ -10,8 +10,8 @@
 
 namespace InventoryGridPowerPaint
 {
-	const FLinearColor PoweredColor(1.f, 0.8f, 0.15f, 1.f);
-	const FLinearColor UnpoweredColor(0.55f, 0.55f, 0.6f, 0.8f);
+	using PowerGridOverlay::PoweredColor;
+	using PowerGridOverlay::UnpoweredColor;
 	const FLinearColor SlotColor(0.4f, 0.85f, 1.f, 0.9f);
 
 	void DrawText(FSlateWindowElementList& Elements, const int32 Layer, const FGeometry& Geometry, const FText& Text,
@@ -35,6 +35,7 @@ void SInventoryGrid::SetPowerGrid(const FPowerGridDisplay& Display)
 	if (!(PowerGrid == Display))
 	{
 		PowerGrid = Display;
+		ApplyUnderlays();
 		Invalidate(EInvalidateWidgetReason::Paint);
 	}
 }
@@ -68,17 +69,9 @@ int32 SInventoryGrid::PaintPowerGrid(const FGeometry& Geometry, FSlateWindowElem
 	const FSlateFontInfo Font = FCoreStyle::GetDefaultFontStyle("Bold", FMath::Max(6, FMath::RoundToInt(HexSize * 0.18f)));
 	for (const FPowerCellDisplay& Cell : PowerGrid.Cells)
 	{
+		// Open faces are drawn by the item's own underlay (SInventoryGridItem), under its icon.
 		const FVector2D CellCenter = Center(Cell.Location);
 		const FLinearColor Color = Cell.bPowered ? PoweredColor : UnpoweredColor;
-		for (int32 Index = 0; Index < HexFaces::Num; ++Index)
-		{
-			const EHexFace Face = HexFaces::FromIndex(Index);
-			if (HexFaces::IsOpen(Cell.OpenFaces, Face))
-			{
-				const TPair<FVector2D, FVector2D> Segment = PowerGridOverlay::GetFaceSegment(CellCenter, HexSize, Face);
-				DrawLine(OutDrawElements, LayerId, Geometry, Segment.Key, Segment.Value, Color, 3.f);
-			}
-		}
 		DrawText(OutDrawElements, LayerId + 1, Geometry, PowerGridOverlay::GetPowerLabel(Cell), Font,
 			CellCenter + FVector2D(0.f, HexSize * 0.15f), Color); // above the item name
 	}

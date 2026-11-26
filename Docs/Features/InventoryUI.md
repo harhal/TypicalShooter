@@ -67,6 +67,9 @@ IInventoryItem_Model                  UInventoryItem_Presenter ──▶ SInvent
 - Hover / выбор / курсор общие для всех сеток через `UInventoryUISubsystem` (local player subsystem);
   `UInventoryGridWidget::SyncSelection` переносит их на Slate-сетку.
 - `UInventoryItemInfoWidget` (в `BP_ItemInfo`) показывает отображаемый предмет.
+- Редкость ([LootGeneration.md](LootGeneration.md), R10): `IInventoryItem_Model::GetItemRarity` (у `UInventoryItem` —
+  из `FLootOrigin_ItemFragment`) → `IInventoryItem_View::SetRarity`. `SInventoryGridItem` рисует гекс-рамку цветом
+  редкости; `SInventoryItemInfo` красит имя и показывает строку с названием редкости. Без редкости — как раньше.
 - Цепочка контейнера в BP: `BP_HUD.SetContainer` → `BP_ContainerGrid.SetContainer` → `CreatePresenter` +
   `AssignPresenter`. Кнопки Take / Take All в `BP_ContainerGrid`.
 
@@ -97,4 +100,4 @@ IInventoryItem_Model                  UInventoryItem_Presenter ──▶ SInvent
 - [ ] Переход курсора между сетками при выходе за край (сейчас только LB/RB).
 
 ---
-_Сверено с кодом: 2026-11-25_
+_Сверено с кодом: 2026-11-26_

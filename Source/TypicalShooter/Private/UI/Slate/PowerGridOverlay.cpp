@@ -29,6 +29,13 @@ namespace PowerGridOverlay
 		return { Middle - HalfStroke, Middle + HalfStroke };
 	}
 
+	TPair<FVector2D, FVector2D> GetFaceSpoke(const FVector2D& Center, const float HexSize, const EHexFace Face)
+	{
+		const float Angle = FMath::DegreesToRadians(60.f * static_cast<int32>(Face));
+		const float Apothem = HexSize * FMath::Sqrt(3.f) * 0.5f;
+		return { Center, Center + FVector2D(FMath::Cos(Angle), FMath::Sin(Angle)) * Apothem };
+	}
+
 	FText GetPowerLabel(const FPowerCellDisplay& Cell)
 	{
 		FText Label = Cell.Type == EPowerItemType::Receiver

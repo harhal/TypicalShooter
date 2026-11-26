@@ -30,9 +30,13 @@ public:
 	virtual void SetDescription(const FText& InDescription) override;
 	virtual void SetCount(int32 InCount) override;
 	virtual void SetPowerInfo(const FItemPowerInfo& Info) override;
+	virtual void SetRarity(const TOptional<FItemRarityDisplay>& InRarity) override;
 
 	bool HasItem() const { return Count > 0; }
 	FText GetDisplayedName() const;
+	FLinearColor GetNameColor() const;
+	/** Rarity line under the name; empty when the item has no rarity. */
+	FText GetDisplayedRarity() const;
 	FText GetDisplayedDescription() const;
 	const FItemPowerInfo& GetPowerInfo() const { return PowerInfo; }
 	/** Text lines of the power section: type, power, one per effect step (0 when hidden). */
@@ -45,6 +49,8 @@ private:
 
 	TSharedPtr<SImage> IconImage;
 	TSharedPtr<STextBlock> NameText;
+	TSharedPtr<STextBlock> RarityText;
+	TOptional<FItemRarityDisplay> Rarity;
 	TSharedPtr<STextBlock> DescriptionText;
 
 	void RebuildPowerLines();

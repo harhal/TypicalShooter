@@ -1,0 +1,96 @@
+// Shared helpers for TypicalShooter.Loot.* tests.
+
+#pragma once
+
+#include "CoreMinimal.h"
+
+#if WITH_DEV_AUTOMATION_TESTS
+
+#include "InventoryItemManifest.h"
+#include "Loot/LootItemTemplate.h"
+#include "Loot/LootModifier.h"
+#include "Loot/LootRarity.h"
+#include "Loot/LootOriginFragment.h"
+#include "PowerGrid/PowerGridFragment.h"
+
+namespace LootTestFixture
+{
+	constexpr EAutomationTestFlags Flags = EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter;
+
+	inline int32 MaskOf(std::initializer_list<EHexFace> Faces)
+	{
+		int32 Mask = 0;
+		for (const EHexFace Face : Faces)
+		{
+			Mask |= HexFaces::Bit(Face);
+		}
+		return Mask;
+	}
+
+	inline ULootItemTemplate* MakeTemplate(const EPowerItemType Type, std::initializer_list<FLootFaceShape> Shapes, const bool bRandomRotation)
+	{
+		ULootItemTemplate* Template = NewObject<ULootItemTemplate>();
+		Template->ItemType = Type;
+		Template->FaceShapes = Shapes;
+		Template->bRandomRotation = bRandomRotation;
+		return Template;
+	}
+
+	inline ULootModifier* MakeModifier(const int32 Tier, const FGameplayTag& Tag, const int32 Threshold = 1)
+	{
+		ULootModifier* Modifier = NewObject<ULootModifier>();
+		Modifier->Tier = Tier;
+		Modifier->Tag = Tag;
+		Modifier->Threshold = FLootIntRange(Threshold, Threshold);
+		return Modifier;
+	}
+
+	inline ULootRarity* MakeRarity(std::initializer_list<TPair<int32, FGameplayTag>> Slots)
+	{
+		ULootRarity* Rarity = NewObject<ULootRarity>();
+		for (const TPair<int32, FGameplayTag>& Slot : Slots)
+		{
+			FLootModifierSlot& Added = Rarity->Slots.AddDefaulted_GetRef();
+			Added.Tier = Slot.Key;
+			Added.Tag = Slot.Value;
+		}
+		return Rarity;
+	}
+
+	inline void AddToPool(ULootItemTemplate& Template, const ULootModifier* Modifier, const float Weight = 1.f)
+	{
+		FLootModifierEntry& Entry = Template.ModifierPool.AddDefaulted_GetRef();
+		Entry.Modifier = Modifier;
+		Entry.Weight = Weight;
+	}
+
+	inline FLootFaceShape Shape(const int32 Mask, const float Weight = 1.f)
+	{
+		FLootFaceShape Result;
+		Result.OpenFaces = Mask;
+		Result.Weight = Weight;
+		return Result;
+	}
+
+	inline const FPowerGrid_ItemFragment* PowerGridOf(const FInventoryItemManifest& Manifest)
+	{
+		return Manifest.GetFragmentOfType<FPowerGrid_ItemFragment>();
+	}
+	/** A pointer into a temporary manifest would dangle: keep the manifest in a local first. */
+	const FPowerGrid_ItemFragment* PowerGridOf(FInventoryItemManifest&&) = delete;
+
+	/** Open faces of the generated item; INDEX_NONE if it has no power grid fragment. */
+	inline int32 OpenFacesOf(const FInventoryItemManifest& Manifest)
+	{
+		const FPowerGrid_ItemFragment* PowerGrid = PowerGridOf(Manifest);
+		return PowerGrid ? PowerGrid->OpenFaces : INDEX_NONE;
+	}
+
+	inline const FLootOrigin_ItemFragment* OriginOf(const FInventoryItemManifest& Manifest)
+	{
+		return Manifest.GetFragmentOfType<FLootOrigin_ItemFragment>();
+	}
+	const FLootOrigin_ItemFragment* OriginOf(FInventoryItemManifest&&) = delete;
+}
+
+#endif

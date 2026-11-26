@@ -218,7 +218,9 @@ feature's doc and updated as they change; finished features are merged into `mai
     `BP_ItemInfo`.
   - Power grid on screen (`UI/PowerGrid/PowerGridDisplay.h`, `UI/Slate/PowerGridOverlay.h`): the container presenter
     pushes `PowerGridDisplay::Build(grid)` into `SInventoryGrid::SetPowerGrid` on every grid change; the grid paints
-    faces, links, power / clip labels and slot marks over the items (`InventoryGridPowerPaint.cpp`).
+    links, power / clip labels and slot marks over the items (`InventoryGridPowerPaint.cpp`) and pushes each cell's
+    rotated faces into its `SInventoryGridItem`, which draws them as an underlay (spokes) under the centred icon
+    (`InventoryGridUnderlay.cpp`); generated items also get a rarity-colored hex frame.
 - Custom content lives in `Content/Inventory` (note the folder typo `Bllueprints`).
 - **Shooting** (`Public|Private/Shooting/`, doc `Docs/Features/Shooting.md`): primary / alternate attacks are
   server-only GAS abilities (`UAttackGameplayAbility`, slot = `EAttackSlot`) driven by
@@ -251,6 +253,15 @@ feature's doc and updated as they change; finished features are merged into `mai
   up to `Capacity` from the ammo reserve when a source enters the character's inventory and returns it on leaving;
   each attack shot calls `ReportUse(receiver)`: every ammo source feeding the receiver pays `CostPerUse`; after
   `RechargeDelay` without uses a looping timer refills the clip from the reserve until full.
+- **Loot generation** (`Public|Private/Loot/`, doc `Docs/Features/LootGeneration.md`): data assets `ULootItemTemplate`
+  (fixed power type, weighted face shapes + random rotation applied to the mask, `FLootIntRange`/`FLootFloatRange`
+  numbers, modifier pool, name / description format / icon per rarity), `ULootModifier` (one threshold step: tier,
+  `Loot.Modifier.*` tag), `ULootRarity` (name, color, slots `{Tier, Tag}`: exact tier, matching tag), `ULootTable`
+  (count, weighted templates, rarity weights by level). `LootGenerator::Generate(Template, {Level, Seed, Rarity})` →
+  plain `FInventoryItemManifest` + `FLootOrigin_ItemFragment`; all randomness from `FRandomStream(Seed)`; level 1–100,
+  scaling ranges use the `ULootSettings` curve (Project Settings → Game → Loot). `AItemsContainer` `LootTable` /
+  `LootLevel` / `LootSeed` (0 = random) adds rolled items after its hand-made manifest. Threshold step GEs apply with
+  `FPowerThresholdEffect::CharacterEffectLevel` (loot: the item level). Test content in `Content/Inventory/Loot`.
 - **Health**: `UHealthComponent` (`Shooting/HealthComponent.h`) on the player (`bRefillWhenDepleted`: immortal for now)
   and on enemies: sets `UHealthAttributeSet` health at BeginPlay, fires `GetDepletedDelegate()` once per depletion.
   `BP_HUD.HealthCounter` (`UHealthCounterWidget`) shows it.

@@ -4,6 +4,7 @@
 
 #include "CoreMinimal.h"
 #include "UI/InventoryItem/InventoryItem_View.h"
+#include "UI/Slate/ItemUnderlay.h"
 #include "Widgets/SCompoundWidget.h"
 
 class SImage;
@@ -29,10 +30,23 @@ public:
 	virtual void SetDescription(const FText& InDescription) override;
 	virtual void SetCount(int32 InCount) override;
 	virtual void SetPowerInfo(const FItemPowerInfo& Info) override {}
+	virtual void SetRarity(const TOptional<FItemRarityDisplay>& InRarity) override;
 
 	const FSlateBrush& GetIconBrush() const { return IconBrush; }
+	/** Color of the hex frame around the item; unset = no frame. */
+	TOptional<FLinearColor> GetFrameColor() const { return FrameColor; }
+
+	/** Underlay with the item's outputs; unset = the item is not on the power grid. */
+	void SetUnderlay(const TOptional<FItemUnderlay>& InUnderlay);
+	const TOptional<FItemUnderlay>& GetUnderlay() const { return Underlay; }
+
+	virtual int32 OnPaint(const FPaintArgs& Args, const FGeometry& AllottedGeometry, const FSlateRect& MyCullingRect,
+		FSlateWindowElementList& OutDrawElements, int32 LayerId, const FWidgetStyle& InWidgetStyle, bool bParentEnabled) const override;
 
 private:
+	TOptional<FLinearColor> FrameColor;
+	TOptional<FItemUnderlay> Underlay;
+
 	/** SImage keeps a pointer to the brush, so the brush must live as long as the widget. */
 	FSlateBrush IconBrush;
 	int32 Count = 0;

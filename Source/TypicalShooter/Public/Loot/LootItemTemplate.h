@@ -1,0 +1,91 @@
+// Loot item template: describes a kind of item whose parameters are rolled by LootGenerator (LootGeneration R1).
+
+#pragma once
+
+#include "CoreMinimal.h"
+#include "Engine/DataAsset.h"
+#include "ItemFragment.h"
+#include "Loot/LootPowerParams.h"
+#include "PowerGrid/HexFaces.h"
+#include "PowerGrid/PowerGridFragment.h"
+#include "StructUtils/InstancedStruct.h"
+#include "LootItemTemplate.generated.h"
+
+class ULootModifier;
+class ULootRarity;
+class UTexture2D;
+
+/** One possible arrangement of open faces, picked by weight. */
+USTRUCT(BlueprintType)
+struct TYPICALSHOOTER_API FLootFaceShape
+{
+	GENERATED_BODY()
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Loot", meta = (Bitmask, BitmaskEnum = "/Script/TypicalShooter.EHexFace"))
+	int32 OpenFaces = HexFaces::AllFaces;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Loot", meta = (ClampMin = 0))
+	float Weight = 1.f;
+};
+
+/** A modifier the template can get, with its pick weight. */
+USTRUCT(BlueprintType)
+struct TYPICALSHOOTER_API FLootModifierEntry
+{
+	GENERATED_BODY()
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Loot")
+	TObjectPtr<const ULootModifier> Modifier = nullptr;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Loot", meta = (ClampMin = 0))
+	float Weight = 1.f;
+};
+
+UCLASS(BlueprintType)
+class TYPICALSHOOTER_API ULootItemTemplate : public UPrimaryDataAsset
+{
+	GENERATED_BODY()
+
+public:
+	/** Role in the power grid; never random. */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Power Grid")
+	EPowerItemType ItemType = EPowerItemType::Connector;
+
+	/** Open face masks to pick from by weight; empty = all faces open. */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Power Grid")
+	TArray<FLootFaceShape> FaceShapes;
+
+	/** Rotate the picked shape by a random multiple of 60 degrees. */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Power Grid")
+	bool bRandomRotation = true;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Power Grid", meta = (EditCondition = "ItemType == EPowerItemType::Source", EditConditionHides))
+	FLootSourceParams Source;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Power Grid", meta = (EditCondition = "ItemType == EPowerItemType::Receiver", EditConditionHides))
+	FLootReceiverParams Receiver;
+
+	/** Modifiers the rarity slots pick from. */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Modifiers")
+	TArray<FLootModifierEntry> ModifierPool;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Text")
+	FText DisplayName;
+
+	/** Placeholders: {Power}, {Capacity}, {CostPerUse}, {RechargeDelay}, {RequiredPower}, {Level}, {Rarity}.
+	 *  Description lines of the picked modifiers follow on separate lines. */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Text", meta = (MultiLine = true))
+	FText DescriptionFormat;
+
+	/** Icon drawn in the cell centre for items of a rarity. */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Text")
+	TMap<TObjectPtr<const ULootRarity>, TObjectPtr<UTexture2D>> IconsByRarity;
+
+	/** Icon when there is no rarity or it is not in IconsByRarity. */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Text")
+	TObjectPtr<UTexture2D> DefaultIcon = nullptr;
+
+	/** Copied into every generated item as is (don't put an info fragment here: it is generated). */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Item", meta = (ExcludeBaseStruct))
+	TArray<TInstancedStruct<FItemFragment>> FixedFragments;
+};

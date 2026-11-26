@@ -28,6 +28,7 @@ public:
 	virtual FText GetItemName() const override;
 	virtual FText GetItemDescription() const override;
 	virtual int32 GetItemCount() const override;
+	virtual TOptional<FItemRarityDisplay> GetItemRarity() const override;
 
 	/** Clockwise 60-degree steps, 0..5 (power grid R3). Server-side state, replicated. */
 	int32 GetRotation() const { return Rotation; }

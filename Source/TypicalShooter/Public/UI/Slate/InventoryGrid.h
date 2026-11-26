@@ -97,6 +97,8 @@ public:
 
 	/** Slot of the item view at Location, invalid if the cell is empty. */
 	FGuid GetSlotAt(const FHhAxialCoord& Location) const;
+	/** Item view at Location, null if the cell is empty. */
+	TSharedPtr<const SInventoryGridItem> GetItemViewAt(const FHhAxialCoord& Location) const;
 
 	/** Cell under a point in this widget's local space (the grid is centred in LocalSize). */
 	FHhAxialCoord GetCoordAtLocalPosition(const FVector2D& LocalPosition, const FVector2D& LocalSize) const;
@@ -138,6 +140,8 @@ private:
 	/** Power grid over the items: links, open faces, slot marks, power labels (R16). Returns the last layer used. */
 	int32 PaintPowerGrid(const FGeometry& Geometry, FSlateWindowElementList& OutDrawElements, int32 LayerId) const;
 	TOptional<FHhAxialCoord> GetSlotLocation(const FGuid& SlotGuid) const;
+	/** Pushes the power grid cells' faces into the item views at their locations (LootGeneration R11). */
+	void ApplyUnderlays();
 
 	TSharedPtr<SHhGridPanel> CellsPanel;
 	TSharedPtr<SHhGridPanel> ItemsPanel;

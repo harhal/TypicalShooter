@@ -41,7 +41,18 @@ void SInventoryItemInfo::Construct(const FArguments& InArgs)
 		[
 			SAssignNew(NameText, STextBlock)
 			.Font(FCoreStyle::GetDefaultFontStyle("Bold", 16))
+			.ColorAndOpacity_Lambda([this]() { return FSlateColor(GetNameColor()); })
 			.AutoWrapText(true)
+		]
+
+		+ SVerticalBox::Slot()
+		.AutoHeight()
+		.Padding(FMargin(0.f, 0.f, 0.f, 4.f))
+		[
+			SAssignNew(RarityText, STextBlock)
+			.Font(FCoreStyle::GetDefaultFontStyle("Italic", 11))
+			.ColorAndOpacity_Lambda([this]() { return FSlateColor(GetNameColor()); })
+			.Visibility_Lambda([this]() { return Rarity ? EVisibility::HitTestInvisible : EVisibility::Collapsed; })
 		]
 
 		+ SVerticalBox::Slot()
@@ -135,4 +146,20 @@ void SInventoryItemInfo::RebuildPowerLines()
 bool SInventoryItemInfo::IsPowerStepHighlighted(const int32 StepIndex) const
 {
 	return PowerInfo.Steps.IsValidIndex(StepIndex) && PowerInfo.Steps[StepIndex].bReached;
+}
+
+void SInventoryItemInfo::SetRarity(const TOptional<FItemRarityDisplay>& InRarity)
+{
+	Rarity = InRarity;
+	RarityText->SetText(Rarity ? Rarity->Name : FText::GetEmpty());
+}
+
+FLinearColor SInventoryItemInfo::GetNameColor() const
+{
+	return Rarity ? Rarity->Color : FLinearColor::White;
+}
+
+FText SInventoryItemInfo::GetDisplayedRarity() const
+{
+	return RarityText->GetText();
 }
