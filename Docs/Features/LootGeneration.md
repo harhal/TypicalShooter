@@ -60,7 +60,7 @@
 ## План итераций
 - [x] 1. `FLootIntRange` / `FLootFloatRange` + `ULootSettings` (кривая множителя) + бросок с масштабированием —
   тест: `TypicalShooter.Loot.Range.*`
-- [ ] 2. `ULootItemTemplate` (тип, фиксированные фрагменты, формы с весами, поворот) + `LootGenerator::Generate`
+- [x] 2. `ULootItemTemplate` (тип, фиксированные фрагменты, формы с весами, поворот) + `LootGenerator::Generate`
   + `FLootOrigin_ItemFragment`, детерминизм по seed — тест: `TypicalShooter.Loot.Generator.Shape`,
   `.Determinism`
 - [ ] 3. Числа энергосети источника / приёмника из диапазонов с уровнем — тест: `TypicalShooter.Loot.Generator.PowerParams`
@@ -87,13 +87,26 @@
 - [`LootSettings.h`](../../Source/TypicalShooter/Public/Loot/LootSettings.h): `ULootSettings` (`UDeveloperSettings`,
   `DefaultGame.ini`): кривая `LevelMultiplier` (по умолчанию линейная ×1 → ×5.95), `ClampLevel` (1…100),
   `GetLevelMultiplier(Level)` (пустая кривая = 1).
+- [`LootRandom.h`](../../Source/TypicalShooter/Public/Loot/LootRandom.h): `PickWeightedIndex` — выбор по весам
+  (веса ≤ 0 не выигрывают), общий для форм, пулов и таблиц.
+- [`LootItemTemplate.h`](../../Source/TypicalShooter/Public/Loot/LootItemTemplate.h): `ULootItemTemplate` —
+  `ItemType`, `FaceShapes` (`FLootFaceShape`: маска + вес; пусто = все грани), `bRandomRotation`, `FixedFragments`.
+- [`LootGenerator.h`](../../Source/TypicalShooter/Public/Loot/LootGenerator.h): `LootGenerator::Generate(Template,
+  {Level, Seed})` → `FInventoryItemManifest` = фиксированные фрагменты + `FPowerGrid_ItemFragment` + фрагмент
+  происхождения. Весь рандом — из `FRandomStream(Seed)`. **Случайный поворот** применяется к самой маске
+  (`HexFaces::RotateMask`), а не к `UInventoryItem::Rotation`: поворот — состояние экземпляра, в манифесте его нет.
+- [`LootOriginFragment.h`](../../Source/TypicalShooter/Public/Loot/LootOriginFragment.h): `FLootOrigin_ItemFragment`
+  — шаблон, уровень (после clamp), seed.
 
 ## Настройка контента
-Project Settings → Game → Loot: кривая множителя уровня.
+- Project Settings → Game → Loot: кривая множителя уровня.
+- Шаблон предмета: Data Asset класса `LootItemTemplate`.
 
 ## Тесты
 - `TypicalShooter.Loot.Range.*` (`Private/Tests/LootRangeTest.cpp`, без мира): границы, масштабирование и округление,
   неотрицательность, детерминизм по seed, множитель уровня и clamp.
+- `TypicalShooter.Loot.Random.PickWeighted`, `TypicalShooter.Loot.Generator.*` (`LootGeneratorTest.cpp`, общие
+  хелперы — `LootTestFixture.h`): форма по весам и поворот, фиксированные фрагменты, детерминизм, происхождение.
 
 ## Ограничения и грабли
 
