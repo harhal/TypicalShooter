@@ -97,7 +97,9 @@
   дуло `Muzzle` у капсулы (50 вперёд, 50 вверх). На сервере в `BeginPlay` выставляет базу основного слота из `AttackStats`
   (по умолчанию: очередь 3 × 0.15 с, пауза 1.5 с, 2500 см/с, 4 физ., конец огня 5000) и выдаёт `AttackAbility`
   (`UPrimaryAttackAbility`) с InputID `PrimaryAttack`. `SetFiring(true/false)` — «зажать / отпустить» атаку
-  (`AbilityLocalInputPressed/Released`): пока зажато, абилка повторяет очереди.
+  (`AbilityLocalInputPressed/Released`): пока зажато, абилка повторяет очереди. У `CharacterMovement` включено RVO-избегание
+  (`bUseRVOAvoidance`, радиус учёта 400, вес 0.5): следование по пути пешек не видит, и стоящий на пути союзник иначе
+  навсегда останавливал врага.
 - Смерть врага (`Die`, сервер, по `UHealthComponent::GetDepletedDelegate`): отпускает атаку и отменяет абилки,
   останавливает движение, выключает коллизию капсулы, отцепляется от контроллера, шлёт `OnDied` /
   `GetDiedDelegate()` и исчезает через `DeathLifeSpan` (0.1 с). Мёртвый враг не стреляет (`SetFiring` игнорируется).
@@ -187,6 +189,8 @@ HUD: `BP_HUD` → `HealthCounter` (`UHealthCounterWidget`), левый нижн�
 `.KeepsDistance` (слишком близко → отходит в полосу и там стоит).
 [EnemiesSpawnerTest.cpp](../../Source/TypicalShooter/Private/Tests/EnemiesSpawnerTest.cpp): `TypicalShooter.Enemies.Spawner.FirstWaveAfterDelay`,
 `.NextWaveWhenAllDead` (и повтор списка), `.UsesSpawnPoints`, `.DisabledByConsoleVariable`.
+[EnemiesAvoidanceTest.cpp](../../Source/TypicalShooter/Private/Tests/EnemiesAvoidanceTest.cpp): `TypicalShooter.Enemies.Movement.AvoidsStandingAlly`
+(враг обходит союзника, стоящего на прямой к цели; без RVO застревал в 6.7 м от неё).
 [EnemiesBehaviorTreeTest.cpp](../../Source/TypicalShooter/Private/Tests/EnemiesBehaviorTreeTest.cpp): `TypicalShooter.Enemies.Behavior.TreeCompiles`.
 [EnemiesFlowTest.cpp](../../Source/TypicalShooter/Private/Tests/EnemiesFlowTest.cpp) — PIE `TypicalShooter.Enemies.Flow` на
 `Lvl_FirstPerson`: первая волна, дерево ведёт игрока, враг в полосе дистанций своей роли (±150), игрок ранен, игрок
@@ -210,6 +214,8 @@ HUD: `BP_HUD` → `HealthCounter` (`UHealthCounterWidget`), левый нижн�
   навмеш пересобирается в рантайме (динамическая генерация); безвредно.
 - Враги не различают «своих»: снаряд врага ранит другого врага, если тот влезет на линию огня после выстрела
   (`CanShootAt` проверяет линию только в момент решения стрелять).
+- RVO учитывает только агентов с избеганием (враги). Игрок к ним не относится, так что врага на пути через игрока
+  останавливает обычная коллизия капсул.
 
 ## Открытые задачи
 - [ ] Координация группы через `UEnemyDirectorSubsystem` — в работе: [EnemyCoordination.md](EnemyCoordination.md).
