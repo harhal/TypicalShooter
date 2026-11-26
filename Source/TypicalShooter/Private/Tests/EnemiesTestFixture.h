@@ -7,6 +7,7 @@
 #include "Components/BoxComponent.h"
 #include "Enemies/EnemyCharacter.h"
 #include "Engine/HitResult.h"
+#include "AI/NavigationSystemBase.h"
 #include "Shooting/ShootingTags.h"
 #include "Shooting/ShotDamage.h"
 #include "Shooting/ShotDamageReceiver.h"
@@ -26,6 +27,12 @@ namespace EnemiesTest
 		Box->RegisterComponent();
 		Box->SetWorldLocation(FVector(0.f, 0.f, -Extent.Z));
 		return Floor;
+	}
+
+	/** Navigation system without nav data: AI straight-line moves work (bare worlds have none). */
+	inline void AddNavigation(const ShootingTest::FWorldFixture& F)
+	{
+		FNavigationSystem::AddNavigationSystemToWorld(*F.World, FNavigationSystemRunMode::GameMode);
 	}
 
 	/** Enemy standing on the floor at Location, facing Yaw. */

@@ -71,7 +71,8 @@
 - [x] 6. Огонь только при линии видимости (R9) — тест: `TypicalShooter.Enemies.Combat.*`
 - [x] 7. Выбор точки в полосе дистанций (R8) — тест: `TypicalShooter.Enemies.Positioning.*`
 - [x] 8. `UEnemyDirectorSubsystem`: регистрация, поиск цели (R7, R11) — тест: `TypicalShooter.Enemies.Director.*`
-- [ ] 9. `AEnemyAIController` + задачи StateTree (цель, держать дистанцию, стрелять) (R8–R10) — тест: `TypicalShooter.Enemies.Tasks.*`
+- [x] 9. `AEnemyAIController` + задачи StateTree (цель, держать дистанцию, стрелять) (R8–R10) — тест:
+  `TypicalShooter.Enemies.Controller.*` (логика задач); сами задачи в дереве — PIE-тест итерации 11
 - [ ] 10. `AEnemyWaveSpawner` (R12) — тест: `TypicalShooter.Enemies.Spawner.*`
 - [ ] 11. Контент: `HealthCounter` в `BP_HUD`, `BP_Enemy`, `BP_EnemyAIController`, `ST_Enemy`, навмеш и спавнер на `Lvl_FirstPerson` (R14) —
   тест: `TypicalShooter.Enemies.Flow` (PIE: волна появляется, враги держат дистанцию и ранят игрока, игрок их
@@ -109,6 +110,17 @@
   (`UWorldSubsystem`): враг регистрируется на сервере в `BeginPlay` и снимается при смерти и в `EndPlay`;
   `GetEnemies()` — живые враги, `FindTargetFor(Enemy)` — ближайшая пешка игрока (по контроллерам игроков). Сюда же
   ляжет координация группы.
+- Контроллер — [`AEnemyAIController`](../../Source/TypicalShooter/Public/Enemies/EnemyAIController.h) (у врага
+  `AIControllerClass`, `AutoPossessAI = PlacedInWorldOrSpawned`): `UStateTreeAIComponent` без автозапуска; при захвате
+  пешки ставит в него `Behavior` (ассет StateTree) и запускает, при отпускании — останавливает. Шаги поведения:
+  `UpdateTarget` (цель от директора + `SetFocus` — враг поворачивается и целится в центр цели), `UpdateFire`
+  (`UpdateFiring(Target)`), `UpdatePosition(FEnemyStandSettings)` (когда стоит или прошло `RepathInterval` — выбирает
+  точку `ChooseStandPoint` с видимостью от `CanShootAt` и идёт туда `MoveToLocation` по навмешу; без навданных — по
+  прямой; дошёл до полосы по дороге — останавливается), `StopCombat`.
+- Задачи StateTree — [EnemyStateTreeTasks.h](../../Source/TypicalShooter/Public/Enemies/EnemyStateTreeTasks.h) (категория
+  «Enemy», контекст — `AIController`): `Enemy: Track Target`, `Enemy: Shoot When Visible` (на выходе отпускает атаку),
+  `Enemy: Keep Distance` (параметры `FEnemyStandSettings`: полоса 800–1600, разброс 20° / 60°, на выходе останавливается).
+  Все бегут бесконечно — кладутся в одно состояние и работают параллельно.
 
 ## Настройка контента
 Будет заполнено по ходу итераций.
@@ -129,8 +141,13 @@
 `.TooCloseBacksOff`, `.TooFarApproaches`, `.NoLineOfSightApproaches`, `.OnTopOfTarget`.
 [EnemiesDirectorTest.cpp](../../Source/TypicalShooter/Private/Tests/EnemiesDirectorTest.cpp): `TypicalShooter.Enemies.Director.RegistersLiveEnemies`,
 `.NearestPlayerTarget`.
+[EnemiesControllerTest.cpp](../../Source/TypicalShooter/Private/Tests/EnemiesControllerTest.cpp) (мир с навигационной системой
+ без навмеша — `EnemiesTest::AddNavigation`): `TypicalShooter.Enemies.Controller.PossessesSpawnedEnemy`, `.TracksAndShootsTarget`,
+`.KeepsDistance` (слишком близко → отходит в полосу и там стоит).
 
 ## Ограничения и грабли
+- В «голом» тестовом мире нет навигационной системы: `MoveToLocation` не стартует даже по прямой. Тесты движения
+  вызывают `EnemiesTest::AddNavigation` (система без навданных — прямые перемещения работают).
 
 ## Открытые задачи
 - [ ] Координация группы через `UEnemyDirectorSubsystem`.

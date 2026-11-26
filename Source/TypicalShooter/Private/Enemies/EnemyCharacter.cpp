@@ -2,6 +2,7 @@
 
 #include "TS_GAS.h"
 #include "Components/CapsuleComponent.h"
+#include "Enemies/EnemyAIController.h"
 #include "Enemies/EnemyDirectorSubsystem.h"
 #include "Engine/World.h"
 #include "GameFramework/CharacterMovementComponent.h"
@@ -33,6 +34,9 @@ AEnemyCharacter::AEnemyCharacter()
 	Muzzle->SetupAttachment(GetCapsuleComponent());
 	Muzzle->SetRelativeLocation(FVector(50.f, 0.f, 50.f));
 	Muzzle->ComponentTags.Add(FShotAim::MuzzleTag);
+
+	AIControllerClass = AEnemyAIController::StaticClass();
+	AutoPossessAI = EAutoPossessAI::PlacedInWorldOrSpawned;
 
 	AttackAbility = UPrimaryAttackAbility::StaticClass();
 	using A = EAttackAttribute;
