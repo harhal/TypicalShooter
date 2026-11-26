@@ -69,7 +69,7 @@
 - [x] 4. `AEnemyCharacter`: здоровье, урон, атака с базовыми параметрами (R4, R5) — тест: `TypicalShooter.Enemies.Character.*`
 - [x] 5. Смерть врага (R6) — тест: `TypicalShooter.Enemies.Character.Dies*`
 - [x] 6. Огонь только при линии видимости (R9) — тест: `TypicalShooter.Enemies.Combat.*`
-- [ ] 7. Выбор точки в полосе дистанций (R8) — тест: `TypicalShooter.Enemies.Positioning.*`
+- [x] 7. Выбор точки в полосе дистанций (R8) — тест: `TypicalShooter.Enemies.Positioning.*`
 - [ ] 8. `UEnemyDirectorSubsystem`: регистрация, поиск цели (R7, R11) — тест: `TypicalShooter.Enemies.Director.*`
 - [ ] 9. `AEnemyAIController` + задачи StateTree (цель, держать дистанцию, стрелять) (R8–R10) — тест: `TypicalShooter.Enemies.Tasks.*`
 - [ ] 10. `AEnemyWaveSpawner` (R12) — тест: `TypicalShooter.Enemies.Spawner.*`
@@ -101,6 +101,10 @@
   центра цели ничего не задевает (или задевает саму цель); `UpdateFiring(Target)` = `SetFiring(CanShootAt(Target))`.
   Капсула врага блокирует `Visibility` (профиль Pawn её игнорирует): прицел игрока останавливается на враге, а враги
   перекрывают линию огня друг другу.
+- Куда встать — [`EnemyPositioning::ChooseStandPoint`](../../Source/TypicalShooter/Public/Enemies/EnemyPositioning.h)
+  (`FEnemyStandQuery`): по горизонтали внутри полосы [Min, Max] и цель видна — стоять; иначе точка на середине полосы
+  (без видимости — на её ближнем крае) со стороны врага, повёрнутая вокруг цели на случайный угол в пределах
+  `JitterDegrees` (20°; без видимости — `FlankDegrees` 60°, чтобы зайти с другого угла), на высоте самого врага.
 
 ## Настройка контента
 Будет заполнено по ходу итераций.
@@ -117,6 +121,8 @@
 `.DiesAndStopsFiring`.
 [EnemiesCombatTest.cpp](../../Source/TypicalShooter/Private/Tests/EnemiesCombatTest.cpp): `TypicalShooter.Enemies.Combat.FiresWithLineOfSight`,
 `.WallBlocksFire`, `.AllyBlocksFire`, `.OutOfRange`.
+[EnemiesPositioningTest.cpp](../../Source/TypicalShooter/Private/Tests/EnemiesPositioningTest.cpp): `TypicalShooter.Enemies.Positioning.InsideBandStays`,
+`.TooCloseBacksOff`, `.TooFarApproaches`, `.NoLineOfSightApproaches`, `.OnTopOfTarget`.
 
 ## Ограничения и грабли
 
