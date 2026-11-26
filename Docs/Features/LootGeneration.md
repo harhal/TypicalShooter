@@ -78,7 +78,7 @@
 - [x] 8. UI: цвет редкости в сетке и инфо-панели — тест: `TypicalShooter.Loot.UI.Rarity*`
 - [x] 9. UI: процедурная подложка с выходами + иконка по центру — тест: `TypicalShooter.Loot.UI.Underlay`
   (+ скриншот из `PowerGrid.Flow` для визуальной проверки)
-- [ ] 10. Контент: 2–3 редкости, несколько модификаторов, шаблоны источника / коннектора / приёмника, лут-таблица;
+- [x] 10. Контент: 2–3 редкости, несколько модификаторов, шаблоны источника / коннектора / приёмника, лут-таблица;
   подключить к одному контейнеру на `Lvl_FirstPerson` — ручная проверка в PIE + `TypicalShooter.Inventory.UIFlow`
 
 ## Как устроено
@@ -144,6 +144,18 @@
 - Project Settings → Game → Loot: кривая множителя уровня.
 - Data Assets классов `LootItemTemplate`, `LootModifier`, `LootRarity`, `LootTable`.
 - Экземпляр `BP_ItemsContainer` на уровне: категория Loot — `LootTable`, `LootLevel`, `LootSeed`.
+- Тестовый контент в `Content/Inventory/Loot` (иконки — заглушка `T_UE_Logo_M`):
+  - редкости `DA_Rarity_Common` (серая, слот тир 1), `DA_Rarity_Rare` (синяя, 2 слота тир 1), `DA_Rarity_Epic`
+    (фиолетовая, тир 2 + тир 1); все слоты — `Loot.Modifier.Attack`;
+  - модификаторы `DA_Mod_Physical_T1`, `DA_Mod_Acid_T1`, `DA_Mod_Speed_T1`, `DA_Mod_Physical_T2`, `DA_Mod_Electric_T2`
+    (бонусы атаки, урон масштабируется от уровня);
+  - шаблоны `DA_Loot_ParticleCore` (источник на `Ammo.Particle`, все грани или тройник), `DA_Loot_Conduit`
+    (коннектор: прямой / изогнутый / угол / тройник, без модификаторов), `DA_Loot_Amplifier` (коннектор с пулом
+    модификаторов), `DA_Loot_RifleReceiver` (приёмник основной атаки, урон от уровня, пул модификаторов);
+  - таблица `DA_LootTable_TestCrate`: 3–5 предметов, Conduit 3 : Amplifier 2 : Core 1 : Rifle 1; веса редкостей от
+    уровня: Common 6→1, Rare 2→4, Epic 0.5→3.
+- На `Lvl_FirstPerson` первый контейнер (3 ручных тестовых предмета) получил `DA_LootTable_TestCrate`, уровень 10,
+  `LootSeed = 0`: при каждом запуске PIE в нём новые 3–5 случайных предметов.
 
 ## Тесты
 - `TypicalShooter.Loot.Range.*` (`Private/Tests/LootRangeTest.cpp`, без мира): границы, масштабирование и округление,
