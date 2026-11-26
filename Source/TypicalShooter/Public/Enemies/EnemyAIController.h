@@ -102,8 +102,10 @@ private:
 	void MoveToStandPoint(const FEnemyStandSettings& Settings);
 	/** Role band, waiting behaviour and sector from the director, when it coordinates this enemy. */
 	void ApplyCoordination(struct FEnemyStandQuery& Query) const;
+	/** Stand point filter: on the navmesh (snapped onto it) and with room for the capsule next to level geometry. */
+	bool AcceptStandPoint(FVector& Point) const;
 	/** Snaps Point onto the navmesh; false if it is off the navmesh (outside the arena, inside a wall). */
-	bool ProjectToNavigation(FVector& Point) const;
+	bool ProjectToNavigation(FVector& Point, bool& bOutOnNavmesh) const;
 
 	UPROPERTY(VisibleAnywhere, Category = "Components")
 	TObjectPtr<UStateTreeAIComponent> StateTreeAI;

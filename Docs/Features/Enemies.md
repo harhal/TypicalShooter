@@ -123,9 +123,11 @@
   пешки ставит в него `Behavior` (ассет StateTree) и запускает, при отпускании — останавливает. Шаги поведения:
   `UpdateTarget` (цель от директора + `SetFocus` — враг поворачивается и целится в центр цели), `UpdateFire`
   (стреляет, только если держит токен атаки группы и `CanAttack(Target)`), `UpdatePosition(FEnemyStandSettings)` (когда
-  стоит или прошло `RepathInterval` — выбирает точку `ChooseReachableStandPoint` (проекция на навмеш, без навданных —
-  любая) с видимостью от `CanShootAt` и идёт туда `MoveToLocation` по навмешу; без навданных — по прямой; дошёл до полосы
-  по дороге — останавливается). Если директор координирует врага, полоса берётся из роли, а точка — из сектора
+  стоит или прошло `RepathInterval` — выбирает точку `ChooseReachableStandPoint` с видимостью от `CanShootAt` и идёт туда
+  `MoveToLocation` по навмешу; без навданных — по прямой (в Verbose-логе — если пути по навмешу нет); дошёл до полосы по
+  дороге — останавливается). Точку пропускает `AcceptStandPoint`: проекция на навмеш (без навданных — любая), а затем
+  вокруг точки должно хватать места капсуле (радиус +10 см): никаких пересечений с `WorldStatic` / `WorldDynamic`, пешки не
+  в счёт. Без этого точка у самой стены давала врагу вклиниться в геометрию уровня и застрять. Если директор координирует врага, полоса берётся из роли, а точка — из сектора
   (`EnemyRoleStand::Apply`); `Min/MaxDistance` из `FEnemyStandSettings` работают только без координации. `StopCombat`
   отдаёт токен. Подробности — [EnemyCoordination.md](EnemyCoordination.md).
 - Задачи StateTree — [EnemyStateTreeTasks.h](../../Source/TypicalShooter/Public/Enemies/EnemyStateTreeTasks.h) (категория
@@ -187,6 +189,9 @@ HUD: `BP_HUD` → `HealthCounter` (`UHealthCounterWidget`), левый нижн�
 [EnemiesControllerTest.cpp](../../Source/TypicalShooter/Private/Tests/EnemiesControllerTest.cpp) (мир с навигационной системой
  без навмеша — `EnemiesTest::AddNavigation`): `TypicalShooter.Enemies.Controller.PossessesSpawnedEnemy`, `.TracksAndShootsTarget`,
 `.KeepsDistance` (слишком близко → отходит в полосу и там стоит).
+[EnemiesStandClearanceTest.cpp](../../Source/TypicalShooter/Private/Tests/EnemiesStandClearanceTest.cpp):
+`TypicalShooter.Enemies.Controller.StandPointClearOfWalls` (точка в 10 см от стены отвергается и поворачивается вокруг цели;
+без проверки получалось 30 см при радиусе капсулы 34).
 [EnemiesSpawnerTest.cpp](../../Source/TypicalShooter/Private/Tests/EnemiesSpawnerTest.cpp): `TypicalShooter.Enemies.Spawner.FirstWaveAfterDelay`,
 `.NextWaveWhenAllDead` (и повтор списка), `.UsesSpawnPoints`, `.DisabledByConsoleVariable`.
 [EnemiesAvoidanceTest.cpp](../../Source/TypicalShooter/Private/Tests/EnemiesAvoidanceTest.cpp): `TypicalShooter.Enemies.Movement.AvoidsStandingAlly`

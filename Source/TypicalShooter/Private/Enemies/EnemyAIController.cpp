@@ -1,5 +1,6 @@
 #include "Enemies/EnemyAIController.h"
 
+#include "Components/CapsuleComponent.h"
 #include "Components/StateTreeAIComponent.h"
 #include "Enemies/Coordination/EnemyCoordinationSettings.h"
 #include "Enemies/Coordination/EnemyRoleStand.h"
@@ -9,6 +10,7 @@
 #include "Engine/World.h"
 #include "Navigation/PathFollowingComponent.h"
 #include "NavigationSystem.h"
+#include "TypicalShooter.h"
 
 AEnemyAIController::AEnemyAIController()
 {
@@ -68,7 +70,7 @@ bool AEnemyAIController::UpdatePosition(const FEnemyStandSettings& Settings)
 	Query.bHasLineOfSight = Enemy->CanShootAt(Target);
 	ApplyCoordination(Query);
 	LastStandChoiceTime = Now;
-	if (!EnemyPositioning::ChooseReachableStandPoint(Query, Random, [this](FVector& Point) { return ProjectToNavigation(Point); }, StandPoint))
+	if (!EnemyPositioning::ChooseReachableStandPoint(Query, Random, [this](FVector& Point) { return AcceptStandPoint(Point); }, StandPoint))
 	{
 		if (bMoving)
 		{
@@ -80,8 +82,34 @@ bool AEnemyAIController::UpdatePosition(const FEnemyStandSettings& Settings)
 	return true;
 }
 
-bool AEnemyAIController::ProjectToNavigation(FVector& Point) const
+bool AEnemyAIController::AcceptStandPoint(FVector& Point) const
 {
+	bool bOnNavmesh = false;
+	if (!ProjectToNavigation(Point, bOnNavmesh))
+	{
+		return false;
+	}
+	const ACharacter* Enemy = GetEnemy();
+	if (!Enemy)
+	{
+		return true;
+	}
+	// Room for the capsule (plus a margin) around the point: a point hugging a wall lets the enemy wedge itself into it.
+	// A navmesh point lies on the floor; without nav data the point is at the enemy's own (capsule centre) height.
+	const UCapsuleComponent* Capsule = Enemy->GetCapsuleComponent();
+	const float HalfHeight = Capsule->GetScaledCapsuleHalfHeight();
+	const FVector Centre = (bOnNavmesh ? Point + FVector(0.f, 0.f, HalfHeight) : Point) + FVector(0.f, 0.f, 10.f);
+	const FCollisionShape Shape = FCollisionShape::MakeCapsule(Capsule->GetScaledCapsuleRadius() + 10.f, HalfHeight - 10.f);
+	FCollisionObjectQueryParams Objects;
+	Objects.AddObjectTypesToQuery(ECC_WorldStatic);
+	Objects.AddObjectTypesToQuery(ECC_WorldDynamic);
+	FCollisionQueryParams Params(SCENE_QUERY_STAT(EnemyStandClearance), false, Enemy);
+	return !GetWorld()->OverlapAnyTestByObjectType(Centre, FQuat::Identity, Objects, Shape, Params);
+}
+
+bool AEnemyAIController::ProjectToNavigation(FVector& Point, bool& bOutOnNavmesh) const
+{
+	bOutOnNavmesh = false;
 	const UNavigationSystemV1* Nav = FNavigationSystem::GetCurrent<UNavigationSystemV1>(GetWorld());
 	if (!Nav || !Nav->GetDefaultNavDataInstance())
 	{
@@ -94,8 +122,10 @@ bool AEnemyAIController::ProjectToNavigation(FVector& Point) const
 		return false;
 	}
 	Point = Projected.Location;
+	bOutOnNavmesh = true;
 	return true;
 }
+
 
 void AEnemyAIController::MoveToStandPoint(const FEnemyStandSettings& Settings)
 {
@@ -104,7 +134,9 @@ void AEnemyAIController::MoveToStandPoint(const FEnemyStandSettings& Settings)
 		MoveToLocation(StandPoint, Settings.AcceptanceRadius, true, true, true, true);
 	if (Result == EPathFollowingRequestResult::Failed)
 	{
-		MoveToLocation(StandPoint, Settings.AcceptanceRadius, true, false, false, true);
+		const EPathFollowingRequestResult::Type Straight = MoveToLocation(StandPoint, Settings.AcceptanceRadius, true, false, false, true);
+		UE_LOG(LogTypicalShooter, Verbose, TEXT("%s: no navmesh path to %s, straight move: %d"), *GetNameSafe(GetPawn()),
+			*StandPoint.ToCompactString(), int32(Straight));
 	}
 }
 
