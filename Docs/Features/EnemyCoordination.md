@@ -93,7 +93,7 @@
 - Нужно ли масштабировать `MaxTokens` от сложности или номера волны? Пока это константа в настройках.
 
 ## План итераций
-- [ ] 1. `UEnemyCoordinationSettings` + число токенов от размера группы (R3, R16) — тест:
+- [x] 1. `UEnemyCoordinationSettings` + число токенов от размера группы (R3, R16) — тест:
   `TypicalShooter.Enemies.Coordination.TokenCount`
 - [ ] 2. Распределение ролей, чистая функция (разрешённые роли, доли, устойчивость) (R7–R9) — тест:
   `TypicalShooter.Enemies.Coordination.Roles.*` (`.RespectsWeights`, `.OnlyAllowed`, `.StableOnRecompute`, `.MinimalChangeOnDeath`)
@@ -117,7 +117,17 @@
   перераспределяются — тест: `TypicalShooter.Enemies.Coordination.Flow`
 
 ## Как устроено
-_Заполняется по ходу итераций._ Задуманное устройство:
+Код координации лежит в `Source/TypicalShooter/{Public,Private}/Enemies/Coordination/`.
+
+Готово:
+- Настройки — [`UEnemyCoordinationSettings`](../../Source/TypicalShooter/Public/Enemies/Coordination/EnemyCoordinationSettings.h)
+  (`UDeveloperSettings`, `Config = Game`, хранится в `DefaultGame.ini`). Группа `Tokens` —
+  [`FEnemyTokenCountSettings`](../../Source/TypicalShooter/Public/Enemies/Coordination/EnemyTokenCount.h) (доля, минимум,
+  максимум).
+- Число токенов — `EnemyCoordination::TokenCount(GroupSize, Settings)`: `round(доля × размер)` в пределах [Min, Max], но
+  не больше размера группы; у пустой группы 0. Обёртка на настройках — `GetTokenCount(GroupSize)`.
+
+Задуманное устройство (дальнейшие итерации):
 - Чистая логика без мира (тестируется без PIE): `EnemyCoordination::TokenCount`, `EnemyRoles::Assign`,
   `EnemySectors::Assign`, `FEnemyTokenPool` (токены со временем), `EnemyPositioning` (угол сектора).
 - `UEnemyDirectorSubsystem` становится `UTickableWorldSubsystem`: держит группы по цели (`FEnemyGroup`: участники, их роли,
@@ -126,10 +136,15 @@ _Заполняется по ходу итераций._ Задуманное у
 - `AEnemyAIController`: `UpdateFire` спрашивает токен у директора; `UpdatePosition` берёт полосу роли и угол сектора.
 
 ## Настройка контента
-_Заполняется по ходу итераций_ (Project Settings → Game → Enemy Coordination; `AllowedRoles` в `BP_Enemy`).
+Project Settings → Game → **Enemy Coordination**:
+- **Tokens:** `Token Fraction` (0.4), `Min Tokens` (1), `Max Tokens` (3).
+
+Дальше сюда добавятся параметры ролей, секторов и ротации токенов, а также `AllowedRoles` / `RoleBandOverrides` в `BP_Enemy`.
 
 ## Тесты
-_Заполняется по ходу итераций_ (см. план).
+[EnemiesCoordinationTokenCountTest.cpp](../../Source/TypicalShooter/Private/Tests/EnemiesCoordinationTokenCountTest.cpp):
+`TypicalShooter.Enemies.Coordination.TokenCount` — округление, ограничения, пустая группа, минимум не больше размера группы,
+значения по умолчанию в настройках проекта.
 
 ## Ограничения и грабли
 
