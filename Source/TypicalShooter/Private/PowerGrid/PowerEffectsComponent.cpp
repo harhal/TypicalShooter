@@ -108,7 +108,7 @@ void UPowerEffectsComponent::SyncCharacterEffects(UAbilitySystemComponent& InAsc
 			{
 				FGameplayEffectContextHandle Context = InAsc.MakeEffectContext();
 				Context.AddSourceObject(Item);
-				Handle = InAsc.ApplyGameplayEffectToSelf(Step.CharacterEffect.GetDefaultObject(), 1.f, Context);
+				Handle = InAsc.ApplyGameplayEffectToSelf(Step.CharacterEffect.GetDefaultObject(), Step.CharacterEffectLevel, Context);
 			}
 			Next.Add(Key, Handle);
 		});

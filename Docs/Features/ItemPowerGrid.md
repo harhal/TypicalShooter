@@ -249,7 +249,9 @@
   с сервера дойдёт до клиента коррекцией движения — не проверено, возможен рывок.
 - **Эффекты по порогам** (R13–R14a, R13a): фрагмент `FPowerEffects_ItemFragment`
   (`Public/PowerGrid/PowerEffectsFragment.h`) — список ступеней `FPowerThresholdEffect`: `Threshold` (≥ 0),
-  `CharacterEffect` (GE на персонажа целиком) и `AttackBonuses` (список «параметр атаки + значение» без слота).
+  `CharacterEffect` (GE на персонажа целиком, применяется с уровнем `CharacterEffectLevel`, по умолчанию 1; у
+  сгенерированного лута — уровень предмета, см. [LootGeneration.md](LootGeneration.md)) и `AttackBonuses` (список
+  «параметр атаки + значение» без слота).
   Ступень достигнута, если `UPowerGridComponent::GetItemPower(предмет) ≥ Threshold` (предмет вне сети — мощность 0,
   работает только порог 0). Применяет `UPowerEffectsComponent` (на персонаже `PowerEffects`, только сервер, нужен ASC)
   на каждое изменение сети:

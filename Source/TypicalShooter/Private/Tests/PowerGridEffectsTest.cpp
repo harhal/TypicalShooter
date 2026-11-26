@@ -96,6 +96,28 @@ bool FPowerGridEffectThresholdsTest::RunTest(const FString& Parameters)
 	return true;
 }
 
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FPowerGridEffectLevelTest, "TypicalShooter.PowerGrid.Effects.CharacterEffectLevel", ShootingTest::Flags)
+bool FPowerGridEffectLevelTest::RunTest(const FString& Parameters)
+{
+	using namespace PowerGridEffectsTest;
+	const ShootingTest::FWorldFixture F(true);
+	const FEffectsFixture A(F);
+
+	FPowerThresholdEffect Leveled = Step(0);
+	Leveled.CharacterEffectLevel = 7.f;
+	A.Inventory->AddItem(WithEffects(FInventoryItemManifest(), { Leveled }), FHhAxialCoord(0, 0));
+
+	FGameplayEffectQuery Query;
+	Query.EffectDefinition = UPowerGridTestEffect::StaticClass();
+	const TArray<FActiveGameplayEffectHandle> Handles = A.Asc->GetActiveEffects(Query);
+	if (TestEqual(TEXT("The step's effect is active"), Handles.Num(), 1))
+	{
+		const FActiveGameplayEffect* Active = A.Asc->GetActiveGameplayEffect(Handles[0]);
+		TestEqual(TEXT("Effect is applied with the step's level"), Active ? Active->Spec.GetLevel() : 0.f, 7.f);
+	}
+	return true;
+}
+
 IMPLEMENT_SIMPLE_AUTOMATION_TEST(FPowerGridEffectAttackBonusTest, "TypicalShooter.PowerGrid.Effects.AttackBonusesToConnectedReceivers", ShootingTest::Flags)
 bool FPowerGridEffectAttackBonusTest::RunTest(const FString& Parameters)
 {

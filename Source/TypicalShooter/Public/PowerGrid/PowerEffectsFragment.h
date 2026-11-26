@@ -21,6 +21,10 @@ struct TYPICALSHOOTER_API FPowerThresholdEffect
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Power Grid")
 	TSubclassOf<UGameplayEffect> CharacterEffect;
 
+	/** Level the character effect is applied with (generated loot: the item level). */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Power Grid", meta = (ClampMin = 1))
+	float CharacterEffectLevel = 1.f;
+
 	/** Added to the slot attributes of every receiver the item is connected to (R14, R14a). */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Power Grid")
 	TArray<FAttackStatBonus> AttackBonuses;

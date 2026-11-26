@@ -66,7 +66,7 @@
 - [x] 3. Числа энергосети источника / приёмника из диапазонов с уровнем — тест: `TypicalShooter.Loot.Generator.PowerParams`
 - [x] 4. `ULootRarity` + `ULootModifier`: выбор по слотам (тег, тир строго, веса, без повторов, пропуск без
   кандидата) → `FPowerEffects_ItemFragment` — тест: `TypicalShooter.Loot.Modifiers.*`, `.Generator.Modifiers`
-- [ ] 4б. Уровень GE модификатора = уровень предмета: поле уровня в `FPowerThresholdEffect`, его учитывает
+- [x] 4б. Уровень GE модификатора = уровень предмета: поле уровня в `FPowerThresholdEffect`, его учитывает
   `UPowerEffectsComponent` (затрагивает энергосеть, поэтому отдельный шаг) — тест: `TypicalShooter.PowerGrid.Effects.*`,
   `TypicalShooter.Loot.Generator.Modifiers`
 - [ ] 5. `FInfo_ItemFragment`: имя, описание с плейсхолдерами + строки модификаторов, иконка по редкости —
@@ -109,7 +109,8 @@
   `FPowerSourceParams` / `FPowerReceiverParams`; коннектор оставляет их по умолчанию.
 - [`LootGenerator.h`](../../Source/TypicalShooter/Public/Loot/LootGenerator.h): `LootGenerator::Generate(Template,
   {Level, Seed, Rarity})` → `FInventoryItemManifest` = фиксированные фрагменты + `FPowerGrid_ItemFragment` +
-  `FPowerEffects_ItemFragment` (только если выпали модификаторы; шаги отсортированы по `Threshold`) + фрагмент
+  `FPowerEffects_ItemFragment` (только если выпали модификаторы; шаги отсортированы по `Threshold`, у каждого
+  `CharacterEffectLevel` = уровень предмета — с ним `UPowerEffectsComponent` применяет GE) + фрагмент
   происхождения. Весь рандом — из `FRandomStream(Seed)`. **Случайный поворот** применяется к самой маске
   (`HexFaces::RotateMask`), а не к `UInventoryItem::Rotation`: поворот — состояние экземпляра, в манифесте его нет.
 - [`LootOriginFragment.h`](../../Source/TypicalShooter/Public/Loot/LootOriginFragment.h): `FLootOrigin_ItemFragment`

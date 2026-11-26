@@ -114,13 +114,17 @@ bool FLootModifiersGeneratorTest::RunTest(const FString& Parameters)
 	AddToPool(*Template, Low);
 	const ULootRarity* Rarity = MakeRarity({{2, LootTags::Loot_Modifier_Attack}, {1, LootTags::Loot_Modifier_Character}});
 
-	const FInventoryItemManifest Manifest = LootGenerator::Generate(*Template, {1, 3, Rarity});
+	const FInventoryItemManifest Manifest = LootGenerator::Generate(*Template, {30, 3, Rarity});
 	const FPowerEffects_ItemFragment* Effects = Manifest.GetFragmentOfType<FPowerEffects_ItemFragment>();
 	if (TestNotNull(TEXT("Item with modifiers gets a power effects fragment"), Effects)
 		&& TestEqual(TEXT("One step per modifier"), Effects->Effects.Num(), 2))
 	{
 		TestEqual(TEXT("Steps are sorted by threshold"), Effects->Effects[0].Threshold, 1);
 		TestEqual(TEXT("Higher threshold last"), Effects->Effects[1].Threshold, 5);
+		for (const FPowerThresholdEffect& Step : Effects->Effects)
+		{
+			TestEqual(TEXT("Character effect level = item level"), Step.CharacterEffectLevel, 30.f);
+		}
 	}
 
 	const FLootOrigin_ItemFragment* Origin = OriginOf(Manifest);
