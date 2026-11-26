@@ -205,7 +205,7 @@ HUD: `BP_HUD` → `HealthCounter` (`UHealthCounterWidget`), левый нижн�
   (`CanShootAt` проверяет линию только в момент решения стрелять).
 
 ## Открытые задачи
-- [ ] Координация группы через `UEnemyDirectorSubsystem`.
+- [ ] Координация группы через `UEnemyDirectorSubsystem` — в работе: [EnemyCoordination.md](EnemyCoordination.md).
 - [ ] Смерть игрока (сейчас бессмертен).
 - [ ] Анимации стрельбы / смерти, звук, VFX; оружие в руках у манекена.
 - [ ] Разные типы врагов (свои `AttackStats`, паттерны, полосы дистанций).
