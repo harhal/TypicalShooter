@@ -176,4 +176,29 @@ bool FEnemiesDirectorTargetChangeTest::RunTest(const FString& Parameters)
 	return true;
 }
 
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FEnemiesDirectorLoneFlankerTest, "TypicalShooter.Enemies.Director.LoneFlankerLeavesView", ShootingTest::Flags)
+bool FEnemiesDirectorLoneFlankerTest::RunTest(const FString& Parameters)
+{
+	using namespace EnemiesDirectorGroupsTest;
+	const ShootingTest::FWorldFixture F(true);
+	EnemiesTest::SpawnFloor(F);
+	SpawnPlayer(F, FVector::ZeroVector); // looks along +X
+	const FTransform Transform(FRotator::ZeroRotator, FVector(1000.f, 0.f, 100.f)); // right in front of the player
+	AEnemyCharacter* Flanker = F.World->SpawnActorDeferred<AEnemyCharacter>(AEnemyCharacter::StaticClass(), Transform, nullptr,
+		nullptr, ESpawnActorCollisionHandlingMethod::AlwaysSpawn);
+	Flanker->AllowedRoles = {EEnemyRole::Flank};
+	Flanker->FinishSpawning(Transform);
+
+	const FEnemyAssignment* Assignment = F.World->GetSubsystem<UEnemyDirectorSubsystem>()->GetAssignment(Flanker);
+	if (!TestNotNull(TEXT("Assigned"), Assignment))
+	{
+		return false;
+	}
+	const float ViewHalf = GetDefault<UEnemyCoordinationSettings>()->Sectors.FlankViewHalfAngle;
+	TestEqual(TEXT("Its sector is behind the player"), FMath::Abs(FMath::FindDeltaAngleDegrees(Assignment->SectorYaw, 180.f)), 0.f, 1.f);
+	TestTrue(FString::Printf(TEXT("The sector stays out of the view cone (half width %.0f <= %.0f)"), Assignment->SectorHalfWidth, 180.f - ViewHalf),
+		Assignment->SectorHalfWidth <= 180.f - ViewHalf + 0.01f);
+	return true;
+}
+
 #endif

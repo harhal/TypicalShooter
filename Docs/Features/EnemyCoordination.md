@@ -137,7 +137,7 @@
 как остальные.
 - [x] 11. Обход по дуге в полосе роли (R19) — тест: `TypicalShooter.Enemies.Positioning.Arc*`,
   `TypicalShooter.Enemies.Controller.CirclesAroundTarget`
-- [ ] 12. Сектор фланкёра ограничен зоной вне взгляда (R20) — тест: `TypicalShooter.Enemies.Director.LoneFlankerLeavesView`
+- [x] 12. Сектор фланкёра ограничен зоной вне взгляда (R20) — тест: `TypicalShooter.Enemies.Director.LoneFlankerLeavesView`
 - [ ] 13. Токены реже вне поля зрения (R21) — тест: `TypicalShooter.Enemies.Coordination.Tokens.OutOfView*`
 
 ## Как устроено
@@ -201,7 +201,8 @@
   (без мира). `Update(Now, место цели, взгляд цели, участники {Id, AllowedRoles, Location, bCanAttack}, Settings)` по
   очереди считает роли (`EnemyRoles::Assign` с прошлыми ролями), сектора (`EnemySectors::Assign`; опорный взгляд для
   фланга обновляется по `ShouldReaimFlank`) и токены (`FEnemyTokenPool`, число — `GetTokenCount(размер)`). Результат —
-  `Find(Id)` → {Role, SectorYaw, SectorHalfWidth}, плюс `HasToken` / `ReleaseToken`.
+  `Find(Id)` → {Role, SectorYaw, SectorHalfWidth}, плюс `HasToken` / `ReleaseToken`. Полуширина сектора фланкёра не
+  больше 180° − `FlankViewHalfAngle` (R20): одинокий фланкёр перед игроком иначе получал сектор на весь круг и не двигался.
 - Директор — [`UEnemyDirectorSubsystem`](../../Source/TypicalShooter/Public/Enemies/EnemyDirectorSubsystem.h), теперь
   `UTickableWorldSubsystem`.
   - `Recompute()` группирует живых врагов по `FindTargetFor` и обновляет каждую группу. Координатор цели, у которой уже
@@ -312,7 +313,8 @@ Project Settings → Game → **Enemy Coordination**:
 у каждой группы свои токены), `.GroupsSpreadAndShareTokens` (куча из четырёх получает четверти; токенов —
 `GetTokenCount(4)`; отданный токен уходит другому при следующем пересчёте), `.RecomputeOnDeath` (убит держатель токена:
 группа, роли, токены и ширина секторов пересчитаны сразу), `.FollowsTargetChange` (ближе появился другой игрок — враг уходит
-в его группу на следующем тике, а не через `UpdateInterval`).
+в его группу на следующем тике, а не через `UpdateInterval`), `.LoneFlankerLeavesView` (одинокий фланкёр перед игроком
+получает сектор у него за спиной полушириной ≤ 120°; раньше было 180°).
 
 [EnemiesPositioningArcTest.cpp](../../Source/TypicalShooter/Private/Tests/EnemiesPositioningArcTest.cpp):
 `TypicalShooter.Enemies.Positioning.ArcGoesStraightWhenClose`, `.ArcGoesAroundTarget` (из-за спины к лицу цели — шагами по

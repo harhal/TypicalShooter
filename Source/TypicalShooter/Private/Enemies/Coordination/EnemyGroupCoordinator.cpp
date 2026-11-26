@@ -51,11 +51,13 @@ void FEnemyGroupCoordinator::UpdateSectors(const FVector& TargetLocation, const 
 	}
 	const TArray<float> Yaws = EnemySectors::Assign(Query);
 	const float HalfWidth = EnemySectors::SectorHalfWidth(Members.Num());
+	// A flanker's sector never reaches into the target's view (a lone flanker would otherwise "fit" right in front of it).
+	const float FlankHalfWidth = FMath::Min(HalfWidth, 180.f - Settings.Sectors.FlankViewHalfAngle);
 	for (int32 Index = 0; Index < Members.Num(); ++Index)
 	{
 		FEnemyGroupAssignment& Assignment = Assignments[Members[Index].Id];
 		Assignment.SectorYaw = Yaws[Index];
-		Assignment.SectorHalfWidth = HalfWidth;
+		Assignment.SectorHalfWidth = Assignment.Role == EEnemyRole::Flank ? FlankHalfWidth : HalfWidth;
 	}
 }
 
